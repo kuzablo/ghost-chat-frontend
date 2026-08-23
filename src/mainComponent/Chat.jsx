@@ -14,7 +14,7 @@ const Chat = () => {
   const wsRef = useRef(null);
 
   useEffect(() => {
-    new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:3000')
+    const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:3000');
     wsRef.current = ws;
     ws.onopen = () => setIsConnected(true);
     ws.onmessage = (event) => {
