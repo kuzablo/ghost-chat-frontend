@@ -1,7 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
+
+// Простая хэш-функция для цвета аватара
+const getAvatarColor = (nickname) => {
+  if (!nickname) return '#666';
+  let hash = 0;
+  for (let i = 0; i < nickname.length; i++) {
+    hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 60%, 55%)`;
+};
+
+const getInitial = (nickname) => {
+  return nickname ? nickname.charAt(0).toUpperCase() : '?';
+};
+
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -30,7 +51,6 @@ const Chat = () => {
       setIsConnected(true);
       setErrorMessage('');
       console.log(`[CHAT v${VERSION}] Connected`);
-      // при успешном переподключении повторно отправляем ник
       if (nicknameRef.current) {
         ws.send(JSON.stringify({ type: 'join', data: { nickname: nicknameRef.current } }));
       }
@@ -230,11 +250,50 @@ const Chat = () => {
         }
 
         .msg {
-          margin-bottom: 8px;
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 10px;
           word-break: break-word;
         }
-        .msg strong {
+
+        .msg-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: #666;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: bold;
+          color: white;
+          flex-shrink: 0;
+        }
+
+        .msg-content {
+          flex: 1;
+        }
+
+        .msg-header {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+          margin-bottom: 2px;
+        }
+
+        .msg-nick {
+          font-weight: bold;
           color: #e94560;
+        }
+
+        .msg-time {
+          font-size: 11px;
+          color: #888;
+        }
+
+        .msg-text {
+          color: #ddd;
         }
 
         .input-row {
@@ -378,7 +437,16 @@ const Chat = () => {
           <div className="messages">
             {messages.map((m, i) => (
               <div className="msg" key={i}>
-                <strong>{m.nickname}</strong>: {m.text}
+                <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
+                  {getInitial(m.nickname)}
+                </div>
+                <div className="msg-content">
+                  <div className="msg-header">
+                    <span className="msg-nick">{m.nickname}</span>
+                    <span className="msg-time">{formatTime(m.time)}</span>
+                  </div>
+                  <div className="msg-text">{m.text}</div>
+                </div>
               </div>
             ))}
           </div>
