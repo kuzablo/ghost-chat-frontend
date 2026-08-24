@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.4';
+const VERSION = '1.0.5';
 
-// Простая хэш-функция для цвета аватара
+// Пастельные цвета для аватарок
 const getAvatarColor = (nickname) => {
-  if (!nickname) return '#666';
+  if (!nickname) return '#888';
   let hash = 0;
   for (let i = 0; i < nickname.length; i++) {
     hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 60%, 55%)`;
+  return `hsl(${hue}, 45%, 60%)`;
 };
 
 const getInitial = (nickname) => {
@@ -182,7 +182,7 @@ const Chat = () => {
           overflow: hidden;
         }
         body {
-          background: #1a1a2e;
+          background: #1e2a3a; /* мягкий синий фон */
           color: #eee;
           font-family: 'Segoe UI', sans-serif;
         }
@@ -201,10 +201,10 @@ const Chat = () => {
         .chat-main {
           flex: 2;
           min-width: 300px;
-          background: #16213e;
+          background: #263443; /* нежный тёмно-синий */
           border-radius: 16px;
           padding: 16px;
-          box-shadow: 0 0 20px rgba(0,0,0,0.5);
+          box-shadow: 0 0 20px rgba(0,0,0,0.4);
           display: flex;
           flex-direction: column;
           height: 100%;
@@ -214,10 +214,10 @@ const Chat = () => {
         .chat-side {
           flex: 1;
           min-width: 220px;
-          background: #0f3460;
+          background: #1f2e3d; /* другой оттенок */
           border-radius: 16px;
           padding: 16px;
-          box-shadow: 0 0 20px rgba(0,0,0,0.5);
+          box-shadow: 0 0 20px rgba(0,0,0,0.4);
           height: 100%;
           box-sizing: border-box;
           display: flex;
@@ -231,6 +231,8 @@ const Chat = () => {
           border: none;
           margin-bottom: 10px;
           box-sizing: border-box;
+          background: #314459;
+          color: #e0e8f0;
         }
 
         .qr-wrap {
@@ -243,7 +245,7 @@ const Chat = () => {
         .messages {
           flex: 1;
           overflow-y: auto;
-          background: #1a1a2e;
+          background: #1a2535;
           border-radius: 12px;
           padding: 12px;
           margin-bottom: 10px;
@@ -252,48 +254,52 @@ const Chat = () => {
         .msg {
           display: flex;
           align-items: flex-start;
-          gap: 10px;
-          margin-bottom: 10px;
+          gap: 12px;
+          margin-bottom: 14px;
           word-break: break-word;
         }
 
         .msg-avatar {
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
-          background: #666;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 16px;
-          font-weight: bold;
-          color: white;
+          font-weight: 600;
+          color: #fff;
           flex-shrink: 0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
         .msg-content {
           flex: 1;
+          display: flex;
+          flex-direction: column;
         }
 
         .msg-header {
           display: flex;
           align-items: baseline;
-          gap: 8px;
-          margin-bottom: 2px;
+          gap: 6px;
+          margin-bottom: 3px;
         }
 
         .msg-nick {
-          font-weight: bold;
-          color: #e94560;
+          font-weight: 600;
+          color: #b8c5d0; /* нежный */
         }
 
         .msg-time {
           font-size: 11px;
-          color: #888;
+          color: #8296a5;
+          margin-left: auto; /* прижимаем время вправо */
         }
 
         .msg-text {
-          color: #ddd;
+          color: #e8edf2;
+          line-height: 1.4;
         }
 
         .input-row {
@@ -305,6 +311,8 @@ const Chat = () => {
           padding: 10px;
           border-radius: 8px;
           border: none;
+          background: #314459;
+          color: #e0e8f0;
         }
 
         .btn {
@@ -375,7 +383,7 @@ const Chat = () => {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          background: #16213e;
+          background: #263443;
           border-radius: 16px;
           padding: 24px;
           width: 90%;
@@ -395,6 +403,8 @@ const Chat = () => {
           border: none;
           margin: 10px 0;
           font-size: 16px;
+          background: #314459;
+          color: #e0e8f0;
         }
         .nickname-modal .btn {
           width: 100%;
