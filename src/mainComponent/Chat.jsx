@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [nickname, setNickname] = useState('');
+  const [nicknameSet, setNicknameSet] = useState(false);
   const [players, setPlayers] = useState([]);
   const [myId, setMyId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -80,13 +81,19 @@ const Chat = () => {
   }, []);
 
   const sendNickname = () => {
-    if (nickname.trim()) {
-      wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: nickname.trim() } }));
-    }
+    const trimmed = nickname.trim();
+    if (!trimmed) return;
+    wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: trimmed } }));
+    setNicknameSet(true);
   };
 
   const sendMessage = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && input.trim() && !bannedUntil) {
+    if (
+      wsRef.current?.readyState === WebSocket.OPEN &&
+      input.trim() &&
+      !bannedUntil &&
+      nicknameSet
+    ) {
       wsRef.current.send(JSON.stringify({
         type: 'message',
         data: { nickname: nickname || 'Аноним', text: input.trim() }
@@ -96,19 +103,19 @@ const Chat = () => {
   };
 
   const requestDuel = (targetId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && nicknameSet) {
       wsRef.current.send(JSON.stringify({ type: 'duel_request', data: { targetId } }));
     }
   };
 
   const acceptDuel = () => {
-    if (duelInvite && wsRef.current?.readyState === WebSocket.OPEN) {
+    if (duelInvite && wsRef.current?.readyState === WebSocket.OPEN && nicknameSet) {
       wsRef.current.send(JSON.stringify({ type: 'duel_accept', data: { fromId: duelInvite.fromId } }));
     }
   };
 
   const choose = (choice) => {
-    if (duelState && wsRef.current?.readyState === WebSocket.OPEN) {
+    if (duelState && wsRef.current?.readyState === WebSocket.OPEN && nicknameSet) {
       wsRef.current.send(JSON.stringify({ type: 'duel_choice', data: { choice } }));
       setDuelState(prev => ({ ...prev, myChoice: choice }));
     }
@@ -117,7 +124,7 @@ const Chat = () => {
   return (
     <>
       <style>{`
-        /* Фикс для отключения скролла всего окна */
+        /* Базовые стили и мобильная адаптация (как в v1.0.1) */
         html, body, #root {
           height: 100%;
           margin: 0;
@@ -262,6 +269,51 @@ const Chat = () => {
           flex-wrap: wrap;
         }
 
+        /* Блюр чата, пока не введён ник */
+        .blur-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.4);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 998;
+        }
+
+        /* Модальное окно */
+        .nickname-modal {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: #16213e;
+          border-radius: 16px;
+          padding: 24px;
+          width: 90%;
+          max-width: 360px;
+          z-index: 1000;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+          text-align: center;
+        }
+        .nickname-modal h3 {
+          margin-top: 0;
+          color: #eee;
+        }
+        .nickname-modal input {
+          width: 100%;
+          padding: 10px;
+          border-radius: 8px;
+          border: none;
+          margin: 10px 0;
+          font-size: 16px;
+        }
+        .nickname-modal .btn {
+          width: 100%;
+          font-size: 16px;
+        }
+
         /* Мобильная адаптация */
         @media (max-width: 600px) {
           .chat-container {
@@ -281,25 +333,18 @@ const Chat = () => {
           .messages {
             min-height: 150px;
           }
-          .nickname-input {
+          .nickname-input,
+          .input-row input,
+          .nickname-modal input {
             font-size: 16px; /* предотвращает зум на iOS */
-          }
-          .input-row input {
-            font-size: 16px;
           }
         }
       `}</style>
 
-      <div className="chat-container">
+      {/* Сам чат */}
+      <div className="chat-container" style={{ filter: nicknameSet ? 'none' : 'blur(6px)', pointerEvents: nicknameSet ? 'auto' : 'none' }}>
         <div className="chat-main">
-          <input
-            className="nickname-input"
-            placeholder="Твой ник"
-            value={nickname}
-            onChange={e => setNickname(e.target.value)}
-            onBlur={sendNickname}
-          />
-
+          {/* Старый input ника убран, вход теперь через модалку */}
           <div className="qr-wrap">
             <QRCodeSVG value={window.location.href} size={100} />
             <span style={{ fontSize: 12, marginTop: 4 }}>QR для входа</span>
@@ -318,10 +363,10 @@ const Chat = () => {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              disabled={!!bannedUntil}
+              disabled={!!bannedUntil || !nicknameSet}
               placeholder={bannedUntil ? 'Вы в бане...' : 'Сообщение'}
             />
-            <button className="btn" onClick={sendMessage} disabled={!!bannedUntil}>
+            <button className="btn" onClick={sendMessage} disabled={!!bannedUntil || !nicknameSet}>
               Отправить
             </button>
           </div>
@@ -369,7 +414,7 @@ const Chat = () => {
                 <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
                 <button
                   className="btn"
-                  disabled={p.id === myId}
+                  disabled={p.id === myId || !nicknameSet}
                   onClick={() => requestDuel(p.id)}
                   style={{ padding: '4px 8px', fontSize: 12 }}
                 >
@@ -380,6 +425,26 @@ const Chat = () => {
           </div>
         </div>
       </div>
+
+      {/* Блюр и модальное окно */}
+      {!nicknameSet && (
+        <>
+          <div className="blur-overlay" />
+          <div className="nickname-modal">
+            <h3>ВВЕДИ НИКНЕЙМ</h3>
+            <input
+              autoFocus
+              placeholder="Твой ник"
+              value={nickname}
+              onChange={e => setNickname(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') sendNickname();
+              }}
+            />
+            <button className="btn" onClick={sendNickname}>Войти</button>
+          </div>
+        </>
+      )}
 
       <div className="version">v{VERSION}</div>
     </>
