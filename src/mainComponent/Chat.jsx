@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.5';
+const VERSION = '1.0.6';
 
-// Пастельные цвета для аватарок
 const getAvatarColor = (nickname) => {
-  if (!nickname) return '#888';
+  if (!nickname) return '#b0c4de';
   let hash = 0;
   for (let i = 0; i < nickname.length; i++) {
     hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 45%, 60%)`;
+  return `hsl(${hue}, 45%, 70%)`; // пастельные тона
 };
 
-const getInitial = (nickname) => {
-  return nickname ? nickname.charAt(0).toUpperCase() : '?';
-};
+const getInitial = (nickname) => nickname ? nickname.charAt(0).toUpperCase() : '?';
 
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
@@ -175,6 +172,7 @@ const Chat = () => {
   return (
     <>
       <style>{`
+        /* Базовые стили — светлая тема */
         html, body, #root {
           height: 100%;
           margin: 0;
@@ -182,8 +180,8 @@ const Chat = () => {
           overflow: hidden;
         }
         body {
-          background: #1e2a3a; /* мягкий синий фон */
-          color: #eee;
+          background: #f2f5f9;
+          color: #2c3e50;
           font-family: 'Segoe UI', sans-serif;
         }
 
@@ -201,10 +199,10 @@ const Chat = () => {
         .chat-main {
           flex: 2;
           min-width: 300px;
-          background: #263443; /* нежный тёмно-синий */
-          border-radius: 16px;
+          background: #ffffff;
+          border-radius: 20px;
           padding: 16px;
-          box-shadow: 0 0 20px rgba(0,0,0,0.4);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.05);
           display: flex;
           flex-direction: column;
           height: 100%;
@@ -214,25 +212,14 @@ const Chat = () => {
         .chat-side {
           flex: 1;
           min-width: 220px;
-          background: #1f2e3d; /* другой оттенок */
-          border-radius: 16px;
+          background: #ffffff;
+          border-radius: 20px;
           padding: 16px;
-          box-shadow: 0 0 20px rgba(0,0,0,0.4);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.05);
           height: 100%;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-        }
-
-        .nickname-input {
-          width: 100%;
-          padding: 8px;
-          border-radius: 8px;
-          border: none;
-          margin-bottom: 10px;
-          box-sizing: border-box;
-          background: #314459;
-          color: #e0e8f0;
         }
 
         .qr-wrap {
@@ -245,17 +232,18 @@ const Chat = () => {
         .messages {
           flex: 1;
           overflow-y: auto;
-          background: #1a2535;
-          border-radius: 12px;
+          background: #f9fbfd;
+          border-radius: 16px;
           padding: 12px;
           margin-bottom: 10px;
+          text-align: left; /* ключевое */
         }
 
         .msg {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          margin-bottom: 14px;
+          margin-bottom: 16px;
           word-break: break-word;
         }
 
@@ -268,38 +256,42 @@ const Chat = () => {
           justify-content: center;
           font-size: 16px;
           font-weight: 600;
-          color: #fff;
+          color: #ffffff;
           flex-shrink: 0;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .msg-content {
           flex: 1;
           display: flex;
           flex-direction: column;
+          text-align: left; /* чтобы ники и текст были слева */
         }
 
         .msg-header {
           display: flex;
           align-items: baseline;
-          gap: 6px;
+          gap: 8px;
           margin-bottom: 3px;
         }
 
         .msg-nick {
           font-weight: 600;
-          color: #b8c5d0; /* нежный */
+          color: #5b7a99; /* нежный синий */
+          font-size: 14px;
         }
 
         .msg-time {
           font-size: 11px;
-          color: #8296a5;
-          margin-left: auto; /* прижимаем время вправо */
+          color: #a0b0c0;
+          margin-left: auto; /* время справа */
         }
 
         .msg-text {
-          color: #e8edf2;
-          line-height: 1.4;
+          color: #34495e;
+          line-height: 1.5;
+          font-size: 15px;
+          white-space: pre-wrap;
         }
 
         .input-row {
@@ -308,30 +300,40 @@ const Chat = () => {
         }
         .input-row input {
           flex: 1;
-          padding: 10px;
-          border-radius: 8px;
-          border: none;
-          background: #314459;
-          color: #e0e8f0;
+          padding: 12px;
+          border-radius: 12px;
+          border: 1px solid #e0e6ed;
+          background: #f8fafc;
+          color: #2c3e50;
+          font-size: 15px;
+          outline: none;
+        }
+        .input-row input:focus {
+          border-color: #a0c0e0;
         }
 
         .btn {
-          background: #e94560;
+          background: #ff8fa3; /* пастельный розовый */
           border: none;
           color: white;
-          padding: 10px 16px;
-          border-radius: 8px;
+          padding: 12px 20px;
+          border-radius: 12px;
           cursor: pointer;
           transition: transform 0.1s;
+          font-weight: 600;
         }
         .btn:active {
           transform: scale(0.95);
+        }
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .status {
           margin-top: 10px;
           font-size: 14px;
-          color: #4ecca3;
+          color: #4caf50;
         }
 
         .version {
@@ -351,14 +353,16 @@ const Chat = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 6px 0;
+          padding: 8px 0;
+          border-bottom: 1px solid #f0f3f8;
         }
 
         .duel-box {
-          background: #e94560;
-          border-radius: 10px;
-          padding: 10px;
+          background: #ffe5ec;
+          border-radius: 12px;
+          padding: 12px;
           margin-top: 10px;
+          color: #b03a5b;
         }
         .duel-actions {
           display: flex;
@@ -372,7 +376,7 @@ const Chat = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.4);
+          background: rgba(255,255,255,0.6);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
           z-index: 998;
@@ -383,28 +387,28 @@ const Chat = () => {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          background: #263443;
-          border-radius: 16px;
+          background: #ffffff;
+          border-radius: 20px;
           padding: 24px;
           width: 90%;
           max-width: 360px;
           z-index: 1000;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.12);
           text-align: center;
         }
         .nickname-modal h3 {
           margin-top: 0;
-          color: #eee;
+          color: #2c3e50;
         }
         .nickname-modal input {
           width: 100%;
-          padding: 10px;
-          border-radius: 8px;
-          border: none;
-          margin: 10px 0;
+          padding: 12px;
+          border-radius: 12px;
+          border: 1px solid #e0e6ed;
+          margin: 12px 0;
           font-size: 16px;
-          background: #314459;
-          color: #e0e8f0;
+          background: #f8fafc;
+          outline: none;
         }
         .nickname-modal .btn {
           width: 100%;
@@ -429,10 +433,9 @@ const Chat = () => {
           .messages {
             min-height: 150px;
           }
-          .nickname-input,
-          .input-row input,
-          .nickname-modal input {
-            font-size: 16px;
+          .nickname-modal input,
+          .input-row input {
+            font-size: 16px; /* предотвращает зум на iOS */
           }
         }
       `}</style>
@@ -441,7 +444,7 @@ const Chat = () => {
         <div className="chat-main">
           <div className="qr-wrap">
             <QRCodeSVG value={window.location.href} size={100} />
-            <span style={{ fontSize: 12, marginTop: 4 }}>QR для входа</span>
+            <span style={{ fontSize: 12, marginTop: 4, color: '#8899aa' }}>QR для входа</span>
           </div>
 
           <div className="messages">
@@ -510,11 +513,11 @@ const Chat = () => {
         </div>
 
         <div className="chat-side">
-          <h4 style={{ marginTop: 0 }}>Онлайн: {players.length}</h4>
+          <h4 style={{ marginTop: 0, color: '#2c3e50' }}>Онлайн: {players.length}</h4>
           <div className="players-list">
             {players.map(p => (
               <div className="player-item" key={p.id}>
-                <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
+                <span style={{ color: '#34495e' }}>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
                 <button
                   className="btn"
                   disabled={p.id === myId || !nicknameSet}
