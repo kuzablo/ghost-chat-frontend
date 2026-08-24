@@ -1,105 +1,122 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
+const VERSION = '1.0.0';
+
 const Chat = () => {
-    const [messages, setMessages] = useState([]);
-    const [input, setInput] = useState('');
-    const [nickname, setNickname] = useState('');
-    const [players, setPlayers] = useState([]);
-    const [myId, setMyId] = useState(null);
-    const [isConnected, setIsConnected] = useState(false);
-    const [duelInvite, setDuelInvite] = useState(null);
-    const [duelState, setDuelState] = useState(null);
-    const [bannedUntil, setBannedUntil] = useState(null);
-    const wsRef = useRef(null);
-    // состояние для ошибки
-    const [errorMessage, setErrorMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [players, setPlayers] = useState([]);
+  const [myId, setMyId] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [duelInvite, setDuelInvite] = useState(null);
+  const [duelState, setDuelState] = useState(null);
+  const [bannedUntil, setBannedUntil] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const wsRef = useRef(null);
 
-    useEffect(() => {
-        const ws = new WebSocket('wss://ghost-chat-backend-3r9e.onrender.com');
-        wsRef.current = ws;
-        ws.onopen = () => {
-            setIsConnected(true);
-            setErrorMessage('');
-        };
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            switch (msg.type) {
-                case 'history':
-                    setMessages(msg.data);
-                    break;
-                case 'message':
-                    setMessages(prev => [...prev, msg.data]);
-                    break;
-                case 'players':
-                    setPlayers(msg.data);
-                    break;
-                case 'duel_invite':
-                    setDuelInvite(msg.data);
-                    break;
-                case 'duel_start':
-                    setDuelState({ opponentNick: msg.data.opponentNick, myChoice: null });
-                    setDuelInvite(null);
-                    break;
-                case 'duel_result':
-                    setDuelState(prev => prev ? { ...prev, result: msg.data.result } : null);
-                    break;
-                case 'banned':
-                    setBannedUntil(msg.data.until);
-                    break;
-                default:
-                    break;
-            }
-        };
-        ws.onerror = (e) => {
-            setErrorMessage('WebSocket error');
-            setIsConnected(false);
-        };
-        ws.onclose = (e) => {
-            setErrorMessage(`Closed: code ${e.code} reason ${e.reason}`);
-            setIsConnected(false);
-        };
-        return () => ws.close();
-    }, []);
+  useEffect(() => {
+    const ws = new WebSocket('wss://ghost-chat-backend-production-5faf.up.railway.app');
+    wsRef.current = ws;
 
-    const sendNickname = () => {
-        if (nickname.trim()) {
-            wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: nickname.trim() } }));
-        }
+    ws.onopen = () => {
+      setIsConnected(true);
+      setErrorMessage('');
+      console.log(`[CHAT v${VERSION}] Connected`);
     };
 
-    const sendMessage = () => {
-        if (wsRef.current?.readyState === WebSocket.OPEN && input.trim() && !bannedUntil) {
-            wsRef.current.send(JSON.stringify({
-                type: 'message',
-                data: { nickname: nickname || 'Аноним', text: input.trim() }
-            }));
-            setInput('');
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case 'version':
+            console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
+            break;
+          case 'history':
+            setMessages(msg.data);
+            break;
+          case 'message':
+            setMessages(prev => [...prev, msg.data]);
+            break;
+          case 'players':
+            setPlayers(msg.data);
+            break;
+          case 'duel_invite':
+            setDuelInvite(msg.data);
+            break;
+          case 'duel_start':
+            setDuelState({ opponentNick: msg.data.opponentNick, myChoice: null });
+            setDuelInvite(null);
+            break;
+          case 'duel_result':
+            setDuelState(prev => prev ? { ...prev, result: msg.data.result } : null);
+            break;
+          case 'banned':
+            setBannedUntil(msg.data.until);
+            break;
+          default:
+            console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
         }
+      } catch (err) {
+        console.error(`[CHAT v${VERSION}] Message parse error:`, err);
+        setErrorMessage(`v${VERSION}: Ошибка обработки сообщения`);
+      }
     };
 
-    const requestDuel = (targetId) => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'duel_request', data: { targetId } }));
-        }
+    ws.onerror = (e) => {
+      console.error(`[CHAT v${VERSION}] WebSocket error`, e);
+      setErrorMessage(`v${VERSION}: WebSocket error`);
+      setIsConnected(false);
     };
 
-    const acceptDuel = () => {
-        if (duelInvite && wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'duel_accept', data: { fromId: duelInvite.fromId } }));
-        }
+    ws.onclose = (e) => {
+      console.warn(`[CHAT v${VERSION}] Closed (code ${e.code}, reason ${e.reason})`);
+      setErrorMessage(`v${VERSION}: Closed (code ${e.code})`);
+      setIsConnected(false);
     };
 
-    const choose = (choice) => {
-        if (duelState && wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'duel_choice', data: { choice } }));
-            setDuelState(prev => ({ ...prev, myChoice: choice }));
-        }
-    };
+    return () => ws.close();
+  }, []);
 
-    return (
-        <>
-            <style>{`
+  const sendNickname = () => {
+    if (nickname.trim()) {
+      wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: nickname.trim() } }));
+    }
+  };
+
+  const sendMessage = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && input.trim() && !bannedUntil) {
+      wsRef.current.send(JSON.stringify({
+        type: 'message',
+        data: { nickname: nickname || 'Аноним', text: input.trim() }
+      }));
+      setInput('');
+    }
+  };
+
+  const requestDuel = (targetId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'duel_request', data: { targetId } }));
+    }
+  };
+
+  const acceptDuel = () => {
+    if (duelInvite && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'duel_accept', data: { fromId: duelInvite.fromId } }));
+    }
+  };
+
+  const choose = (choice) => {
+    if (duelState && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'duel_choice', data: { choice } }));
+      setDuelState(prev => ({ ...prev, myChoice: choice }));
+    }
+  };
+
+  return (
+    <>
+      <style>{`
         body {
           background: #1a1a2e;
           color: #eee;
@@ -185,6 +202,13 @@ const Chat = () => {
           font-size: 14px;
           color: #4ecca3;
         }
+        .version {
+          position: fixed;
+          bottom: 10px;
+          right: 10px;
+          font-size: 12px;
+          color: #aaa;
+        }
         .players-list {
           max-height: 300px;
           overflow-y: auto;
@@ -208,98 +232,100 @@ const Chat = () => {
         }
       `}</style>
 
-            <div className="chat-container">
-                <div className="chat-main">
-                    <input
-                        className="nickname-input"
-                        placeholder="Твой ник"
-                        value={nickname}
-                        onChange={e => setNickname(e.target.value)}
-                        onBlur={sendNickname}
-                    />
+      <div className="chat-container">
+        <div className="chat-main">
+          <input
+            className="nickname-input"
+            placeholder="Твой ник"
+            value={nickname}
+            onChange={e => setNickname(e.target.value)}
+            onBlur={sendNickname}
+          />
 
-                    <div className="qr-wrap">
-                        <QRCodeSVG value={window.location.href} size={100} />
-                        <span style={{ fontSize: 12, marginTop: 4 }}>QR для входа</span>
-                    </div>
+          <div className="qr-wrap">
+            <QRCodeSVG value={window.location.href} size={100} />
+            <span style={{ fontSize: 12, marginTop: 4 }}>QR для входа</span>
+          </div>
 
-                    <div className="messages">
-                        {messages.map((m, i) => (
-                            <div className="msg" key={i}>
-                                <strong>{m.nickname}</strong>: {m.text}
-                            </div>
-                        ))}
-                    </div>
+          <div className="messages">
+            {messages.map((m, i) => (
+              <div className="msg" key={i}>
+                <strong>{m.nickname}</strong>: {m.text}
+              </div>
+            ))}
+          </div>
 
-                    <div className="input-row">
-                        <input
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                            disabled={!!bannedUntil}
-                            placeholder={bannedUntil ? 'Вы в бане...' : 'Сообщение'}
-                        />
-                        <button className="btn" onClick={sendMessage} disabled={!!bannedUntil}>
-                            Отправить
-                        </button>
-                    </div>
+          <div className="input-row">
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              disabled={!!bannedUntil}
+              placeholder={bannedUntil ? 'Вы в бане...' : 'Сообщение'}
+            />
+            <button className="btn" onClick={sendMessage} disabled={!!bannedUntil}>
+              Отправить
+            </button>
+          </div>
 
-                    <div className="status">
-                        {isConnected ? 'Онлайн' : 'Оффлайн'}
-                        {bannedUntil && ` — бан до ${new Date(bannedUntil).toLocaleTimeString()}`}
-                        {errorMessage && <div style={{ color: '#e94560', marginTop: 4 }}>{errorMessage}</div>}
-                    </div>
+          <div className="status">
+            {isConnected ? 'Онлайн' : 'Оффлайн'}
+            {bannedUntil && ` — бан до ${new Date(bannedUntil).toLocaleTimeString()}`}
+            {errorMessage && <div style={{ color: '#e94560', marginTop: 4 }}>{errorMessage}</div>}
+          </div>
 
-                    {duelInvite && (
-                        <div className="duel-box">
-                            <p>{duelInvite.fromNick} вызывает вас!</p>
-                            <div className="duel-actions">
-                                <button className="btn" onClick={acceptDuel}>Принять</button>
-                                <button className="btn" onClick={() => setDuelInvite(null)}>Отклонить</button>
-                            </div>
-                        </div>
-                    )}
-
-                    {duelState && !duelState.result && (
-                        <div className="duel-box">
-                            <p>Дуэль против {duelState.opponentNick}. Твой выбор:</p>
-                            <div className="duel-actions">
-                                <button className="btn" onClick={() => choose('rock')}>Камень</button>
-                                <button className="btn" onClick={() => choose('scissors')}>Ножницы</button>
-                                <button className="btn" onClick={() => choose('paper')}>Бумага</button>
-                            </div>
-                        </div>
-                    )}
-                    {duelState?.result && (
-                        <div className="duel-box">
-                            {duelState.result === 'win' && '🏆 Победа!'}
-                            {duelState.result === 'lose' && '💀 Поражение'}
-                            {duelState.result === 'draw' && '🤝 Ничья'}
-                        </div>
-                    )}
-                </div>
-
-                <div className="chat-side">
-                    <h4 style={{ marginTop: 0 }}>Онлайн: {players.length}</h4>
-                    <div className="players-list">
-                        {players.map(p => (
-                            <div className="player-item" key={p.id}>
-                                <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
-                                <button
-                                    className="btn"
-                                    disabled={p.id === myId}
-                                    onClick={() => requestDuel(p.id)}
-                                    style={{ padding: '4px 8px', fontSize: 12 }}
-                                >
-                                    Вызвать
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+          {duelInvite && (
+            <div className="duel-box">
+              <p>{duelInvite.fromNick} вызывает вас!</p>
+              <div className="duel-actions">
+                <button className="btn" onClick={acceptDuel}>Принять</button>
+                <button className="btn" onClick={() => setDuelInvite(null)}>Отклонить</button>
+              </div>
             </div>
-        </>
-    );
+          )}
+
+          {duelState && !duelState.result && (
+            <div className="duel-box">
+              <p>Дуэль против {duelState.opponentNick}. Твой выбор:</p>
+              <div className="duel-actions">
+                <button className="btn" onClick={() => choose('rock')}>Камень</button>
+                <button className="btn" onClick={() => choose('scissors')}>Ножницы</button>
+                <button className="btn" onClick={() => choose('paper')}>Бумага</button>
+              </div>
+            </div>
+          )}
+          {duelState?.result && (
+            <div className="duel-box">
+              {duelState.result === 'win' && '🏆 Победа!'}
+              {duelState.result === 'lose' && '💀 Поражение'}
+              {duelState.result === 'draw' && '🤝 Ничья'}
+            </div>
+          )}
+        </div>
+
+        <div className="chat-side">
+          <h4 style={{ marginTop: 0 }}>Онлайн: {players.length}</h4>
+          <div className="players-list">
+            {players.map(p => (
+              <div className="player-item" key={p.id}>
+                <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
+                <button
+                  className="btn"
+                  disabled={p.id === myId}
+                  onClick={() => requestDuel(p.id)}
+                  style={{ padding: '4px 8px', fontSize: 12 }}
+                >
+                  Вызвать
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="version">v{VERSION}</div>
+    </>
+  );
 };
 
 export default Chat;
