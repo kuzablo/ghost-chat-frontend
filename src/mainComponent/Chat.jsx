@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.6';
+const VERSION = '1.0.7';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -10,7 +10,7 @@ const getAvatarColor = (nickname) => {
     hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 45%, 70%)`; // пастельные тона
+  return `hsl(${hue}, 45%, 70%)`;
 };
 
 const getInitial = (nickname) => nickname ? nickname.charAt(0).toUpperCase() : '?';
@@ -21,11 +21,36 @@ const formatTime = (timestamp) => {
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 };
 
+// Звук уведомления (без файлов)
+const playNotificationSound = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.2;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    setTimeout(() => {
+      osc.stop();
+      ctx.close();
+    }, 200);
+  } catch (e) {
+    console.error('Sound error:', e);
+  }
+};
+
 const Chat = () => {
+  // Загружаем ник из localStorage
+  const storedNickname = localStorage.getItem('ghost-chat-nickname') || '';
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [nicknameSet, setNicknameSet] = useState(false);
+  const [nickname, setNickname] = useState(storedNickname);
+  const [nicknameSet, setNicknameSet] = useState(!!storedNickname);
   const [players, setPlayers] = useState([]);
   const [myId, setMyId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -34,9 +59,10 @@ const Chat = () => {
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const wsRef = useRef(null);
-  const nicknameRef = useRef('');
+  const nicknameRef = useRef(storedNickname);
   const unmountedRef = useRef(false);
   const reconnectTimeoutRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   const connect = () => {
     if (unmountedRef.current) return;
@@ -65,6 +91,7 @@ const Chat = () => {
             break;
           case 'message':
             setMessages(prev => [...prev, msg.data]);
+            playNotificationSound();
             break;
           case 'players':
             setPlayers(msg.data);
@@ -127,10 +154,18 @@ const Chat = () => {
     };
   }, []);
 
+  // Автопрокрутка вниз при новых сообщениях
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
   const sendNickname = () => {
     const trimmed = nickname.trim();
     if (!trimmed) return;
     nicknameRef.current = trimmed;
+    localStorage.setItem('ghost-chat-nickname', trimmed);
     wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: trimmed } }));
     setNicknameSet(true);
   };
@@ -172,7 +207,6 @@ const Chat = () => {
   return (
     <>
       <style>{`
-        /* Базовые стили — светлая тема */
         html, body, #root {
           height: 100%;
           margin: 0;
@@ -236,7 +270,7 @@ const Chat = () => {
           border-radius: 16px;
           padding: 12px;
           margin-bottom: 10px;
-          text-align: left; /* ключевое */
+          text-align: left;
         }
 
         .msg {
@@ -265,7 +299,7 @@ const Chat = () => {
           flex: 1;
           display: flex;
           flex-direction: column;
-          text-align: left; /* чтобы ники и текст были слева */
+          text-align: left;
         }
 
         .msg-header {
@@ -277,14 +311,14 @@ const Chat = () => {
 
         .msg-nick {
           font-weight: 600;
-          color: #5b7a99; /* нежный синий */
+          color: #5b7a99;
           font-size: 14px;
         }
 
         .msg-time {
           font-size: 11px;
           color: #a0b0c0;
-          margin-left: auto; /* время справа */
+          margin-left: auto;
         }
 
         .msg-text {
@@ -313,7 +347,7 @@ const Chat = () => {
         }
 
         .btn {
-          background: #ff8fa3; /* пастельный розовый */
+          background: #ff8fa3;
           border: none;
           color: white;
           padding: 12px 20px;
@@ -435,7 +469,7 @@ const Chat = () => {
           }
           .nickname-modal input,
           .input-row input {
-            font-size: 16px; /* предотвращает зум на iOS */
+            font-size: 16px;
           }
         }
       `}</style>
@@ -462,6 +496,7 @@ const Chat = () => {
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="input-row">
