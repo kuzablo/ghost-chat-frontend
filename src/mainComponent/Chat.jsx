@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -117,20 +117,30 @@ const Chat = () => {
   return (
     <>
       <style>{`
+        /* Фикс для отключения скролла всего окна */
+        html, body, #root {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
         body {
           background: #1a1a2e;
           color: #eee;
           font-family: 'Segoe UI', sans-serif;
-          margin: 0;
-          padding: 20px;
         }
+
         .chat-container {
           max-width: 900px;
           margin: 0 auto;
+          height: 100%;
           display: flex;
           gap: 20px;
           flex-wrap: wrap;
+          padding: 10px;
+          box-sizing: border-box;
         }
+
         .chat-main {
           flex: 2;
           min-width: 300px;
@@ -138,7 +148,12 @@ const Chat = () => {
           border-radius: 16px;
           padding: 16px;
           box-shadow: 0 0 20px rgba(0,0,0,0.5);
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          box-sizing: border-box;
         }
+
         .chat-side {
           flex: 1;
           min-width: 220px;
@@ -146,28 +161,37 @@ const Chat = () => {
           border-radius: 16px;
           padding: 16px;
           box-shadow: 0 0 20px rgba(0,0,0,0.5);
+          height: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
         }
+
         .nickname-input {
-          width: calc(100% - 16px);
+          width: 100%;
           padding: 8px;
           border-radius: 8px;
           border: none;
           margin-bottom: 10px;
+          box-sizing: border-box;
         }
+
         .qr-wrap {
           display: flex;
           flex-direction: column;
           align-items: center;
           margin-bottom: 10px;
         }
+
         .messages {
-          height: 400px;
+          flex: 1;
           overflow-y: auto;
           background: #1a1a2e;
           border-radius: 12px;
           padding: 12px;
           margin-bottom: 10px;
         }
+
         .msg {
           margin-bottom: 8px;
           word-break: break-word;
@@ -175,6 +199,7 @@ const Chat = () => {
         .msg strong {
           color: #e94560;
         }
+
         .input-row {
           display: flex;
           gap: 8px;
@@ -185,6 +210,7 @@ const Chat = () => {
           border-radius: 8px;
           border: none;
         }
+
         .btn {
           background: #e94560;
           border: none;
@@ -197,20 +223,24 @@ const Chat = () => {
         .btn:active {
           transform: scale(0.95);
         }
+
         .status {
           margin-top: 10px;
           font-size: 14px;
           color: #4ecca3;
         }
+
         .version {
           position: fixed;
           bottom: 10px;
           right: 10px;
           font-size: 12px;
           color: #aaa;
+          z-index: 999;
         }
+
         .players-list {
-          max-height: 300px;
+          flex: 1;
           overflow-y: auto;
         }
         .player-item {
@@ -219,6 +249,7 @@ const Chat = () => {
           align-items: center;
           padding: 6px 0;
         }
+
         .duel-box {
           background: #e94560;
           border-radius: 10px;
@@ -229,6 +260,33 @@ const Chat = () => {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 600px) {
+          .chat-container {
+            flex-direction: column;
+            height: 100%;
+            gap: 10px;
+            padding: 5px;
+          }
+          .chat-main {
+            min-width: auto;
+            height: 70%;
+          }
+          .chat-side {
+            min-width: auto;
+            height: 30%;
+          }
+          .messages {
+            min-height: 150px;
+          }
+          .nickname-input {
+            font-size: 16px; /* предотвращает зум на iOS */
+          }
+          .input-row input {
+            font-size: 16px;
+          }
         }
       `}</style>
 
