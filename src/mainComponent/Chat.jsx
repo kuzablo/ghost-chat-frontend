@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.10';
+const VERSION = '1.0.11';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -76,11 +76,13 @@ const Chat = () => {
   const [duelState, setDuelState] = useState(null);
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [typingUsers, setTypingUsers] = useState([]);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const unmountedRef = useRef(false);
   const reconnectTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const connect = () => {
     if (unmountedRef.current) return;
@@ -114,6 +116,19 @@ const Chat = () => {
           case 'players':
             setPlayers(msg.data);
             break;
+          case 'typing': {
+            const { nickname: typingNick, isTyping } = msg.data;
+            setTypingUsers(prev => {
+              if (isTyping && !prev.includes(typingNick)) {
+                return [...prev, typingNick];
+              }
+              if (!isTyping) {
+                return prev.filter(name => name !== typingNick);
+              }
+              return prev;
+            });
+            break;
+          }
           case 'duel_invite':
             setDuelInvite(msg.data);
             break;
@@ -206,6 +221,26 @@ const Chat = () => {
         data: { nickname: nickname || 'Аноним', text: input.trim() }
       }));
       setInput('');
+      // Отправляем, что перестали печатать
+      wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    if (wsRef.current?.readyState === WebSocket.OPEN && nicknameSet && !bannedUntil) {
+      if (e.target.value.trim()) {
+        // Пользователь печатает
+        wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: true } }));
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
+          }
+        }, 1500);
+      } else {
+        wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
+      }
     }
   };
 
@@ -394,6 +429,13 @@ const Chat = () => {
           color: #4caf50;
         }
 
+        .typing-indicator {
+          font-size: 13px;
+          color: #7f8c8d;
+          margin: 5px 0;
+          min-height: 18px;
+        }
+
         .version {
           position: fixed;
           bottom: 10px;
@@ -551,10 +593,14 @@ const Chat = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          <div className="typing-indicator">
+            {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
+          </div>
+
           <div className="input-row">
             <input
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={e => e.key === 'Enter' && sendMessage()}
               disabled={!!bannedUntil || !nicknameSet}
               placeholder={bannedUntil ? 'Вы в бане...' : 'Сообщение'}
