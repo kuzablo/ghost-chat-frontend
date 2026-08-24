@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.8';
+const VERSION = '1.0.9';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -21,14 +21,12 @@ const formatTime = (timestamp) => {
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 };
 
-// Разблокировка аудио при первом действии пользователя
 const ensureAudioContext = () => {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
   if (!window.__chatAudioCtx) {
     const ctx = new AudioContext();
     window.__chatAudioCtx = ctx;
-    // воспроизводим пустой буфер для разблокировки
     const buffer = ctx.createBuffer(1, 1, 22050);
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -40,7 +38,6 @@ const ensureAudioContext = () => {
   }
 };
 
-// Приятный двухтоновый колокольчик
 const playNotificationSound = () => {
   const ctx = window.__chatAudioCtx;
   if (!ctx) return;
@@ -53,14 +50,14 @@ const playNotificationSound = () => {
 
   const osc1 = ctx.createOscillator();
   osc1.type = 'sine';
-  osc1.frequency.value = 523.25; // C5
+  osc1.frequency.value = 523.25;
   osc1.connect(gain);
   osc1.start(now);
   osc1.stop(now + 0.2);
 
   const osc2 = ctx.createOscillator();
   osc2.type = 'sine';
-  osc2.frequency.value = 659.25; // E5
+  osc2.frequency.value = 659.25;
   osc2.connect(gain);
   osc2.start(now + 0.1);
   osc2.stop(now + 0.3);
@@ -160,6 +157,11 @@ const Chat = () => {
     unmountedRef.current = false;
     connect();
 
+    // Глобальная разблокировка аудио при первом касании/клике
+    const unlockAudio = () => ensureAudioContext();
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('click', unlockAudio, { once: true });
+
     const handleVisibility = () => {
       if (!document.hidden && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
         connect();
@@ -171,11 +173,12 @@ const Chat = () => {
       unmountedRef.current = true;
       clearTimeout(reconnectTimeoutRef.current);
       document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('click', unlockAudio);
       if (wsRef.current) wsRef.current.close();
     };
   }, []);
 
-  // Автопрокрутка вниз
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -185,7 +188,7 @@ const Chat = () => {
   const sendNickname = () => {
     const trimmed = nickname.trim();
     if (!trimmed) return;
-    ensureAudioContext(); // разблокируем звук
+    ensureAudioContext();
     nicknameRef.current = trimmed;
     localStorage.setItem('ghost-chat-nickname', trimmed);
     wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: trimmed } }));
