@@ -115,9 +115,11 @@ const Chat = () => {
             setMessages(prev => [...prev, msg.data]);
             playNotificationSound();
             break;
-          case 'message_update': {
-            setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
-            break;
+            case 'message_update': {
+                if (msg.data.id) { // ← ДОБАВЬ ПРОВЕРКУ
+                    setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
+                }
+                break;
           }
           case 'players':
             setPlayers(msg.data);
