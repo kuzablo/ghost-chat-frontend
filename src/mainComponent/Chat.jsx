@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.9';
+const VERSION = '1.0.10';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -157,7 +157,6 @@ const Chat = () => {
     unmountedRef.current = false;
     connect();
 
-    // Глобальная разблокировка аудио при первом касании/клике
     const unlockAudio = () => ensureAudioContext();
     document.addEventListener('touchstart', unlockAudio, { once: true });
     document.addEventListener('click', unlockAudio, { once: true });
@@ -414,6 +413,13 @@ const Chat = () => {
           align-items: center;
           padding: 8px 0;
           border-bottom: 1px solid #f0f3f8;
+          gap: 8px;
+        }
+        .player-item span {
+          flex: 1;
+          min-width: 0;
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
 
         .duel-box {
@@ -480,17 +486,38 @@ const Chat = () => {
             height: 100%;
             gap: 10px;
             padding: 5px;
+            overflow: hidden;
+            box-sizing: border-box;
           }
           .chat-main {
-            min-width: auto;
-            height: 70%;
+            min-width: 0;
+            height: auto;
+            flex: 2;
+            min-height: 0;
           }
           .chat-side {
-            min-width: auto;
-            height: 30%;
+            min-width: 0;
+            height: auto;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
           }
           .messages {
-            min-height: 150px;
+            min-height: 120px;
+          }
+          .players-list {
+            overflow-y: auto;
+            overflow-x: hidden;
+          }
+          .player-item {
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+          .player-item span {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
           }
           .nickname-modal input,
           .input-row input {
@@ -577,7 +604,7 @@ const Chat = () => {
           <div className="players-list">
             {players.map(p => (
               <div className="player-item" key={p.id}>
-                <span style={{ color: '#34495e' }}>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
+                <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
                 <button
                   className="btn"
                   disabled={p.id === myId || !nicknameSet}
