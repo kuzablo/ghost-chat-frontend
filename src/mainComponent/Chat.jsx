@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.11';
+const VERSION = '1.0.12';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -65,6 +65,7 @@ const playNotificationSound = () => {
 
 const Chat = () => {
   const storedNickname = localStorage.getItem('ghost-chat-nickname') || '';
+  const storedTheme = localStorage.getItem('ghost-chat-theme') || 'light';
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [nickname, setNickname] = useState(storedNickname);
@@ -77,6 +78,7 @@ const Chat = () => {
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
+  const [isDark, setIsDark] = useState(storedTheme === 'dark');
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const unmountedRef = useRef(false);
@@ -113,6 +115,10 @@ const Chat = () => {
             setMessages(prev => [...prev, msg.data]);
             playNotificationSound();
             break;
+          case 'message_update': {
+            setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
+            break;
+          }
           case 'players':
             setPlayers(msg.data);
             break;
@@ -199,6 +205,12 @@ const Chat = () => {
     }
   }, [messages]);
 
+  // Применяем тему
+  useEffect(() => {
+    document.body.classList.toggle('dark', isDark);
+    localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
   const sendNickname = () => {
     const trimmed = nickname.trim();
     if (!trimmed) return;
@@ -221,7 +233,6 @@ const Chat = () => {
         data: { nickname: nickname || 'Аноним', text: input.trim() }
       }));
       setInput('');
-      // Отправляем, что перестали печатать
       wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
     }
   };
@@ -230,7 +241,6 @@ const Chat = () => {
     setInput(e.target.value);
     if (wsRef.current?.readyState === WebSocket.OPEN && nicknameSet && !bannedUntil) {
       if (e.target.value.trim()) {
-        // Пользователь печатает
         wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: true } }));
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
@@ -241,6 +251,12 @@ const Chat = () => {
       } else {
         wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
       }
+    }
+  };
+
+  const sendReaction = (messageId, emoji) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && nicknameSet) {
+      wsRef.current.send(JSON.stringify({ type: 'reaction', data: { messageId, emoji } }));
     }
   };
 
@@ -266,6 +282,35 @@ const Chat = () => {
   return (
     <>
       <style>{`
+        :root {
+          --bg: #f2f5f9;
+          --text: #2c3e50;
+          --card-bg: #ffffff;
+          --messages-bg: #f9fbfd;
+          --input-bg: #f8fafc;
+          --border: #e0e6ed;
+          --nick-color: #5b7a99;
+          --msg-text: #34495e;
+          --time-color: #a0b0c0;
+          --btn-bg: #ff8fa3;
+          --duel-bg: #ffe5ec;
+          --duel-text: #b03a5b;
+        }
+        body.dark {
+          --bg: #1e2a3a;
+          --text: #e0e8f0;
+          --card-bg: #263443;
+          --messages-bg: #1a2535;
+          --input-bg: #314459;
+          --border: #3a4a5c;
+          --nick-color: #a8c0d8;
+          --msg-text: #cbd5e1;
+          --time-color: #8296a5;
+          --btn-bg: #ff8fa3;
+          --duel-bg: #4a2530;
+          --duel-text: #ffb3c1;
+        }
+
         html, body, #root {
           height: 100%;
           margin: 0;
@@ -273,9 +318,10 @@ const Chat = () => {
           overflow: hidden;
         }
         body {
-          background: #f2f5f9;
-          color: #2c3e50;
+          background: var(--bg);
+          color: var(--text);
           font-family: 'Segoe UI', sans-serif;
+          transition: background 0.3s, color 0.3s;
         }
 
         .chat-container {
@@ -292,7 +338,7 @@ const Chat = () => {
         .chat-main {
           flex: 2;
           min-width: 300px;
-          background: #ffffff;
+          background: var(--card-bg);
           border-radius: 20px;
           padding: 16px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.05);
@@ -305,7 +351,7 @@ const Chat = () => {
         .chat-side {
           flex: 1;
           min-width: 220px;
-          background: #ffffff;
+          background: var(--card-bg);
           border-radius: 20px;
           padding: 16px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.05);
@@ -325,7 +371,7 @@ const Chat = () => {
         .messages {
           flex: 1;
           overflow-y: auto;
-          background: #f9fbfd;
+          background: var(--messages-bg);
           border-radius: 16px;
           padding: 12px;
           margin-bottom: 10px;
@@ -370,21 +416,52 @@ const Chat = () => {
 
         .msg-nick {
           font-weight: 600;
-          color: #5b7a99;
+          color: var(--nick-color);
           font-size: 14px;
         }
 
         .msg-time {
           font-size: 11px;
-          color: #a0b0c0;
+          color: var(--time-color);
           margin-left: auto;
         }
 
         .msg-text {
-          color: #34495e;
+          color: var(--msg-text);
           line-height: 1.5;
           font-size: 15px;
           white-space: pre-wrap;
+        }
+
+        .reactions {
+          display: flex;
+          gap: 6px;
+          margin-top: 6px;
+          flex-wrap: wrap;
+        }
+
+        .reaction-btn {
+          background: var(--input-bg);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 2px 8px;
+          cursor: pointer;
+          font-size: 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          color: var(--text);
+          transition: background 0.2s;
+        }
+
+        .reaction-btn:hover {
+          background: var(--btn-bg);
+          color: white;
+        }
+
+        .reaction-btn.active {
+          background: var(--btn-bg);
+          color: white;
         }
 
         .input-row {
@@ -395,9 +472,9 @@ const Chat = () => {
           flex: 1;
           padding: 12px;
           border-radius: 12px;
-          border: 1px solid #e0e6ed;
-          background: #f8fafc;
-          color: #2c3e50;
+          border: 1px solid var(--border);
+          background: var(--input-bg);
+          color: var(--text);
           font-size: 15px;
           outline: none;
         }
@@ -406,7 +483,7 @@ const Chat = () => {
         }
 
         .btn {
-          background: #ff8fa3;
+          background: var(--btn-bg);
           border: none;
           color: white;
           padding: 12px 20px;
@@ -445,6 +522,20 @@ const Chat = () => {
           z-index: 999;
         }
 
+        .theme-toggle {
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          z-index: 1000;
+          background: var(--card-bg);
+          color: var(--text);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          padding: 6px 12px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+
         .players-list {
           flex: 1;
           overflow-y: auto;
@@ -454,7 +545,7 @@ const Chat = () => {
           justify-content: space-between;
           align-items: center;
           padding: 8px 0;
-          border-bottom: 1px solid #f0f3f8;
+          border-bottom: 1px solid var(--border);
           gap: 8px;
         }
         .player-item span {
@@ -465,11 +556,11 @@ const Chat = () => {
         }
 
         .duel-box {
-          background: #ffe5ec;
+          background: var(--duel-bg);
           border-radius: 12px;
           padding: 12px;
           margin-top: 10px;
-          color: #b03a5b;
+          color: var(--duel-text);
         }
         .duel-actions {
           display: flex;
@@ -494,7 +585,7 @@ const Chat = () => {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          background: #ffffff;
+          background: var(--card-bg);
           border-radius: 20px;
           padding: 24px;
           width: 90%;
@@ -505,16 +596,17 @@ const Chat = () => {
         }
         .nickname-modal h3 {
           margin-top: 0;
-          color: #2c3e50;
+          color: var(--text);
         }
         .nickname-modal input {
           width: 100%;
           padding: 12px;
           border-radius: 12px;
-          border: 1px solid #e0e6ed;
+          border: 1px solid var(--border);
           margin: 12px 0;
           font-size: 16px;
-          background: #f8fafc;
+          background: var(--input-bg);
+          color: var(--text);
           outline: none;
         }
         .nickname-modal .btn {
@@ -568,6 +660,10 @@ const Chat = () => {
         }
       `}</style>
 
+      <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
+        {isDark ? '☀️' : '🌙'}
+      </button>
+
       <div className="chat-container" style={{ filter: nicknameSet ? 'none' : 'blur(6px)', pointerEvents: nicknameSet ? 'auto' : 'none' }}>
         <div className="chat-main">
           <div className="qr-wrap">
@@ -587,6 +683,21 @@ const Chat = () => {
                     <span className="msg-time">{formatTime(m.time)}</span>
                   </div>
                   <div className="msg-text">{m.text}</div>
+                  <div className="reactions">
+                    {['👍', '🔥', '😂'].map(emoji => {
+                      const count = m.reactions?.[emoji]?.length || 0;
+                      const hasMyReaction = m.reactions?.[emoji]?.includes(nickname);
+                      return (
+                        <button
+                          key={emoji}
+                          className={`reaction-btn ${hasMyReaction ? 'active' : ''}`}
+                          onClick={() => sendReaction(m.id, emoji)}
+                        >
+                          {emoji} {count > 0 && <span>{count}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             ))}
@@ -646,7 +757,7 @@ const Chat = () => {
         </div>
 
         <div className="chat-side">
-          <h4 style={{ marginTop: 0, color: '#2c3e50' }}>Онлайн: {players.length}</h4>
+          <h4 style={{ marginTop: 0, color: 'var(--text)' }}>Онлайн: {players.length}</h4>
           <div className="players-list">
             {players.map(p => (
               <div className="player-item" key={p.id}>
