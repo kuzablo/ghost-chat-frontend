@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.7';
+const VERSION = '1.0.8';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -21,31 +21,52 @@ const formatTime = (timestamp) => {
   return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 };
 
-// Звук уведомления (без файлов)
-const playNotificationSound = () => {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
+// Разблокировка аудио при первом действии пользователя
+const ensureAudioContext = () => {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  if (!window.__chatAudioCtx) {
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.value = 0.2;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    setTimeout(() => {
-      osc.stop();
-      ctx.close();
-    }, 200);
-  } catch (e) {
-    console.error('Sound error:', e);
+    window.__chatAudioCtx = ctx;
+    // воспроизводим пустой буфер для разблокировки
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  }
+  if (window.__chatAudioCtx.state === 'suspended') {
+    window.__chatAudioCtx.resume();
   }
 };
 
+// Приятный двухтоновый колокольчик
+const playNotificationSound = () => {
+  const ctx = window.__chatAudioCtx;
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  const gain = ctx.createGain();
+  gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.15, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 523.25; // C5
+  osc1.connect(gain);
+  osc1.start(now);
+  osc1.stop(now + 0.2);
+
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 659.25; // E5
+  osc2.connect(gain);
+  osc2.start(now + 0.1);
+  osc2.stop(now + 0.3);
+};
+
 const Chat = () => {
-  // Загружаем ник из localStorage
   const storedNickname = localStorage.getItem('ghost-chat-nickname') || '';
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -154,7 +175,7 @@ const Chat = () => {
     };
   }, []);
 
-  // Автопрокрутка вниз при новых сообщениях
+  // Автопрокрутка вниз
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -164,6 +185,7 @@ const Chat = () => {
   const sendNickname = () => {
     const trimmed = nickname.trim();
     if (!trimmed) return;
+    ensureAudioContext(); // разблокируем звук
     nicknameRef.current = trimmed;
     localStorage.setItem('ghost-chat-nickname', trimmed);
     wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: trimmed } }));
