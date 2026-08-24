@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -16,8 +16,13 @@ const Chat = () => {
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const wsRef = useRef(null);
+  const nicknameRef = useRef('');
+  const unmountedRef = useRef(false);
+  const reconnectTimeoutRef = useRef(null);
 
-  useEffect(() => {
+  const connect = () => {
+    if (unmountedRef.current) return;
+
     const ws = new WebSocket('wss://ghost-chat-backend-production-5faf.up.railway.app');
     wsRef.current = ws;
 
@@ -25,6 +30,10 @@ const Chat = () => {
       setIsConnected(true);
       setErrorMessage('');
       console.log(`[CHAT v${VERSION}] Connected`);
+      // при успешном переподключении повторно отправляем ник
+      if (nicknameRef.current) {
+        ws.send(JSON.stringify({ type: 'join', data: { nickname: nicknameRef.current } }));
+      }
     };
 
     ws.onmessage = (event) => {
@@ -75,14 +84,36 @@ const Chat = () => {
       console.warn(`[CHAT v${VERSION}] Closed (code ${e.code}, reason ${e.reason})`);
       setErrorMessage(`v${VERSION}: Closed (code ${e.code})`);
       setIsConnected(false);
+      if (!unmountedRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = setTimeout(connect, 3000);
+      }
     };
+  };
 
-    return () => ws.close();
+  useEffect(() => {
+    unmountedRef.current = false;
+    connect();
+
+    const handleVisibility = () => {
+      if (!document.hidden && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      unmountedRef.current = true;
+      clearTimeout(reconnectTimeoutRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wsRef.current) wsRef.current.close();
+    };
   }, []);
 
   const sendNickname = () => {
     const trimmed = nickname.trim();
     if (!trimmed) return;
+    nicknameRef.current = trimmed;
     wsRef.current?.send(JSON.stringify({ type: 'join', data: { nickname: trimmed } }));
     setNicknameSet(true);
   };
@@ -124,7 +155,6 @@ const Chat = () => {
   return (
     <>
       <style>{`
-        /* Базовые стили и мобильная адаптация (как в v1.0.1) */
         html, body, #root {
           height: 100%;
           margin: 0;
@@ -269,7 +299,6 @@ const Chat = () => {
           flex-wrap: wrap;
         }
 
-        /* Блюр чата, пока не введён ник */
         .blur-overlay {
           position: fixed;
           top: 0;
@@ -282,7 +311,6 @@ const Chat = () => {
           z-index: 998;
         }
 
-        /* Модальное окно */
         .nickname-modal {
           position: fixed;
           top: 50%;
@@ -314,7 +342,6 @@ const Chat = () => {
           font-size: 16px;
         }
 
-        /* Мобильная адаптация */
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
@@ -336,15 +363,13 @@ const Chat = () => {
           .nickname-input,
           .input-row input,
           .nickname-modal input {
-            font-size: 16px; /* предотвращает зум на iOS */
+            font-size: 16px;
           }
         }
       `}</style>
 
-      {/* Сам чат */}
       <div className="chat-container" style={{ filter: nicknameSet ? 'none' : 'blur(6px)', pointerEvents: nicknameSet ? 'auto' : 'none' }}>
         <div className="chat-main">
-          {/* Старый input ника убран, вход теперь через модалку */}
           <div className="qr-wrap">
             <QRCodeSVG value={window.location.href} size={100} />
             <span style={{ fontSize: 12, marginTop: 4 }}>QR для входа</span>
@@ -426,7 +451,6 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Блюр и модальное окно */}
       {!nicknameSet && (
         <>
           <div className="blur-overlay" />
