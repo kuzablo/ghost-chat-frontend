@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.8';
+const VERSION = '2.0.9';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -93,6 +93,8 @@ const Chat = () => {
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
   const [duelNotice, setDuelNotice] = useState('');
   const [showIdleNotice, setShowIdleNotice] = useState(false);
+  const [unreadPrivate, setUnreadPrivate] = useState(0); // счётчик непрочитанных личных сообщений
+  const [searchQuery, setSearchQuery] = useState(''); // поиск участников
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -196,6 +198,10 @@ const Chat = () => {
                 }],
               };
             });
+            // Если чат с отправителем не открыт, увеличиваем счётчик непрочитанных
+            if (!privateChat || privateChat.userId !== msg.data.senderId) {
+              setUnreadPrivate(prev => prev + 1);
+            }
             break;
           case 'private_message_sent':
             setPrivateChat(prev => {
@@ -222,6 +228,8 @@ const Chat = () => {
               if (!prev || prev.userId !== msg.data.userId) return prev;
               return { ...prev, messages: msg.data.messages };
             });
+            // Сбрасываем счётчик непрочитанных при открытии чата
+            setUnreadPrivate(0);
             break;
           default:
             console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
@@ -447,6 +455,7 @@ const Chat = () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'private_history', data: { userId } }));
     }
+    setUnreadPrivate(0); // сбрасываем при открытии
   };
 
   const closePrivateChat = () => {
@@ -499,6 +508,11 @@ const Chat = () => {
       }
     }
   };
+
+  // Фильтрация участников по поисковому запросу
+  const filteredPlayers = players.filter(p =>
+    p.nickname.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
@@ -617,7 +631,7 @@ const Chat = () => {
           padding: 14px;
           margin-bottom: 12px;
           text-align: left;
-          touch-action: pan-y; /* только вертикальная прокрутка */
+          touch-action: pan-y;
           -webkit-overflow-scrolling: touch;
         }
 
@@ -742,10 +756,54 @@ const Chat = () => {
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
 
+        .players-toggle {
+          position: relative;
+        }
+
+        .unread-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          background: #ffd700;
+          color: #000;
+          border-radius: 50%;
+          width: 18px;
+          height: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 700;
+          pointer-events: none;
+        }
+
         .players-overlay {
           position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg);
           border-radius: 16px; padding: 12px; box-shadow: var(--shadow); width: 260px; max-height: 70vh; overflow-y: auto;
           touch-action: none; user-select: none; -webkit-user-drag: none;
+        }
+
+        .players-overlay h4 {
+          margin-top: 0;
+          color: var(--text);
+          font-size: 16px;
+          margin-bottom: 8px;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid var(--border);
+          background: var(--input-bg);
+          color: var(--text);
+          font-size: 14px;
+          outline: none;
+          margin-bottom: 10px;
+          touch-action: manipulation;
+        }
+        .search-input::placeholder {
+          color: var(--time-color);
         }
 
         .player-item {
@@ -954,6 +1012,10 @@ const Chat = () => {
             padding: 8px;
             max-height: 60vh;
           }
+          .search-input {
+            font-size: 13px;
+            padding: 6px 10px;
+          }
           .player-item {
             font-size: 12px;
             padding: 2px 0;
@@ -991,14 +1053,22 @@ const Chat = () => {
       {isAuth && (
         <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
           👥
+          {unreadPrivate > 0 && <span className="unread-badge">{unreadPrivate}</span>}
         </button>
       )}
 
       {showPlayers && isAuth && (
         <div className="players-overlay" ref={playersOverlayRef}>
-          <h4>Онлайн: {players.length}</h4>
+          <h4>Онлайн: {filteredPlayers.length}</h4>
+          <input
+            className="search-input"
+            type="text"
+            placeholder="Поиск участника"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
           <div className="players-list">
-            {players.map(p => {
+            {filteredPlayers.map(p => {
               const isSelf = p.userId === myId;
               return (
                 <div className="player-item" key={p.id}>
