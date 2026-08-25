@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.12';
+const VERSION = '2.1.0';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -95,6 +95,7 @@ const Chat = () => {
   const [showIdleNotice, setShowIdleNotice] = useState(false);
   const [unreadByUser, setUnreadByUser] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [sending, setSending] = useState(false); // для анимации кнопки отправки
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -386,25 +387,24 @@ const Chat = () => {
     }
   };
 
-  const sendMessage = () => {
-    if (
-      wsRef.current?.readyState === WebSocket.OPEN &&
-      input.trim() &&
-      !bannedUntil &&
-      isAuth
-    ) {
-      wsRef.current.send(JSON.stringify({
-        type: 'message',
-        data: { text: input.trim() }
-      }));
-      setInput('');
-      wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
-    }
+  const handleSendMessage = () => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !input.trim() || !isAuth) return;
+
+    wsRef.current.send(JSON.stringify({
+      type: 'message',
+      data: { text: input.trim() }
+    }));
+    setInput('');
+    wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
+
+    // Анимация спиннера
+    setSending(true);
+    setTimeout(() => setSending(false), 800);
   };
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuth && !bannedUntil) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAuth) {
       if (e.target.value.trim()) {
         wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: true } }));
         clearTimeout(typingTimeoutRef.current);
@@ -519,6 +519,10 @@ const Chat = () => {
     p.nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Символы для круговой кнопки "ОТПРАВИТЬ"
+  const sendText = 'ОТПРАВИТЬ';
+  const sendChars = sendText.split('');
+
   return (
     <>
       <style>{`
@@ -594,7 +598,7 @@ const Chat = () => {
         }
 
         .chat-container {
-          max-width: 1400px;
+          max-width: 1500px; /* растянули на 100px относительно прошлого */
           margin: 0 auto;
           height: 100%;
           display: flex;
@@ -725,7 +729,12 @@ const Chat = () => {
         }
         .reaction-btn.active { background: var(--btn-bg); color: white; }
 
-        .input-row { display: flex; gap: 8px; margin-top: auto; }
+        .input-row {
+          display: flex;
+          gap: 8px;
+          margin-top: auto;
+          align-items: center;
+        }
         .input-row input {
           flex: 1;
           padding: 10px 12px;
@@ -737,6 +746,77 @@ const Chat = () => {
           outline: none;
           touch-action: manipulation;
         }
+
+        /* Кнопка отправки с вращающимся текстом */
+        .send-btn {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: var(--btn-bg);
+          border: none;
+          cursor: pointer;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(255, 143, 163, 0.3);
+          touch-action: manipulation;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .send-btn:active {
+          transform: scale(0.95);
+        }
+        .send-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+        .send-btn .rotating-text {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          animation: spin 6s linear infinite;
+        }
+        .send-btn .rotating-text span {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform-origin: 0 0;
+          font-size: 9px;
+          font-weight: 700;
+          color: white;
+          text-transform: uppercase;
+        }
+        .send-btn .send-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 22px;
+          color: white;
+          z-index: 1;
+        }
+        .send-btn .send-spinner {
+          display: none;
+          width: 22px;
+          height: 22px;
+          border: 3px solid rgba(255,255,255,0.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+          z-index: 1;
+        }
+        .send-btn.sending .send-icon {
+          display: none;
+        }
+        .send-btn.sending .send-spinner {
+          display: block;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
         .btn {
           background: var(--btn-bg);
           border: none;
@@ -774,7 +854,6 @@ const Chat = () => {
         }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
-
         .unread-badge {
           position: absolute;
           top: -5px;
@@ -797,31 +876,11 @@ const Chat = () => {
           border-radius: 16px; padding: 10px; box-shadow: var(--shadow); width: 240px; max-height: 70vh; overflow-y: auto;
           touch-action: none; user-select: none; -webkit-user-drag: none;
         }
-        .players-overlay h4 {
-          margin-top: 0;
-          color: var(--text);
-          font-size: 15px;
-          margin-bottom: 6px;
-        }
-        .search-input {
-          width: 100%;
-          padding: 6px 10px;
-          border-radius: 8px;
-          border: 1px solid var(--border);
-          background: var(--input-bg);
-          color: var(--text);
-          font-size: 13px;
-          outline: none;
-          margin-bottom: 8px;
-          touch-action: manipulation;
-        }
-        .search-input::placeholder {
-          color: var(--time-color);
-        }
+        .players-overlay h4 { margin-top: 0; color: var(--text); font-size: 15px; margin-bottom: 6px; }
+        .search-input { width: 100%; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 13px; outline: none; margin-bottom: 8px; touch-action: manipulation; }
+        .search-input::placeholder { color: var(--time-color); }
 
-        .player-item {
-          display: flex; align-items: center; gap: 4px; padding: 3px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 12px;
-        }
+        .player-item { display: flex; align-items: center; gap: 4px; padding: 3px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 12px; }
         .player-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .player-item button { padding: 3px 5px; font-size: 11px; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer; touch-action: manipulation; }
         .unread-excl {
@@ -861,89 +920,17 @@ const Chat = () => {
           user-select: none;
           -webkit-user-drag: none;
         }
-        .private-chat-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          flex-shrink: 0;
-        }
-        .private-chat-header h4 {
-          margin: 0;
-          color: var(--text);
-          font-size: 15px;
-        }
-        .private-chat-close {
-          background: transparent;
-          border: none;
-          color: var(--text);
-          font-size: 20px;
-          cursor: pointer;
-          padding: 0 4px;
-          touch-action: manipulation;
-        }
-        .private-messages {
-          flex: 1;
-          overflow-y: auto;
-          background: var(--messages-bg);
-          border-radius: 10px;
-          padding: 8px;
-          margin-bottom: 8px;
-          touch-action: pan-y;
-          -webkit-overflow-scrolling: touch;
-        }
-        .private-msg {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          margin-bottom: 6px;
-        }
-        .private-msg .private-msg-nick {
-          font-weight: 600;
-          color: var(--nick-color);
-          font-size: 11px;
-          margin-bottom: 2px;
-        }
-        .private-msg .private-msg-text {
-          color: var(--msg-text);
-          background: var(--card-bg);
-          border: 1px solid var(--msg-border);
-          border-radius: 6px;
-          padding: 4px 8px;
-          max-width: 80%;
-          word-break: break-word;
-          font-size: 13px;
-        }
-        .private-input-row {
-          display: flex;
-          gap: 8px;
-          flex-shrink: 0;
-        }
-        .private-input-row input {
-          flex: 1;
-          padding: 8px 12px;
-          border-radius: 8px;
-          border: 1px solid var(--border);
-          background: var(--input-bg);
-          color: var(--text);
-          font-size: 13px;
-          outline: none;
-          touch-action: manipulation;
-        }
-        .private-input-row .btn {
-          padding: 8px 14px;
-          border-radius: 8px;
-          white-space: nowrap;
-          touch-action: manipulation;
-          font-size: 13px;
-        }
-        .private-typing {
-          font-size: 11px;
-          color: var(--nick-color);
-          margin-bottom: 4px;
-          min-height: 14px;
-          flex-shrink: 0;
-        }
+        .private-chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
+        .private-chat-header h4 { margin: 0; color: var(--text); font-size: 15px; }
+        .private-chat-close { background: transparent; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 0 4px; touch-action: manipulation; }
+        .private-messages { flex: 1; overflow-y: auto; background: var(--messages-bg); border-radius: 10px; padding: 8px; margin-bottom: 8px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+        .private-msg { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 6px; }
+        .private-msg .private-msg-nick { font-weight: 600; color: var(--nick-color); font-size: 11px; margin-bottom: 2px; }
+        .private-msg .private-msg-text { color: var(--msg-text); background: var(--card-bg); border: 1px solid var(--msg-border); border-radius: 6px; padding: 4px 8px; max-width: 80%; word-break: break-word; font-size: 13px; }
+        .private-input-row { display: flex; gap: 8px; flex-shrink: 0; }
+        .private-input-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 13px; outline: none; touch-action: manipulation; }
+        .private-input-row .btn { padding: 8px 14px; border-radius: 8px; white-space: nowrap; touch-action: manipulation; font-size: 13px; }
+        .private-typing { font-size: 11px; color: var(--nick-color); margin-bottom: 4px; min-height: 14px; flex-shrink: 0; }
 
         .duel-box { background: var(--duel-bg); border-radius: 12px; padding: 10px; margin-top: 8px; color: var(--duel-text); font-size: 13px; }
         .duel-actions { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -953,9 +940,7 @@ const Chat = () => {
           position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
           background: var(--btn-bg); color: white; padding: 8px 16px; border-radius: 20px; z-index: 1000;
           animation: fadeInUp 0.2s;
-          touch-action: none;
-          user-select: none;
-          font-size: 13px;
+          touch-action: none; user-select: none; font-size: 13px;
         }
 
         .blur-overlay {
@@ -982,104 +967,40 @@ const Chat = () => {
           opacity: 0;
           transition: opacity 2s ease;
         }
-        .idle-notice.visible {
-          opacity: 1;
-        }
+        .idle-notice.visible { opacity: 1; }
 
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
-            padding: 4px;
-            gap: 4px;
+            padding: 0px; /* прижимаем к краям */
+            gap: 0px;
             height: 100%;
           }
           .chat-main {
             min-width: 0;
-            padding: 6px;
-            border-radius: 12px;
+            padding: 4px;
+            border-radius: 0;
           }
-          .qr-wrap {
-            margin-bottom: 4px;
-          }
-          .qr-wrap svg {
-            width: 60px;
-            height: 60px;
-          }
-          .messages {
-            padding: 6px;
-            min-height: 80px;
-          }
-          .msg {
-            gap: 4px;
-            margin-bottom: 6px;
-          }
-          .msg-avatar {
-            width: 20px;
-            height: 20px;
-            border-radius: 5px;
-            font-size: 9px;
-          }
-          .msg-content {
-            padding: 3px 5px;
-          }
-          .msg-text {
-            font-size: 12px;
-          }
-          .input-row {
-            gap: 4px;
-          }
-          .input-row input {
-            padding: 8px 10px;
-            font-size: 16px;
-          }
-          .btn {
-            padding: 8px 12px;
-            font-size: 13px;
-          }
-          .players-overlay {
-            width: 180px;
-            top: 50px;
-            left: 3px;
-            padding: 6px;
-            max-height: 60vh;
-          }
-          .search-input {
-            font-size: 16px;
-            padding: 5px 8px;
-          }
-          .player-item {
-            font-size: 11px;
-            padding: 2px 0;
-          }
-          .player-item button {
-            padding: 2px 4px;
-            font-size: 10px;
-          }
-          .private-chat-overlay {
-            bottom: 50px;
-            width: 95vw;
-            height: 70vh;
-            max-height: none;
-            padding: 10px;
-          }
-          .private-input-row input {
-            font-size: 16px;
-          }
-          .duel-box {
-            position: fixed;
-            bottom: 60px;
-            left: 10px;
-            right: 10px;
-            z-index: 1000;
-            margin-top: 0;
-          }
-          .auth-modal {
-            width: 95%;
-            padding: 15px;
-          }
-          .auth-modal input {
-            font-size: 16px;
-          }
+          .qr-wrap { margin-bottom: 2px; }
+          .qr-wrap svg { width: 50px; height: 50px; }
+          .messages { padding: 4px; min-height: 80px; }
+          .msg { gap: 3px; margin-bottom: 4px; }
+          .msg-avatar { width: 18px; height: 18px; border-radius: 4px; font-size: 8px; }
+          .msg-content { padding: 2px 4px; }
+          .msg-text { font-size: 11px; }
+          .input-row { gap: 4px; }
+          .input-row input { padding: 6px 8px; font-size: 16px; }
+          .send-btn { width: 50px; height: 50px; }
+          .send-btn .rotating-text span { font-size: 7px; }
+          .players-overlay { width: 180px; top: 50px; left: 3px; padding: 6px; max-height: 60vh; }
+          .search-input { font-size: 16px; padding: 4px 6px; }
+          .player-item { font-size: 11px; padding: 2px 0; }
+          .player-item button { padding: 2px 4px; font-size: 10px; }
+          .private-chat-overlay { bottom: 40px; width: 100vw; height: 80vh; max-height: none; padding: 8px; border-radius: 0; }
+          .private-input-row input { font-size: 16px; }
+          .duel-box { position: fixed; bottom: 60px; left: 0; right: 0; z-index: 1000; margin-top: 0; border-radius: 0; }
+          .auth-modal { width: 100%; padding: 10px; border-radius: 0; }
+          .auth-modal input { font-size: 16px; }
         }
       `}</style>
 
@@ -1153,7 +1074,11 @@ const Chat = () => {
                 onKeyDown={e => e.key === 'Enter' && sendPrivateMessage()}
                 placeholder="Напишите сообщение..."
               />
-              <button className="btn" onClick={sendPrivateMessage}>Отправить</button>
+              <button className="btn" onClick={sendPrivateMessage}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
             </div>
           </div>
         </>
@@ -1212,12 +1137,31 @@ const Chat = () => {
             <input
               value={input}
               onChange={handleInputChange}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              disabled={!isAuth || !!bannedUntil}
-              placeholder={bannedUntil ? 'Вы в бане...' : 'Сообщение'}
+              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+              disabled={!isAuth}
+              placeholder="Сообщение"
             />
-            <button className="btn" onClick={sendMessage} disabled={!isAuth || !!bannedUntil}>
-              Отправить
+            <button
+              className={`send-btn ${sending ? 'sending' : ''}`}
+              onClick={handleSendMessage}
+              disabled={!isAuth || !input.trim()}
+            >
+              <div className="rotating-text">
+                {sendChars.map((char, idx) => {
+                  const angle = (360 / sendChars.length) * idx;
+                  return (
+                    <span key={idx} style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}>
+                      {char}
+                    </span>
+                  );
+                })}
+              </div>
+              <div className="send-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </div>
+              <div className="send-spinner" />
             </button>
           </div>
 
