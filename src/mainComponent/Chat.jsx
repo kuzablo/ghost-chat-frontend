@@ -151,6 +151,7 @@ const Chat = () => {
             setMessages(msg.data);
             break;
           case 'message':
+            console.log('📸 New message with imageUrl:', msg.data.imageUrl); // <-- лог
             setMessages(prev => [...prev, msg.data]);
             playNotificationSound();
             break;
@@ -1286,7 +1287,16 @@ const Chat = () => {
                   </div>
                   <div className="msg-text">{m.text}</div>
                   {m.imageUrl && (
-                    <img src={m.imageUrl} alt="photo" className="msg-image" loading="lazy" />
+                    <img
+                      src={m.imageUrl}
+                      alt="photo"
+                      className="msg-image"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                        e.target.style.display = 'none'; // скрыть битую картинку
+                      }}
+                    />
                   )}
                   {activeMessageId === m.id && (
                     <div className="reactions-panel">
