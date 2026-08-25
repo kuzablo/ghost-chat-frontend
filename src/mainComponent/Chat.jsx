@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.1.3';
+const VERSION = '2.4.0';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -96,6 +96,7 @@ const Chat = () => {
   const [unreadByUser, setUnreadByUser] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sending, setSending] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // <-- новое состояние
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -135,6 +136,7 @@ const Chat = () => {
             setMyId(msg.data.userId);
             setNickname(msg.data.nickname);
             setIsAuth(true);
+            setIsAdmin(msg.data.role === 'admin'); // <-- получаем роль
             break;
           case 'history':
             setMessages(msg.data);
@@ -147,6 +149,9 @@ const Chat = () => {
             if (msg.data.id) {
               setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
             }
+            break;
+          case 'message_deleted': // <-- новое событие
+            setMessages(prev => prev.filter(m => m.id !== msg.data.messageId));
             break;
           case 'players':
             setPlayers(msg.data);
@@ -181,6 +186,14 @@ const Chat = () => {
           case 'banned':
             setBannedUntil(msg.data.until);
             break;
+          case 'banned_forever':
+            setAuthError('У нас тут таких не любят');
+            setIsAuth(false);
+            localStorage.removeItem('ghost-chat-token');
+            localStorage.removeItem('ghost-chat-nickname');
+            setToken('');
+            setNickname('');
+            break;
           case 'idle_disconnect':
             setAuthError('Вы были отключены за неактивность. Войдите снова.');
             setIsAuth(false);
@@ -188,6 +201,10 @@ const Chat = () => {
             localStorage.removeItem('ghost-chat-nickname');
             setToken('');
             setNickname('');
+            break;
+          case 'admin_error': // <-- обработка ошибок админа
+            setDuelNotice(msg.data.message);
+            setTimeout(() => setDuelNotice(''), 3000);
             break;
           case 'private_message':
             setPrivateChat(prev => {
@@ -269,6 +286,13 @@ const Chat = () => {
         setAuthError('Аккаунт уже используется на другом устройстве');
       } else if (e.code === 4005) {
         setAuthError('Вы были отключены за неактивность. Войдите снова.');
+        setIsAuth(false);
+        localStorage.removeItem('ghost-chat-token');
+        localStorage.removeItem('ghost-chat-nickname');
+        setToken('');
+        setNickname('');
+      } else if (e.code === 4006) {
+        setAuthError('У нас тут таких не любят');
         setIsAuth(false);
         localStorage.removeItem('ghost-chat-token');
         localStorage.removeItem('ghost-chat-nickname');
@@ -521,6 +545,25 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
+  // ============== АДМИНСКИЕ ФУНКЦИИ ==============
+  const banForever = (userId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
+      wsRef.current.send(JSON.stringify({ type: 'ban_forever', data: { userId } }));
+    }
+  };
+
+  const deleteMessage = (messageId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
+      wsRef.current.send(JSON.stringify({ type: 'delete_message', data: { messageId } }));
+    }
+  };
+
+  const watchChat = (userId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
+      wsRef.current.send(JSON.stringify({ type: 'watch_chat', data: { userId } }));
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -727,6 +770,21 @@ const Chat = () => {
           color: var(--text);
         }
         .reaction-btn.active { background: var(--btn-bg); color: white; }
+
+        .admin-delete-btn {
+          background: #ff4d4f;
+          border: none;
+          color: white;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          cursor: pointer;
+          font-size: 10px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-left: 4px;
+        }
 
         .input-row {
           display: flex;
@@ -1033,8 +1091,14 @@ const Chat = () => {
                   <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
                   {!isSelf && (
                     <>
-                      <button onClick={() => requestDuel(p.id)}>⚔️</button>
-                      <button onClick={() => openPrivateChat(p.userId, p.nickname)}>
+                      {isAdmin && (
+                        <>
+                          <button onClick={() => watchChat(p.userId)} title="Просмотр чата">ℹ️</button>
+                          <button onClick={() => banForever(p.userId)} title="Забанить навсегда">⛔</button>
+                        </>
+                      )}
+                      <button onClick={() => requestDuel(p.id)} title="Вызвать на дуэль">⚔️</button>
+                      <button onClick={() => openPrivateChat(p.userId, p.nickname)} title="Написать">
                         ✉️
                         {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
                       </button>
@@ -1100,6 +1164,15 @@ const Chat = () => {
                 <div className="msg-content">
                   <div className="msg-header">
                     <span className="msg-nick">{m.nickname}</span>
+                    {isAdmin && (
+                      <button
+                        className="admin-delete-btn"
+                        title="Удалить сообщение"
+                        onClick={(e) => { e.stopPropagation(); deleteMessage(m.id); }}
+                      >
+                        🗑
+                      </button>
+                    )}
                     <div className="reactions-header">
                       {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
                         <span key={emoji} className="reaction-badge">
