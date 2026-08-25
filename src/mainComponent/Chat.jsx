@@ -1183,6 +1183,7 @@ const Chat = () => {
 
       {privateChat && (
         <PrivateChat
+          key={privateChat.userId}
           userId={privateChat.userId}
           nickname={privateChat.nickname}
           myId={myId}
