@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
+import LatestVersionLink from './LatestVersionLink';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.4.0';
+const VERSION = '2.4.1';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -99,6 +100,7 @@ const Chat = () => {
   const [sending, setSending] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [banConfirm, setBanConfirm] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -1300,13 +1302,32 @@ const Chat = () => {
               value={authNickname}
               onChange={e => setAuthNickname(e.target.value)}
             />
-            <input
-              type="password"
-              placeholder="Пароль"
-              value={authPassword}
-              onChange={e => setAuthPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAuthSubmit()}
-            />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Пароль"
+                value={authPassword}
+                onChange={e => setAuthPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAuthSubmit()}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  color: 'var(--nick-color)',
+                }}
+              >
+                {showPassword ? '🙈' : '👁'}
+              </button>
+            </div>
             {authError && <div style={{ color: '#e94560', marginBottom: 8 }}>{authError}</div>}
             {showIdleNotice && (
               <div className={`idle-notice ${showIdleNotice ? 'visible' : ''}`}>
@@ -1327,7 +1348,7 @@ const Chat = () => {
           </div>
         </>
       )}
-
+      <LatestVersionLink />
       <div className="version">v{VERSION}</div>
     </>
   );
