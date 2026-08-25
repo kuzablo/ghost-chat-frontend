@@ -3,7 +3,7 @@ import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.5.0';
+const VERSION = '2.5.1';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -141,7 +141,7 @@ const Chat = () => {
             setMyId(msg.data.userId);
             setNickname(msg.data.nickname);
             setIsAuth(true);
-            setIsAdmin(msg.data.role === 'admin'); // <-- получаем роль
+            setIsAdmin(msg.data.role === 'admin');
             setServerVersion(msg.data.serverVersion || '');
             break;
           case 'history':
@@ -156,7 +156,7 @@ const Chat = () => {
               setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
             }
             break;
-          case 'message_deleted': // <-- новое событие
+          case 'message_deleted':
             setMessages(prev => prev.filter(m => m.id !== msg.data.messageId));
             break;
           case 'players':
@@ -208,7 +208,7 @@ const Chat = () => {
             setToken('');
             setNickname('');
             break;
-          case 'admin_error': // <-- обработка ошибок админа
+          case 'admin_error':
             setDuelNotice(msg.data.message);
             setTimeout(() => setDuelNotice(''), 3000);
             break;
@@ -1364,7 +1364,8 @@ const Chat = () => {
           </div>
         </>
       )}
-      <LatestVersionLink show={isNewVersionAvailable} />
+
+      {isNewVersionAvailable && <LatestVersionLink />}
       <div className="version">v{VERSION}</div>
     </>
   );
