@@ -4,7 +4,7 @@ import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.6.2';
+const VERSION = '2.6.3';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
