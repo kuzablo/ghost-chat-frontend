@@ -1,9 +1,15 @@
 import React from 'react';
 
 const LatestVersionLink = ({ url = window.location.href }) => {
+  const handleClick = (e) => {
+    e.preventDefault();
+    window.location.reload(true); // принудительная перезагрузка без кэша
+  };
+
   return (
     <a
       href={url}
+      onClick={handleClick}
       target="_blank"
       rel="noopener noreferrer"
       style={{
