@@ -1,19 +1,13 @@
 import React from 'react';
 
-const LatestVersionLink = ({ url = window.location.href }) => {
-  const handleClick = (e) => {
-    e.preventDefault();
-    // Добавляем параметр версии, чтобы сбросить кэш
-    const base = window.location.origin + window.location.pathname;
-    const params = new URLSearchParams(window.location.search);
-    params.set('v', Date.now()); // или фиксированная версия
-    window.location.href = base + '?' + params.toString();
-  };
+const LatestVersionLink = () => {
+  const NEW_VERSION_URL = 'https://ghost-chat-frontend-as6opbqxo-banjoboy420.vercel.app/';
 
   return (
     <a
-      href="#"
-      onClick={handleClick}
+      href={NEW_VERSION_URL}
+      target="_blank"
+      rel="noopener noreferrer"
       style={{
         position: 'fixed',
         bottom: '20px',
