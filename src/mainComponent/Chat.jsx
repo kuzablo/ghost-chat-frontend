@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.16';
+const VERSION = '1.0.17';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -80,12 +80,14 @@ const Chat = () => {
   const [typingUsers, setTypingUsers] = useState([]);
   const [isDark, setIsDark] = useState(storedTheme === 'dark');
   const [activeMessageId, setActiveMessageId] = useState(null);
+  const [showPlayers, setShowPlayers] = useState(false);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const unmountedRef = useRef(false);
   const reconnectTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const playersOverlayRef = useRef(null);
 
   const connect = () => {
     if (unmountedRef.current) return;
@@ -206,6 +208,22 @@ const Chat = () => {
     document.body.classList.toggle('dark', isDark);
     localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (playersOverlayRef.current && !playersOverlayRef.current.contains(e.target)) {
+        setShowPlayers(false);
+      }
+    };
+    if (showPlayers) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showPlayers]);
 
   const sendNickname = () => {
     const trimmed = nickname.trim();
@@ -346,7 +364,9 @@ const Chat = () => {
           box-sizing: border-box;
         }
 
-        .chat-main, .chat-side {
+        .chat-main {
+          flex: 1;
+          min-width: 300px;
           background: var(--card-bg);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
@@ -354,25 +374,10 @@ const Chat = () => {
           border-radius: 24px;
           padding: 20px;
           box-shadow: var(--shadow);
-          transition: all 0.3s;
-        }
-
-        .chat-main {
-          flex: 2;
-          min-width: 300px;
           display: flex;
           flex-direction: column;
           height: 100%;
           box-sizing: border-box;
-        }
-
-        .chat-side {
-          flex: 1;
-          min-width: 220px;
-          height: 100%;
-          box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
         }
 
         .qr-wrap {
@@ -558,10 +563,9 @@ const Chat = () => {
           z-index: 999;
         }
 
-        .theme-toggle {
+        .theme-toggle,
+        .players-toggle {
           position: fixed;
-          top: 10px;
-          right: 10px;
           z-index: 1000;
           background: var(--card-bg);
           color: var(--text);
@@ -569,26 +573,48 @@ const Chat = () => {
           border-radius: 20px;
           padding: 6px 12px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 18px;
           transition: background 0.3s, transform 0.2s;
         }
-        .theme-toggle:hover {
+        .theme-toggle {
+          top: 10px;
+          right: 10px;
+        }
+        .players-toggle {
+          top: 10px;
+          left: 10px;
+        }
+        .theme-toggle:hover,
+        .players-toggle:hover {
           transform: scale(1.05);
         }
 
-        .players-list {
-          flex: 1;
+        .players-overlay {
+          position: fixed;
+          top: 50px;
+          left: 10px;
+          z-index: 1000;
+          background: var(--card-bg);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid var(--card-border);
+          border-radius: 16px;
+          padding: 16px;
+          box-shadow: var(--shadow);
+          width: 250px;
+          max-height: 70vh;
           overflow-y: auto;
-          scrollbar-width: thin;
+          animation: fadeInUp 0.2s ease;
         }
-        .players-list::-webkit-scrollbar {
-          width: 6px;
+        .players-overlay h4 {
+          margin-top: 0;
+          color: var(--text);
         }
-        .players-list::-webkit-scrollbar-thumb {
-          background: #c0c8d0;
-          border-radius: 3px;
+        .players-list {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
-
         .player-item {
           display: flex;
           justify-content: space-between;
@@ -596,10 +622,6 @@ const Chat = () => {
           padding: 8px 0;
           border-bottom: 1px solid var(--border);
           gap: 8px;
-          transition: background 0.2s;
-        }
-        .player-item:hover {
-          background: rgba(0,0,0,0.02);
         }
         .player-item span {
           flex: 1;
@@ -688,21 +710,17 @@ const Chat = () => {
           }
           .chat-main {
             min-width: 0;
-            flex: 2;
-            min-height: 0;
-            position: relative;
-          }
-          .chat-side {
-            min-width: 0;
             flex: 1;
             min-height: 0;
-            overflow: hidden;
+            position: relative;
           }
           .messages {
             min-height: 140px;
           }
-          .player-item {
-            flex-wrap: wrap;
+          .players-overlay {
+            width: 200px;
+            top: 50px;
+            left: 5px;
           }
           .nickname-modal input,
           .input-row input {
@@ -722,6 +740,31 @@ const Chat = () => {
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
         {isDark ? '☀️' : '🌙'}
       </button>
+
+      <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
+        👥
+      </button>
+
+      {showPlayers && (
+        <div className="players-overlay" ref={playersOverlayRef}>
+          <h4>Онлайн: {players.length}</h4>
+          <div className="players-list">
+            {players.map(p => (
+              <div className="player-item" key={p.id}>
+                <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
+                <button
+                  className="btn"
+                  disabled={p.id === myId || !nicknameSet}
+                  onClick={() => requestDuel(p.id)}
+                  style={{ padding: '4px 8px', fontSize: 12 }}
+                >
+                  Вызвать
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="chat-container" style={{ filter: nicknameSet ? 'none' : 'blur(6px)', pointerEvents: nicknameSet ? 'auto' : 'none' }}>
         <div className="chat-main">
@@ -818,25 +861,6 @@ const Chat = () => {
               {duelState.result === 'draw' && '🤝 Ничья'}
             </div>
           )}
-        </div>
-
-        <div className="chat-side">
-          <h4 style={{ marginTop: 0, color: 'var(--text)' }}>Онлайн: {players.length}</h4>
-          <div className="players-list">
-            {players.map(p => (
-              <div className="player-item" key={p.id}>
-                <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
-                <button
-                  className="btn"
-                  disabled={p.id === myId || !nicknameSet}
-                  onClick={() => requestDuel(p.id)}
-                  style={{ padding: '4px 8px', fontSize: 12 }}
-                >
-                  Вызвать
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
