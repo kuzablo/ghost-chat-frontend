@@ -3,7 +3,7 @@ import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.5.3';
+const VERSION = '2.5.6';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -102,7 +102,8 @@ const Chat = () => {
   const [serverVersion, setServerVersion] = useState('');
   const [banConfirm, setBanConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // новый стейт для загрузки фото
+  const [isUploading, setIsUploading] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null); // для увеличения фото
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -114,7 +115,7 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const privateMessagesEndRef = useRef(null);
   const privateTypingTimeoutRef = useRef(null);
-  const fileInputRef = useRef(null); // реф для скрытого input
+  const fileInputRef = useRef(null);
 
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
 
@@ -151,7 +152,7 @@ const Chat = () => {
             setMessages(msg.data);
             break;
           case 'message':
-            console.log('📸 New message with imageUrl:', msg.data.imageUrl); // <-- лог
+            console.log('📸 Новое сообщение с imageUrl:', msg.data.imageUrl);
             setMessages(prev => [...prev, msg.data]);
             playNotificationSound();
             break;
@@ -435,7 +436,6 @@ const Chat = () => {
     setTimeout(() => setSending(false), 800);
   };
 
-  // Новая функция: отправка фото
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -458,16 +458,14 @@ const Chat = () => {
         throw new Error(data.error || 'Upload failed');
       }
 
-      // Отправляем сообщение с imageUrl
       wsRef.current.send(JSON.stringify({
         type: 'message',
         data: {
-          text: '', // можно оставить пустым или добавить подпись
+          text: '',
           imageUrl: data.imageUrl
         }
       }));
 
-      // Сбросить input, чтобы можно было выбрать то же фото снова
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -796,6 +794,8 @@ const Chat = () => {
           border-radius: 8px;
           padding: 4px 8px;
           transition: background 0.2s;
+          display: flex;
+          flex-direction: column;
         }
         .msg-header { display: flex; align-items: baseline; gap: 4px; margin-bottom: 2px; }
         .msg-nick { font-weight: 600; color: var(--nick-color); font-size: 13px; }
@@ -818,13 +818,21 @@ const Chat = () => {
         }
         .msg-time { font-size: 9px; color: var(--time-color); margin-left: 4px; }
         .msg-text { color: var(--msg-text); line-height: 1.3; font-size: 14px; white-space: pre-wrap; }
-        .msg-image {
-          max-width: 100%;
-          max-height: 200px;
-          border-radius: 8px;
-          margin-top: 4px;
-          cursor: pointer;
+        .msg-image-wrapper {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 2px;
         }
+        .msg-image {
+          max-width: 40%;
+          max-height: 120px;
+          border-radius: 8px;
+          cursor: pointer;
+          object-fit: contain;
+          margin-left: auto;
+          transition: transform 0.1s;
+        }
+        .msg-image:active { transform: scale(0.95); }
 
         .reactions-panel {
           display: flex;
@@ -1107,6 +1115,28 @@ const Chat = () => {
         }
         .idle-notice.visible { opacity: 1; }
 
+        /* Фуллскрин картинки */
+        .fullscreen-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0,0,0,0.9);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          touch-action: none;
+        }
+        .fullscreen-overlay img {
+          max-width: 95%;
+          max-height: 95%;
+          object-fit: contain;
+          border-radius: 8px;
+        }
+
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
@@ -1131,7 +1161,7 @@ const Chat = () => {
           .msg-avatar { width: 18px; height: 18px; border-radius: 4px; font-size: 8px; }
           .msg-content { padding: 2px 4px; }
           .msg-text { font-size: 11px; }
-          .msg-image { max-height: 120px; }
+          .msg-image { max-width: 60%; max-height: 100px; }
           .input-row { gap: 4px; }
           .input-row input[type="text"] { padding: 6px 8px; font-size: 16px; }
           .send-btn {
@@ -1152,18 +1182,12 @@ const Chat = () => {
           .auth-modal input { font-size: 16px; }
         }
 
-        /* Скрываем кнопку прикрепления на ПК (мышь) */
-@media (pointer: fine) {
-  .attach-btn {
-    display: none !important;
-  }
-}
-/* На мобильных (touch) показываем */
-@media (pointer: coarse) {
-  .attach-btn {
-    display: inline-block;
-  }
-}
+        @media (pointer: fine) {
+          .attach-btn { display: none !important; }
+        }
+        @media (pointer: coarse) {
+          .attach-btn { display: inline-block; }
+        }
       `}</style>
 
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
@@ -1300,16 +1324,22 @@ const Chat = () => {
                   </div>
                   <div className="msg-text">{m.text}</div>
                   {m.imageUrl && (
-                    <img
-                      src={m.imageUrl}
-                      alt="photo"
-                      className="msg-image"
-                      loading="lazy"
-                      onError={(e) => {
-                        console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                        e.target.style.display = 'none'; // скрыть битую картинку
-                      }}
-                    />
+                    <div className="msg-image-wrapper">
+                      <img
+                        src={m.imageUrl}
+                        alt="photo"
+                        className="msg-image"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                          e.target.style.display = 'none';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFullscreenImage(m.imageUrl);
+                        }}
+                      />
+                    </div>
                   )}
                   {activeMessageId === m.id && (
                     <div className="reactions-panel">
@@ -1357,7 +1387,7 @@ const Chat = () => {
               onChange={handleFileUpload}
               accept="image/*"
               style={{ display: 'none' }}
-              capture="environment" // на телефоне откроет камеру
+              capture="environment"
             />
             <button
               className={`send-btn ${sending ? 'sending' : ''}`}
@@ -1481,6 +1511,13 @@ const Chat = () => {
 
       {isNewVersionAvailable && <LatestVersionLink />}
       <div className="version">v{VERSION}</div>
+
+      {/* Фуллскрин картинки */}
+      {fullscreenImage && (
+        <div className="fullscreen-overlay" onClick={() => setFullscreenImage(null)}>
+          <img src={fullscreenImage} alt="fullscreen" />
+        </div>
+      )}
     </>
   );
 };
