@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.9';
+const VERSION = '2.0.10';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -93,8 +93,8 @@ const Chat = () => {
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
   const [duelNotice, setDuelNotice] = useState('');
   const [showIdleNotice, setShowIdleNotice] = useState(false);
-  const [unreadPrivate, setUnreadPrivate] = useState(0); // счётчик непрочитанных личных сообщений
-  const [searchQuery, setSearchQuery] = useState(''); // поиск участников
+  const [unreadByUser, setUnreadByUser] = useState({}); // userId -> true, если есть непрочитанные
+  const [searchQuery, setSearchQuery] = useState('');
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -105,6 +105,8 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const privateMessagesEndRef = useRef(null);
   const privateTypingTimeoutRef = useRef(null);
+
+  const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
 
   const connect = () => {
     if (unmountedRef.current) return;
@@ -198,9 +200,9 @@ const Chat = () => {
                 }],
               };
             });
-            // Если чат с отправителем не открыт, увеличиваем счётчик непрочитанных
+            // Если чат с отправителем не открыт, помечаем его как непрочитанного
             if (!privateChat || privateChat.userId !== msg.data.senderId) {
-              setUnreadPrivate(prev => prev + 1);
+              setUnreadByUser(prev => ({ ...prev, [msg.data.senderId]: true }));
             }
             break;
           case 'private_message_sent':
@@ -228,8 +230,11 @@ const Chat = () => {
               if (!prev || prev.userId !== msg.data.userId) return prev;
               return { ...prev, messages: msg.data.messages };
             });
-            // Сбрасываем счётчик непрочитанных при открытии чата
-            setUnreadPrivate(0);
+            // Сбрасываем флаг непрочитанных для этого пользователя
+            setUnreadByUser(prev => {
+              const { [msg.data.userId]: _, ...rest } = prev;
+              return rest;
+            });
             break;
           default:
             console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
@@ -452,10 +457,14 @@ const Chat = () => {
   const openPrivateChat = (userId, nickname) => {
     if (userId === myId) return;
     setPrivateChat({ userId, nickname, messages: [] });
+    // Убираем флаг непрочитанных для этого пользователя
+    setUnreadByUser(prev => {
+      const { [userId]: _, ...rest } = prev;
+      return rest;
+    });
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'private_history', data: { userId } }));
     }
-    setUnreadPrivate(0); // сбрасываем при открытии
   };
 
   const closePrivateChat = () => {
@@ -509,7 +518,6 @@ const Chat = () => {
     }
   };
 
-  // Фильтрация участников по поисковому запросу
   const filteredPlayers = players.filter(p =>
     p.nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -755,10 +763,7 @@ const Chat = () => {
         }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
-
-        .players-toggle {
-          position: relative;
-        }
+        .players-toggle { position: relative; }
 
         .unread-badge {
           position: absolute;
@@ -782,14 +787,12 @@ const Chat = () => {
           border-radius: 16px; padding: 12px; box-shadow: var(--shadow); width: 260px; max-height: 70vh; overflow-y: auto;
           touch-action: none; user-select: none; -webkit-user-drag: none;
         }
-
         .players-overlay h4 {
           margin-top: 0;
           color: var(--text);
           font-size: 16px;
           margin-bottom: 8px;
         }
-
         .search-input {
           width: 100%;
           padding: 8px 12px;
@@ -811,6 +814,14 @@ const Chat = () => {
         }
         .player-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .player-item button { padding: 4px 6px; font-size: 12px; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer; touch-action: manipulation; }
+        .player-item .unread-dot {
+          width: 8px;
+          height: 8px;
+          background: #ffd700;
+          border-radius: 50%;
+          margin-left: 4px;
+          flex-shrink: 0;
+        }
 
         .private-chat-overlay {
           position: fixed;
@@ -999,7 +1010,7 @@ const Chat = () => {
           }
           .input-row input {
             padding: 10px 12px;
-            font-size: 14px;
+            font-size: 16px;
           }
           .btn {
             padding: 10px 16px;
@@ -1013,7 +1024,7 @@ const Chat = () => {
             max-height: 60vh;
           }
           .search-input {
-            font-size: 13px;
+            font-size: 16px;
             padding: 6px 10px;
           }
           .player-item {
@@ -1031,6 +1042,9 @@ const Chat = () => {
             max-height: none;
             padding: 12px;
           }
+          .private-input-row input {
+            font-size: 16px;
+          }
           .duel-box {
             position: fixed;
             bottom: 70px;
@@ -1043,6 +1057,9 @@ const Chat = () => {
             width: 95%;
             padding: 20px;
           }
+          .auth-modal input {
+            font-size: 16px;
+          }
         }
       `}</style>
 
@@ -1053,7 +1070,7 @@ const Chat = () => {
       {isAuth && (
         <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
           👥
-          {unreadPrivate > 0 && <span className="unread-badge">{unreadPrivate}</span>}
+          {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
         </button>
       )}
 
@@ -1076,7 +1093,10 @@ const Chat = () => {
                   {!isSelf && (
                     <>
                       <button onClick={() => requestDuel(p.id)}>⚔️</button>
-                      <button onClick={() => openPrivateChat(p.userId, p.nickname)}>✉️</button>
+                      <button onClick={() => openPrivateChat(p.userId, p.nickname)}>
+                        ✉️
+                        {unreadByUser[p.userId] && <span className="unread-dot" />}
+                      </button>
                     </>
                   )}
                 </div>
