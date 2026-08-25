@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.4';
+const VERSION = '2.0.5';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -493,9 +493,8 @@ const Chat = () => {
           background: var(--bg);
           color: var(--text);
           font-family: 'Segoe UI', sans-serif;
-          touch-action: none;
-          user-select: none;
-          -webkit-user-select: none;
+          touch-action: manipulation;
+          -webkit-text-size-adjust: 100%;
         }
 
         .chat-container {
@@ -545,6 +544,7 @@ const Chat = () => {
           gap: 8px;
           margin-bottom: 12px;
           cursor: pointer;
+          touch-action: manipulation;
         }
 
         .msg-avatar {
@@ -650,7 +650,7 @@ const Chat = () => {
         .players-overlay {
           position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg);
           border-radius: 16px; padding: 12px; box-shadow: var(--shadow); width: 260px; max-height: 70vh; overflow-y: auto;
-          touch-action: none; user-select: none; -webkit-user-drag: none;
+          touch-action: manipulation; user-select: none; -webkit-user-drag: none;
         }
 
         .player-item {
@@ -661,14 +661,72 @@ const Chat = () => {
         .player-item button:disabled { opacity: 0.4; }
 
         .private-chat-overlay {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: var(--card-bg); border-radius: 20px; padding: 20px; width: 320px; max-height: 70vh;
-          display: flex; flex-direction: column; z-index: 1000; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: none; user-select: none; -webkit-user-drag: none;
+          position: fixed;
+          bottom: 100px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: var(--card-bg);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border-radius: 20px;
+          padding: 20px;
+          width: 500px;
+          max-width: 90vw;
+          height: 60vh;
+          max-height: 600px;
+          display: flex;
+          flex-direction: column;
+          z-index: 1000;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          touch-action: manipulation;
+          user-select: none;
+          -webkit-user-drag: none;
         }
-        .private-messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
-        .private-input-row { display: flex; gap: 8px; }
-        .private-input-row input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+        .private-chat-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .private-chat-header h4 {
+          margin: 0;
+          color: var(--text);
+        }
+        .private-chat-close {
+          background: transparent;
+          border: none;
+          color: var(--text);
+          font-size: 24px;
+          cursor: pointer;
+          padding: 0 4px;
+        }
+        .private-messages {
+          flex: 1;
+          overflow-y: auto;
+          background: var(--messages-bg);
+          border-radius: 12px;
+          padding: 10px;
+          margin-bottom: 10px;
+        }
+        .private-input-row {
+          display: flex;
+          gap: 10px;
+        }
+        .private-input-row input {
+          flex: 1;
+          padding: 12px 16px;
+          border-radius: 12px;
+          border: 1px solid var(--border);
+          background: var(--input-bg);
+          color: var(--text);
+          font-size: 15px;
+          outline: none;
+        }
+        .private-input-row .btn {
+          padding: 12px 20px;
+          border-radius: 12px;
+          white-space: nowrap;
+        }
 
         .duel-box { background: var(--duel-bg); border-radius: 12px; padding: 12px; margin-top: 10px; color: var(--duel-text); }
         .duel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -688,7 +746,7 @@ const Chat = () => {
           position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
           background: var(--card-bg); border-radius: 24px; padding: 28px; width: 90%; max-width: 400px; z-index: 1000;
           text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: none; user-select: none; -webkit-user-drag: none;
+          touch-action: manipulation; user-select: none; -webkit-user-drag: none;
         }
         .auth-modal h3 { margin-top: 0; color: var(--text); }
         .auth-modal input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); margin: 10px 0; font-size: 16px; background: var(--input-bg); color: var(--text); }
@@ -713,7 +771,12 @@ const Chat = () => {
           .player-item { font-size: 12px; padding: 3px 0; }
           .player-item button { padding: 3px 5px; font-size: 11px; }
           .duel-box { position: fixed; bottom: 80px; left: 10px; right: 10px; z-index: 1000; }
-          .private-chat-overlay { width: 90%; }
+          .private-chat-overlay {
+            bottom: 60px;
+            width: 95vw;
+            height: 70vh;
+            max-height: none;
+          }
           .auth-modal { width: 95%; }
         }
       `}</style>
@@ -754,7 +817,10 @@ const Chat = () => {
         <>
           <div className="blur-overlay" onClick={closePrivateChat} />
           <div className="private-chat-overlay">
-            <h4>Чат с {privateChat.nickname}</h4>
+            <div className="private-chat-header">
+              <h4>Чат с {privateChat.nickname}</h4>
+              <button className="private-chat-close" onClick={closePrivateChat}>×</button>
+            </div>
             <div className="private-messages">
               {privateChat.messages?.map((m, i) => (
                 <div key={i}><strong>{m.senderId === myId ? 'Я' : privateChat.nickname}:</strong> {m.text}</div>
@@ -766,7 +832,7 @@ const Chat = () => {
                 value={privateInput}
                 onChange={e => setPrivateInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendPrivateMessage()}
-                placeholder="Сообщение"
+                placeholder="Напишите сообщение..."
               />
               <button className="btn" onClick={sendPrivateMessage}>Отправить</button>
             </div>
