@@ -3,7 +3,7 @@ import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.5.2';
+const VERSION = '2.5.3';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -1151,6 +1151,19 @@ const Chat = () => {
           .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
         }
+
+        /* Скрываем кнопку прикрепления на ПК (мышь) */
+@media (pointer: fine) {
+  .attach-btn {
+    display: none !important;
+  }
+}
+/* На мобильных (touch) показываем */
+@media (pointer: coarse) {
+  .attach-btn {
+    display: inline-block;
+  }
+}
       `}</style>
 
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
@@ -1231,7 +1244,7 @@ const Chat = () => {
               />
               <button className="btn" onClick={sendPrivateMessage}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               </button>
             </div>
@@ -1363,7 +1376,7 @@ const Chat = () => {
               </div>
               <div className="send-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               </div>
               <div className="send-spinner" />
