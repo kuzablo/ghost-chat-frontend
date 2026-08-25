@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.5';
+const VERSION = '2.0.6';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -90,6 +90,7 @@ const Chat = () => {
   const [authError, setAuthError] = useState('');
   const [privateChat, setPrivateChat] = useState(null);
   const [privateInput, setPrivateInput] = useState('');
+  const [privateTypingUser, setPrivateTypingUser] = useState(null);
   const [duelNotice, setDuelNotice] = useState('');
   const [showIdleNotice, setShowIdleNotice] = useState(false);
   const wsRef = useRef(null);
@@ -101,6 +102,7 @@ const Chat = () => {
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
   const privateMessagesEndRef = useRef(null);
+  const privateTypingTimeoutRef = useRef(null);
 
   const connect = () => {
     if (unmountedRef.current) return;
@@ -194,6 +196,26 @@ const Chat = () => {
                 }],
               };
             });
+            break;
+          case 'private_message_sent':
+            setPrivateChat(prev => {
+              if (!prev || prev.userId !== msg.data.recipientId) return prev;
+              return {
+                ...prev,
+                messages: [...(prev.messages || []), {
+                  senderId: myId,
+                  text: msg.data.text,
+                  created_at: msg.data.created_at,
+                }],
+              };
+            });
+            break;
+          case 'private_typing':
+            if (msg.data.senderId !== myId) {
+              setPrivateTypingUser(msg.data.isTyping ? msg.data.senderNickname : null);
+              clearTimeout(privateTypingTimeoutRef.current);
+              privateTypingTimeoutRef.current = setTimeout(() => setPrivateTypingUser(null), 2000);
+            }
             break;
           case 'private_history':
             setPrivateChat(prev => {
@@ -430,6 +452,7 @@ const Chat = () => {
   const closePrivateChat = () => {
     setPrivateChat(null);
     setPrivateInput('');
+    setPrivateTypingUser(null);
   };
 
   const sendPrivateMessage = () => {
@@ -444,6 +467,37 @@ const Chat = () => {
         data: { recipientId: privateChat.userId, text: privateInput.trim() }
       }));
       setPrivateInput('');
+      // Отправляем событие окончания набора
+      wsRef.current.send(JSON.stringify({
+        type: 'private_typing',
+        data: { recipientId: privateChat.userId, isTyping: false }
+      }));
+    }
+  };
+
+  const handlePrivateInputChange = (e) => {
+    setPrivateInput(e.target.value);
+    if (wsRef.current?.readyState === WebSocket.OPEN && privateChat && privateChat.userId !== myId) {
+      if (e.target.value.trim()) {
+        wsRef.current.send(JSON.stringify({
+          type: 'private_typing',
+          data: { recipientId: privateChat.userId, isTyping: true }
+        }));
+        clearTimeout(privateTypingTimeoutRef.current);
+        privateTypingTimeoutRef.current = setTimeout(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+              type: 'private_typing',
+              data: { recipientId: privateChat.userId, isTyping: false }
+            }));
+          }
+        }, 1500);
+      } else {
+        wsRef.current.send(JSON.stringify({
+          type: 'private_typing',
+          data: { recipientId: privateChat.userId, isTyping: false }
+        }));
+      }
     }
   };
 
@@ -727,6 +781,12 @@ const Chat = () => {
           border-radius: 12px;
           white-space: nowrap;
         }
+        .private-typing {
+          font-size: 12px;
+          color: var(--nick-color);
+          margin-bottom: 5px;
+          min-height: 16px;
+        }
 
         .duel-box { background: var(--duel-bg); border-radius: 12px; padding: 12px; margin-top: 10px; color: var(--duel-text); }
         .duel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -821,6 +881,9 @@ const Chat = () => {
               <h4>Чат с {privateChat.nickname}</h4>
               <button className="private-chat-close" onClick={closePrivateChat}>×</button>
             </div>
+            <div className="private-typing">
+              {privateTypingUser ? `${privateTypingUser} печатает...` : ''}
+            </div>
             <div className="private-messages">
               {privateChat.messages?.map((m, i) => (
                 <div key={i}><strong>{m.senderId === myId ? 'Я' : privateChat.nickname}:</strong> {m.text}</div>
@@ -830,7 +893,7 @@ const Chat = () => {
             <div className="private-input-row">
               <input
                 value={privateInput}
-                onChange={e => setPrivateInput(e.target.value)}
+                onChange={handlePrivateInputChange}
                 onKeyDown={e => e.key === 'Enter' && sendPrivateMessage()}
                 placeholder="Напишите сообщение..."
               />
@@ -960,7 +1023,7 @@ const Chat = () => {
             {authError && <div style={{ color: '#e94560', marginBottom: 10 }}>{authError}</div>}
             {showIdleNotice && (
               <div className={`idle-notice ${showIdleNotice ? 'visible' : ''}`}>
-                ⏳ Неактивные пользователи будут автоматически отключены через 1 минуту бездействия.
+                ⏳ Неактивные пользователи будут автоматически отключены через 3 минуты бездействия.
               </div>
             )}
             {isRegisterMode && (
