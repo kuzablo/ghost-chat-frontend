@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.1.0';
+const VERSION = '2.1.1';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -95,7 +95,7 @@ const Chat = () => {
   const [showIdleNotice, setShowIdleNotice] = useState(false);
   const [unreadByUser, setUnreadByUser] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
-  const [sending, setSending] = useState(false); // для анимации кнопки отправки
+  const [sending, setSending] = useState(false);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -397,7 +397,6 @@ const Chat = () => {
     setInput('');
     wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
 
-    // Анимация спиннера
     setSending(true);
     setTimeout(() => setSending(false), 800);
   };
@@ -519,7 +518,6 @@ const Chat = () => {
     p.nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Символы для круговой кнопки "ОТПРАВИТЬ"
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
@@ -598,19 +596,19 @@ const Chat = () => {
         }
 
         .chat-container {
-          max-width: 1500px; /* растянули на 100px относительно прошлого */
+          width: 100%;
           margin: 0 auto;
           height: 100%;
           display: flex;
           gap: 20px;
           flex-wrap: wrap;
-          padding: 10px;
+          padding: 20px;
           overflow: hidden;
         }
 
         .chat-main {
           flex: 1;
-          min-width: 300px;
+          min-width: 0;
           background: var(--card-bg);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
@@ -747,7 +745,6 @@ const Chat = () => {
           touch-action: manipulation;
         }
 
-        /* Кнопка отправки с вращающимся текстом */
         .send-btn {
           width: 60px;
           height: 60px;
@@ -763,14 +760,8 @@ const Chat = () => {
           touch-action: manipulation;
           transition: transform 0.2s, box-shadow 0.2s;
         }
-        .send-btn:active {
-          transform: scale(0.95);
-        }
-        .send-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          box-shadow: none;
-        }
+        .send-btn:active { transform: scale(0.95); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
         .send-btn .rotating-text {
           position: absolute;
           top: 0;
@@ -807,15 +798,9 @@ const Chat = () => {
           animation: spin 0.7s linear infinite;
           z-index: 1;
         }
-        .send-btn.sending .send-icon {
-          display: none;
-        }
-        .send-btn.sending .send-spinner {
-          display: block;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        .send-btn.sending .send-icon { display: none; }
+        .send-btn.sending .send-spinner { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .btn {
           background: var(--btn-bg);
@@ -972,16 +957,18 @@ const Chat = () => {
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
-            padding: 0px; /* прижимаем к краям */
-            gap: 0px;
+            padding: 8px;
+            gap: 8px;
             height: 100%;
           }
           .chat-main {
             min-width: 0;
-            padding: 4px;
-            border-radius: 0;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
           }
-          .qr-wrap { margin-bottom: 2px; }
+          .qr-wrap { margin-bottom: 4px; }
           .qr-wrap svg { width: 50px; height: 50px; }
           .messages { padding: 4px; min-height: 80px; }
           .msg { gap: 3px; margin-bottom: 4px; }
@@ -998,8 +985,8 @@ const Chat = () => {
           .player-item button { padding: 2px 4px; font-size: 10px; }
           .private-chat-overlay { bottom: 40px; width: 100vw; height: 80vh; max-height: none; padding: 8px; border-radius: 0; }
           .private-input-row input { font-size: 16px; }
-          .duel-box { position: fixed; bottom: 60px; left: 0; right: 0; z-index: 1000; margin-top: 0; border-radius: 0; }
-          .auth-modal { width: 100%; padding: 10px; border-radius: 0; }
+          .duel-box { position: fixed; bottom: 60px; left: 10px; right: 10px; z-index: 1000; margin-top: 0; border-radius: 12px; }
+          .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
         }
       `}</style>
