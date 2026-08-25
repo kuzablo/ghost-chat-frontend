@@ -1,7 +1,7 @@
 import React from 'react';
 
 const LatestVersionLink = () => {
-  const NEW_VERSION_URL = 'https://ghost-chat-frontend-as6opbqxo-banjoboy420.vercel.app/';
+  const NEW_VERSION_URL = 'https://ghost-chat-frontend-roan.vercel.app/';
 
   return (
     <a
