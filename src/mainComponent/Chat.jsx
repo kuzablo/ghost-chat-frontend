@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.15';
+const VERSION = '1.0.16';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -79,7 +79,7 @@ const Chat = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [isDark, setIsDark] = useState(storedTheme === 'dark');
-  const [activeMessageId, setActiveMessageId] = useState(null); // для показа реакций по клику
+  const [activeMessageId, setActiveMessageId] = useState(null);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const unmountedRef = useRef(false);
@@ -282,6 +282,10 @@ const Chat = () => {
   return (
     <>
       <style>{`
+        * {
+          box-sizing: border-box;
+        }
+
         :root {
           --bg: #f5f7fa;
           --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #e9edf5 100%);
@@ -400,11 +404,11 @@ const Chat = () => {
         .msg {
           display: flex;
           align-items: flex-start;
-          gap: 6px; /* уменьшенный отступ */
+          gap: 6px;
           margin-bottom: 12px;
           word-break: break-word;
           animation: fadeInUp 0.25s ease;
-          cursor: pointer; /* кликабельно для показа реакций */
+          cursor: pointer;
         }
 
         @keyframes fadeInUp {
@@ -437,7 +441,7 @@ const Chat = () => {
           display: flex;
           align-items: baseline;
           gap: 4px;
-          margin-bottom: 0; /* убрали отступ */
+          margin-bottom: 0;
         }
 
         .msg-nick {
@@ -686,7 +690,7 @@ const Chat = () => {
             min-width: 0;
             flex: 2;
             min-height: 0;
-            position: relative; /* для дуэли */
+            position: relative;
           }
           .chat-side {
             min-width: 0;
@@ -704,7 +708,6 @@ const Chat = () => {
           .input-row input {
             font-size: 16px;
           }
-          /* Фикс дуэли: показываем поверх */
           .duel-box {
             position: fixed;
             bottom: 80px;
@@ -749,7 +752,7 @@ const Chat = () => {
                             key={emoji}
                             className={`reaction-btn ${hasMyReaction ? 'active' : ''}`}
                             onClick={(e) => {
-                              e.stopPropagation(); // чтобы не закрывался блок
+                              e.stopPropagation();
                               sendReaction(m.id, emoji);
                             }}
                           >
