@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.14';
+const VERSION = '1.0.15';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return '#b0c4de';
@@ -79,6 +79,7 @@ const Chat = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [isDark, setIsDark] = useState(storedTheme === 'dark');
+  const [activeMessageId, setActiveMessageId] = useState(null); // для показа реакций по клику
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const unmountedRef = useRef(false);
@@ -274,6 +275,10 @@ const Chat = () => {
     }
   };
 
+  const toggleReactions = (messageId) => {
+    setActiveMessageId(prev => prev === messageId ? null : messageId);
+  };
+
   return (
     <>
       <style>{`
@@ -395,10 +400,11 @@ const Chat = () => {
         .msg {
           display: flex;
           align-items: flex-start;
-          gap: 12px;
-          margin-bottom: 16px;
+          gap: 6px; /* уменьшенный отступ */
+          margin-bottom: 12px;
           word-break: break-word;
           animation: fadeInUp 0.25s ease;
+          cursor: pointer; /* кликабельно для показа реакций */
         }
 
         @keyframes fadeInUp {
@@ -407,17 +413,17 @@ const Chat = () => {
         }
 
         .msg-avatar {
-          width: 40px;
-          height: 40px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 17px;
+          font-size: 8px;
           font-weight: 600;
           color: #ffffff;
           flex-shrink: 0;
-          box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .msg-content {
@@ -430,8 +436,8 @@ const Chat = () => {
         .msg-header {
           display: flex;
           align-items: baseline;
-          gap: 8px;
-          margin-bottom: 3px;
+          gap: 4px;
+          margin-bottom: 0; /* убрали отступ */
         }
 
         .msg-nick {
@@ -441,22 +447,22 @@ const Chat = () => {
         }
 
         .msg-time {
-          font-size: 11px;
+          font-size: 10px;
           color: var(--time-color);
           margin-left: auto;
         }
 
         .msg-text {
           color: var(--msg-text);
-          line-height: 1.5;
+          line-height: 1.4;
           font-size: 15px;
           white-space: pre-wrap;
         }
 
         .reactions {
           display: flex;
-          gap: 6px;
-          margin-top: 6px;
+          gap: 4px;
+          margin-top: 4px;
           flex-wrap: wrap;
         }
 
@@ -464,9 +470,9 @@ const Chat = () => {
           background: var(--input-bg);
           border: 1px solid var(--border);
           border-radius: 16px;
-          padding: 2px 10px;
+          padding: 2px 8px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 12px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
@@ -680,6 +686,7 @@ const Chat = () => {
             min-width: 0;
             flex: 2;
             min-height: 0;
+            position: relative; /* для дуэли */
           }
           .chat-side {
             min-width: 0;
@@ -697,6 +704,15 @@ const Chat = () => {
           .input-row input {
             font-size: 16px;
           }
+          /* Фикс дуэли: показываем поверх */
+          .duel-box {
+            position: fixed;
+            bottom: 80px;
+            left: 10px;
+            right: 10px;
+            z-index: 1000;
+            margin-top: 0;
+          }
         }
       `}</style>
 
@@ -713,7 +729,7 @@ const Chat = () => {
 
           <div className="messages">
             {messages.map((m, i) => (
-              <div className="msg" key={i}>
+              <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
                 <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                   {getInitial(m.nickname)}
                 </div>
@@ -723,21 +739,26 @@ const Chat = () => {
                     <span className="msg-time">{formatTime(m.time)}</span>
                   </div>
                   <div className="msg-text">{m.text}</div>
-                  <div className="reactions">
-                    {['👍', '🔥', '😂'].map(emoji => {
-                      const count = m.reactions?.[emoji]?.length || 0;
-                      const hasMyReaction = m.reactions?.[emoji]?.includes(nickname);
-                      return (
-                        <button
-                          key={emoji}
-                          className={`reaction-btn ${hasMyReaction ? 'active' : ''}`}
-                          onClick={() => sendReaction(m.id, emoji)}
-                        >
-                          {emoji} {count > 0 && <span>{count}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {activeMessageId === m.id && (
+                    <div className="reactions">
+                      {['👍', '🔥', '😂'].map(emoji => {
+                        const count = m.reactions?.[emoji]?.length || 0;
+                        const hasMyReaction = m.reactions?.[emoji]?.includes(nickname);
+                        return (
+                          <button
+                            key={emoji}
+                            className={`reaction-btn ${hasMyReaction ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation(); // чтобы не закрывался блок
+                              sendReaction(m.id, emoji);
+                            }}
+                          >
+                            {emoji} {count > 0 && <span>{count}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
