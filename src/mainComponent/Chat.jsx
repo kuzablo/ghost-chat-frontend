@@ -3,7 +3,7 @@ import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.4.1';
+const VERSION = '2.5.0';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -99,6 +99,7 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sending, setSending] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [serverVersion, setServerVersion] = useState('');
   const [banConfirm, setBanConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const wsRef = useRef(null);
@@ -141,6 +142,7 @@ const Chat = () => {
             setNickname(msg.data.nickname);
             setIsAuth(true);
             setIsAdmin(msg.data.role === 'admin'); // <-- получаем роль
+            setServerVersion(msg.data.serverVersion || '');
             break;
           case 'history':
             setMessages(msg.data);
@@ -567,6 +569,20 @@ const Chat = () => {
       wsRef.current.send(JSON.stringify({ type: 'watch_chat', data: { userId } }));
     }
   };
+
+  const compareVersions = (v1, v2) => {
+    const p1 = v1.split('.').map(Number);
+    const p2 = v2.split('.').map(Number);
+    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+      const n1 = p1[i] || 0;
+      const n2 = p2[i] || 0;
+      if (n1 > n2) return 1;
+      if (n1 < n2) return -1;
+    }
+    return 0;
+  };
+
+  const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
 
   return (
     <>
@@ -1348,7 +1364,7 @@ const Chat = () => {
           </div>
         </>
       )}
-      <LatestVersionLink />
+      <LatestVersionLink show={isNewVersionAvailable} />
       <div className="version">v{VERSION}</div>
     </>
   );

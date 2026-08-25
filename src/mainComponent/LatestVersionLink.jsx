@@ -1,6 +1,8 @@
 import React from 'react';
 
-const LatestVersionLink = ({ url = window.location.href }) => {
+const LatestVersionLink = ({ show, url = window.location.href }) => {
+  if (!show) return null;
+
   return (
     <a
       href={url}
