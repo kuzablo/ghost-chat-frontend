@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.7';
+const VERSION = '2.0.8';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -203,7 +203,7 @@ const Chat = () => {
               return {
                 ...prev,
                 messages: [...(prev.messages || []), {
-                  senderId: msg.data.senderId, // ← исправлено: теперь всегда мой ID
+                  senderId: msg.data.senderId,
                   text: msg.data.text,
                   created_at: msg.data.created_at,
                 }],
@@ -503,7 +503,19 @@ const Chat = () => {
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; }
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+          -webkit-tap-highlight-color: transparent;
+          -webkit-touch-callout: none;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          -webkit-user-drag: none;
+          user-drag: none;
+        }
 
         :root {
           --bg: #f5f7fa;
@@ -540,16 +552,26 @@ const Chat = () => {
 
         html, body, #root {
           height: 100%;
+          width: 100%;
           margin: 0;
           padding: 0;
           overflow: hidden;
+          overscroll-behavior: none;
+          touch-action: none;
+          -webkit-overflow-scrolling: auto;
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
         }
+
         body {
           background: var(--bg);
           color: var(--text);
           font-family: 'Segoe UI', sans-serif;
-          touch-action: manipulation;
-          -webkit-text-size-adjust: 100%;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
         }
 
         .chat-container {
@@ -560,6 +582,7 @@ const Chat = () => {
           gap: 20px;
           flex-wrap: wrap;
           padding: 20px;
+          overflow: hidden;
         }
 
         .chat-main {
@@ -574,6 +597,8 @@ const Chat = () => {
           display: flex;
           flex-direction: column;
           height: 100%;
+          overflow: hidden;
+          touch-action: none;
         }
 
         .qr-wrap {
@@ -581,6 +606,7 @@ const Chat = () => {
           flex-direction: column;
           align-items: center;
           margin-bottom: 12px;
+          flex-shrink: 0;
         }
 
         .messages {
@@ -591,6 +617,8 @@ const Chat = () => {
           padding: 14px;
           margin-bottom: 12px;
           text-align: left;
+          touch-action: pan-y; /* только вертикальная прокрутка */
+          -webkit-overflow-scrolling: touch;
         }
 
         .msg {
@@ -600,7 +628,6 @@ const Chat = () => {
           margin-bottom: 12px;
           cursor: pointer;
           touch-action: manipulation;
-          justify-content: flex-start;
         }
 
         .msg-avatar {
@@ -679,7 +706,7 @@ const Chat = () => {
         }
         .reaction-btn.active { background: var(--btn-bg); color: white; }
 
-        .input-row { display: flex; gap: 10px; }
+        .input-row { display: flex; gap: 10px; margin-top: auto; }
         .input-row input {
           flex: 1;
           padding: 14px 16px;
@@ -688,6 +715,8 @@ const Chat = () => {
           background: var(--input-bg);
           color: var(--text);
           font-size: 15px;
+          outline: none;
+          touch-action: manipulation;
         }
         .btn {
           background: var(--btn-bg);
@@ -697,16 +726,18 @@ const Chat = () => {
           border-radius: 14px;
           cursor: pointer;
           font-weight: 600;
+          touch-action: manipulation;
         }
 
-        .status { margin-top: 10px; font-size: 14px; color: #4caf50; }
-        .typing-indicator { font-size: 13px; color: #7f8c8d; margin: 5px 0; min-height: 18px; }
+        .status { margin-top: 10px; font-size: 14px; color: #4caf50; flex-shrink: 0; }
+        .typing-indicator { font-size: 13px; color: #7f8c8d; margin: 5px 0; min-height: 18px; flex-shrink: 0; }
 
         .version { position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: #aaa; z-index: 999; }
 
         .theme-toggle, .players-toggle {
           position: fixed; z-index: 1000; background: var(--card-bg); color: var(--text);
           border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 18px;
+          touch-action: manipulation;
         }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
@@ -714,15 +745,14 @@ const Chat = () => {
         .players-overlay {
           position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg);
           border-radius: 16px; padding: 12px; box-shadow: var(--shadow); width: 260px; max-height: 70vh; overflow-y: auto;
-          touch-action: manipulation; user-select: none; -webkit-user-drag: none;
+          touch-action: none; user-select: none; -webkit-user-drag: none;
         }
 
         .player-item {
           display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 13px;
         }
         .player-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .player-item button { padding: 4px 6px; font-size: 12px; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer; }
-        .player-item button:disabled { opacity: 0.4; }
+        .player-item button { padding: 4px 6px; font-size: 12px; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer; touch-action: manipulation; }
 
         .private-chat-overlay {
           position: fixed;
@@ -742,7 +772,7 @@ const Chat = () => {
           flex-direction: column;
           z-index: 1000;
           box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: manipulation;
+          touch-action: none;
           user-select: none;
           -webkit-user-drag: none;
         }
@@ -751,6 +781,7 @@ const Chat = () => {
           justify-content: space-between;
           align-items: center;
           margin-bottom: 10px;
+          flex-shrink: 0;
         }
         .private-chat-header h4 {
           margin: 0;
@@ -763,6 +794,7 @@ const Chat = () => {
           font-size: 24px;
           cursor: pointer;
           padding: 0 4px;
+          touch-action: manipulation;
         }
         .private-messages {
           flex: 1;
@@ -771,6 +803,8 @@ const Chat = () => {
           border-radius: 12px;
           padding: 10px;
           margin-bottom: 10px;
+          touch-action: pan-y;
+          -webkit-overflow-scrolling: touch;
         }
         .private-msg {
           display: flex;
@@ -796,6 +830,7 @@ const Chat = () => {
         .private-input-row {
           display: flex;
           gap: 10px;
+          flex-shrink: 0;
         }
         .private-input-row input {
           flex: 1;
@@ -806,42 +841,49 @@ const Chat = () => {
           color: var(--text);
           font-size: 15px;
           outline: none;
+          touch-action: manipulation;
         }
         .private-input-row .btn {
           padding: 12px 20px;
           border-radius: 12px;
           white-space: nowrap;
+          touch-action: manipulation;
         }
         .private-typing {
           font-size: 12px;
           color: var(--nick-color);
           margin-bottom: 5px;
           min-height: 16px;
+          flex-shrink: 0;
         }
 
         .duel-box { background: var(--duel-bg); border-radius: 12px; padding: 12px; margin-top: 10px; color: var(--duel-text); }
         .duel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .duel-actions .btn { padding: 10px 14px; font-size: 14px; }
 
         .duel-notice {
           position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
           background: var(--btn-bg); color: white; padding: 10px 20px; border-radius: 20px; z-index: 1000;
           animation: fadeInUp 0.2s;
+          touch-action: none;
+          user-select: none;
         }
 
         .blur-overlay {
           position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.4);
           backdrop-filter: blur(8px); z-index: 998;
+          touch-action: none;
         }
 
         .auth-modal {
           position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
           background: var(--card-bg); border-radius: 24px; padding: 28px; width: 90%; max-width: 400px; z-index: 1000;
           text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: manipulation; user-select: none; -webkit-user-drag: none;
+          touch-action: none; user-select: none; -webkit-user-drag: none;
         }
         .auth-modal h3 { margin-top: 0; color: var(--text); }
-        .auth-modal input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); margin: 10px 0; font-size: 16px; background: var(--input-bg); color: var(--text); }
-        .auth-modal .btn { width: 100%; }
+        .auth-modal input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); margin: 10px 0; font-size: 16px; background: var(--input-bg); color: var(--text); touch-action: manipulation; }
+        .auth-modal .btn { width: 100%; touch-action: manipulation; }
         .auth-switch { margin-top: 10px; cursor: pointer; color: var(--nick-color); }
 
         .idle-notice {
@@ -856,25 +898,89 @@ const Chat = () => {
         }
 
         @media (max-width: 600px) {
-          .chat-container { flex-direction: column; padding: 12px; }
-          .chat-main { min-width: 0; }
-          .players-overlay { width: 220px; top: 45px; left: 5px; padding: 10px; }
-          .player-item { font-size: 12px; padding: 3px 0; }
-          .player-item button { padding: 3px 5px; font-size: 11px; }
-          .duel-box { position: fixed; bottom: 80px; left: 10px; right: 10px; z-index: 1000; }
+          .chat-container {
+            flex-direction: column;
+            padding: 8px;
+            gap: 8px;
+            height: 100%;
+          }
+          .chat-main {
+            min-width: 0;
+            padding: 10px;
+            border-radius: 16px;
+          }
+          .qr-wrap {
+            margin-bottom: 6px;
+          }
+          .qr-wrap svg {
+            width: 70px;
+            height: 70px;
+          }
+          .messages {
+            padding: 8px;
+            min-height: 100px;
+          }
+          .msg {
+            gap: 6px;
+            margin-bottom: 8px;
+          }
+          .msg-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            font-size: 10px;
+          }
+          .msg-content {
+            padding: 4px 6px;
+          }
+          .msg-text {
+            font-size: 14px;
+          }
+          .input-row {
+            gap: 6px;
+          }
+          .input-row input {
+            padding: 10px 12px;
+            font-size: 14px;
+          }
+          .btn {
+            padding: 10px 16px;
+            font-size: 14px;
+          }
+          .players-overlay {
+            width: 200px;
+            top: 40px;
+            left: 5px;
+            padding: 8px;
+            max-height: 60vh;
+          }
+          .player-item {
+            font-size: 12px;
+            padding: 2px 0;
+          }
+          .player-item button {
+            padding: 2px 4px;
+            font-size: 10px;
+          }
           .private-chat-overlay {
             bottom: 60px;
             width: 95vw;
             height: 70vh;
             max-height: none;
+            padding: 12px;
           }
-          .msg-content {
-            padding: 4px 8px;
+          .duel-box {
+            position: fixed;
+            bottom: 70px;
+            left: 10px;
+            right: 10px;
+            z-index: 1000;
+            margin-top: 0;
           }
-          .msg-text {
-            font-size: 14px;
+          .auth-modal {
+            width: 95%;
+            padding: 20px;
           }
-          .auth-modal { width: 95%; }
         }
       `}</style>
 
