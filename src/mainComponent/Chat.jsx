@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.1.2';
+const VERSION = '2.1.3';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -596,19 +596,20 @@ const Chat = () => {
         }
 
         .chat-container {
-          max-width: 1500px;
+          width: 100%;
+          max-width: 100%;
           margin: 0 auto;
           height: 100%;
           display: flex;
-          gap: 20px;
+          gap: 0px;
           flex-wrap: wrap;
-          padding: 10px;
+          padding: 20px;
           overflow: hidden;
         }
 
         .chat-main {
           flex: 1;
-          min-width: 300px;
+          min-width: 0;
           background: var(--card-bg);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
@@ -745,7 +746,6 @@ const Chat = () => {
           touch-action: manipulation;
         }
 
-        /* Кнопка отправки с вращающимся текстом */
         .send-btn {
           width: 60px;
           height: 60px;
@@ -761,21 +761,15 @@ const Chat = () => {
           touch-action: manipulation;
           transition: transform 0.2s, box-shadow 0.2s;
         }
-        .send-btn:active {
-          transform: scale(0.95);
-        }
-        .send-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          box-shadow: none;
-        }
+        .send-btn:active { transform: scale(0.95); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
         .send-btn .rotating-text {
           position: absolute;
           top: 0;
           left: 0;
           width: 100%;
           height: 100%;
-          animation: spin 25s linear infinite; /* очень медленное вращение */
+          animation: spin 25s linear infinite;
         }
         .send-btn .rotating-text span {
           position: absolute;
@@ -805,19 +799,10 @@ const Chat = () => {
           animation: spin 0.7s linear infinite;
           z-index: 1;
         }
-        .send-btn.sending .send-icon {
-          display: none;
-        }
-        .send-btn.sending .send-spinner {
-          display: block;
-        }
-        /* Быстрое вращение и увеличение при отправке */
-        .send-btn.sending {
-          animation: spinOnce 0.5s ease-in-out;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        .send-btn.sending .send-icon { display: none; }
+        .send-btn.sending .send-spinner { display: block; }
+        .send-btn.sending { animation: spinOnce 0.5s ease-in-out; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes spinOnce {
           from { transform: rotate(0deg) scale(1); }
           to { transform: rotate(360deg) scale(1.3); }
@@ -978,12 +963,15 @@ const Chat = () => {
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
-            padding: 8px;
-            gap: 8px;
+            padding: 10px;
+            gap: 10px;
             height: 100%;
+            width: 100%;
+            max-width: 100%;
           }
           .chat-main {
             min-width: 0;
+            width: 100%;
             padding: 10px;
             border-radius: 12px;
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -998,17 +986,12 @@ const Chat = () => {
           .msg-text { font-size: 11px; }
           .input-row { gap: 4px; }
           .input-row input { padding: 6px 8px; font-size: 16px; }
-          /* Увеличиваем кнопку на телефоне */
           .send-btn {
             width: 70px;
             height: 70px;
           }
-          .send-btn .rotating-text span {
-            font-size: 10px; /* чуть крупнее буквы */
-          }
-          .send-btn .send-icon {
-            font-size: 30px;
-          }
+          .send-btn .rotating-text span { font-size: 10px; }
+          .send-btn .send-icon { font-size: 30px; }
           .players-overlay { width: 180px; top: 50px; left: 3px; padding: 6px; max-height: 60vh; }
           .search-input { font-size: 16px; padding: 4px 6px; }
           .player-item { font-size: 11px; padding: 2px 0; }
