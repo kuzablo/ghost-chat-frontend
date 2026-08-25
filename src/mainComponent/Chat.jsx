@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.2';
+const VERSION = '2.0.3';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -217,6 +217,14 @@ const Chat = () => {
         setToken('');
         setIsAuth(false);
         setNickname('');
+      } else if (e.code === 4002) {
+        // Аккаунт уже используется на другом устройстве
+        localStorage.removeItem('ghost-chat-token');
+        localStorage.removeItem('ghost-chat-nickname');
+        setToken('');
+        setIsAuth(false);
+        setNickname('');
+        setAuthError('Аккаунт уже используется на другом устройстве');
       } else if (!unmountedRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = setTimeout(connect, 3000);
@@ -542,11 +550,32 @@ const Chat = () => {
         .msg-content { flex: 1; }
         .msg-header { display: flex; align-items: baseline; gap: 4px; }
         .msg-nick { font-weight: 600; color: var(--nick-color); font-size: 14px; }
-        .msg-time { font-size: 10px; color: var(--time-color); margin-left: auto; }
+        .reactions-header {
+          display: flex;
+          gap: 2px;
+          align-items: center;
+          margin-left: auto;
+        }
+        .reaction-badge {
+          background: var(--input-bg);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 0 3px;
+          font-size: 8px;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 1px;
+        }
+        .msg-time { font-size: 10px; color: var(--time-color); margin-left: 4px; }
         .msg-text { color: var(--msg-text); line-height: 1.4; font-size: 15px; white-space: pre-wrap; }
 
-        .reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
-        .reaction-badge { background: var(--input-bg); border: 1px solid var(--border); border-radius: 16px; padding: 2px 8px; font-size: 12px; }
+        .reactions-panel {
+          display: flex;
+          gap: 4px;
+          margin-top: 4px;
+          flex-wrap: wrap;
+        }
         .reaction-btn {
           background: var(--input-bg);
           border: 1px solid var(--border);
@@ -596,9 +625,7 @@ const Chat = () => {
         .players-overlay {
           position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg);
           border-radius: 16px; padding: 12px; box-shadow: var(--shadow); width: 260px; max-height: 70vh; overflow-y: auto;
-          touch-action: none;
-          user-select: none;
-          -webkit-user-drag: none;
+          touch-action: none; user-select: none; -webkit-user-drag: none;
         }
 
         .player-item {
@@ -612,9 +639,7 @@ const Chat = () => {
           position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
           background: var(--card-bg); border-radius: 20px; padding: 20px; width: 320px; max-height: 70vh;
           display: flex; flex-direction: column; z-index: 1000; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: none;
-          user-select: none;
-          -webkit-user-drag: none;
+          touch-action: none; user-select: none; -webkit-user-drag: none;
         }
         .private-messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
         .private-input-row { display: flex; gap: 8px; }
@@ -638,9 +663,7 @@ const Chat = () => {
           position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
           background: var(--card-bg); border-radius: 24px; padding: 28px; width: 90%; max-width: 400px; z-index: 1000;
           text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: none;
-          user-select: none;
-          -webkit-user-drag: none;
+          touch-action: none; user-select: none; -webkit-user-drag: none;
         }
         .auth-modal h3 { margin-top: 0; color: var(--text); }
         .auth-modal input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); margin: 10px 0; font-size: 16px; background: var(--input-bg); color: var(--text); }
@@ -731,20 +754,18 @@ const Chat = () => {
                 <div className="msg-content">
                   <div className="msg-header">
                     <span className="msg-nick">{m.nickname}</span>
-                    <span className="msg-time">{formatTime(m.time)}</span>
-                  </div>
-                  <div className="msg-text">{m.text}</div>
-                  {hasReactions(m) && (
-                    <div className="reactions">
-                      {Object.entries(m.reactions).map(([emoji, users]) => (
+                    <div className="reactions-header">
+                      {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
                         <span key={emoji} className="reaction-badge">
                           {emoji} {users.length}
                         </span>
                       ))}
                     </div>
-                  )}
+                    <span className="msg-time">{formatTime(m.time)}</span>
+                  </div>
+                  <div className="msg-text">{m.text}</div>
                   {activeMessageId === m.id && (
-                    <div className="reactions">
+                    <div className="reactions-panel">
                       {['👍', '🔥', '😂'].map(emoji => (
                         <button
                           key={emoji}
