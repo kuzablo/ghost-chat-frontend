@@ -3,7 +3,7 @@ import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.5.1';
+const VERSION = '2.5.2';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -102,6 +102,8 @@ const Chat = () => {
   const [serverVersion, setServerVersion] = useState('');
   const [banConfirm, setBanConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // новый стейт для загрузки фото
+
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -112,6 +114,7 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const privateMessagesEndRef = useRef(null);
   const privateTypingTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null); // реф для скрытого input
 
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
 
@@ -429,6 +432,50 @@ const Chat = () => {
 
     setSending(true);
     setTimeout(() => setSending(false), 800);
+  };
+
+  // Новая функция: отправка фото
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!isAuth || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      setErrorMessage('Не авторизован или нет соединения');
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('https://ghost-chat-backend-production-5faf.up.railway.app/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      // Отправляем сообщение с imageUrl
+      wsRef.current.send(JSON.stringify({
+        type: 'message',
+        data: {
+          text: '', // можно оставить пустым или добавить подпись
+          imageUrl: data.imageUrl
+        }
+      }));
+
+      // Сбросить input, чтобы можно было выбрать то же фото снова
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err) {
+      console.error('Ошибка загрузки фото:', err);
+      setErrorMessage('Не удалось загрузить фото');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -770,6 +817,13 @@ const Chat = () => {
         }
         .msg-time { font-size: 9px; color: var(--time-color); margin-left: 4px; }
         .msg-text { color: var(--msg-text); line-height: 1.3; font-size: 14px; white-space: pre-wrap; }
+        .msg-image {
+          max-width: 100%;
+          max-height: 200px;
+          border-radius: 8px;
+          margin-top: 4px;
+          cursor: pointer;
+        }
 
         .reactions-panel {
           display: flex;
@@ -812,7 +866,7 @@ const Chat = () => {
           margin-top: auto;
           align-items: center;
         }
-        .input-row input {
+        .input-row input[type="text"] {
           flex: 1;
           padding: 10px 12px;
           border-radius: 14px;
@@ -822,6 +876,20 @@ const Chat = () => {
           font-size: 14px;
           outline: none;
           touch-action: manipulation;
+        }
+
+        .attach-btn {
+          background: transparent;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          touch-action: manipulation;
+          padding: 0 4px;
+          color: var(--nick-color);
+        }
+        .attach-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
         }
 
         .send-btn {
@@ -1062,14 +1130,16 @@ const Chat = () => {
           .msg-avatar { width: 18px; height: 18px; border-radius: 4px; font-size: 8px; }
           .msg-content { padding: 2px 4px; }
           .msg-text { font-size: 11px; }
+          .msg-image { max-height: 120px; }
           .input-row { gap: 4px; }
-          .input-row input { padding: 6px 8px; font-size: 16px; }
+          .input-row input[type="text"] { padding: 6px 8px; font-size: 16px; }
           .send-btn {
             width: 70px;
             height: 70px;
           }
           .send-btn .rotating-text span { font-size: 10px; }
           .send-btn .send-icon { font-size: 30px; }
+          .attach-btn { font-size: 28px; }
           .players-overlay { width: 180px; top: 50px; left: 3px; padding: 6px; max-height: 60vh; }
           .search-input { font-size: 16px; padding: 4px 6px; }
           .player-item { font-size: 11px; padding: 2px 0; }
@@ -1215,6 +1285,9 @@ const Chat = () => {
                     <span className="msg-time">{formatTime(m.time)}</span>
                   </div>
                   <div className="msg-text">{m.text}</div>
+                  {m.imageUrl && (
+                    <img src={m.imageUrl} alt="photo" className="msg-image" loading="lazy" />
+                  )}
                   {activeMessageId === m.id && (
                     <div className="reactions-panel">
                       {['👍', '🔥', '😂'].map(emoji => (
@@ -1240,16 +1313,33 @@ const Chat = () => {
 
           <div className="input-row">
             <input
+              type="text"
               value={input}
               onChange={handleInputChange}
               onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-              disabled={!isAuth}
-              placeholder="Сообщение"
+              disabled={!isAuth || isUploading}
+              placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
+            />
+            <button
+              className="attach-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!isAuth || isUploading}
+              title="Прикрепить фото"
+            >
+              📎
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              style={{ display: 'none' }}
+              capture="environment" // на телефоне откроет камеру
             />
             <button
               className={`send-btn ${sending ? 'sending' : ''}`}
               onClick={handleSendMessage}
-              disabled={!isAuth || !input.trim()}
+              disabled={!isAuth || !input.trim() || isUploading}
             >
               <div className="rotating-text">
                 {sendChars.map((char, idx) => {
@@ -1274,6 +1364,7 @@ const Chat = () => {
             {isConnected ? 'Онлайн' : 'Оффлайн'}
             {bannedUntil && ` — бан до ${new Date(bannedUntil).toLocaleTimeString()}`}
             {errorMessage && <div style={{ color: '#e94560', marginTop: 4 }}>{errorMessage}</div>}
+            {isUploading && <div style={{ color: '#ff8fa3', marginTop: 4 }}>Загрузка фото...</div>}
           </div>
 
           {duelNotice && <div className="duel-notice">{duelNotice}</div>}
