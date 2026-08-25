@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.0';
+const VERSION = '2.0.1';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -90,6 +90,7 @@ const Chat = () => {
   const [authError, setAuthError] = useState('');
   const [privateChat, setPrivateChat] = useState(null); // { userId, nickname, messages }
   const [privateInput, setPrivateInput] = useState('');
+  const [duelNotice, setDuelNotice] = useState(''); // уведомление о доставке вызова
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -153,12 +154,22 @@ const Chat = () => {
           case 'duel_invite':
             setDuelInvite(msg.data);
             break;
+          case 'duel_request_sent':
+            setDuelNotice(`Вызов ${msg.data.targetNick} отправлен`);
+            setTimeout(() => setDuelNotice(''), 3000);
+            break;
+          case 'duel_timeout':
+            setDuelNotice(`${msg.data.targetNick} не ответил на вызов`);
+            setTimeout(() => setDuelNotice(''), 3000);
+            break;
           case 'duel_start':
             setDuelState({ opponentNick: msg.data.opponentNick, myChoice: null });
             setDuelInvite(null);
             break;
           case 'duel_result':
             setDuelState(prev => prev ? { ...prev, result: msg.data.result } : null);
+            // Автоскрытие результата через 5 секунд
+            setTimeout(() => setDuelState(null), 5000);
             break;
           case 'banned':
             setBannedUntil(msg.data.until);
@@ -202,7 +213,6 @@ const Chat = () => {
       setErrorMessage(`v${VERSION}: Closed (code ${e.code})`);
       setIsConnected(false);
       if (e.code === 4003) {
-        // Неверный токен — очищаем и показываем форму
         localStorage.removeItem('ghost-chat-token');
         localStorage.removeItem('ghost-chat-nickname');
         setToken('');
@@ -295,7 +305,6 @@ const Chat = () => {
         setAuthError(data.error || 'Ошибка');
         return;
       }
-      // Сохраняем токен и ник
       localStorage.setItem('ghost-chat-token', data.token);
       localStorage.setItem('ghost-chat-nickname', data.nickname);
       tokenRef.current = data.token;
@@ -305,16 +314,11 @@ const Chat = () => {
       setIsAuth(true);
       setAuthNickname('');
       setAuthPassword('');
-      // Подключаемся
       connect();
     } catch (error) {
       console.error('Auth error:', error);
       setAuthError('Сеть недоступна, попробуй позже');
     }
-  };
-
-  const sendNickname = () => {
-    // Теперь всё через auth, функция не нужна, оставлена для совместимости
   };
 
   const sendMessage = () => {
@@ -384,6 +388,7 @@ const Chat = () => {
   };
 
   const openPrivateChat = (userId, nickname) => {
+    if (userId === myId) return; // не себе
     setPrivateChat({ userId, nickname, messages: [] });
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'private_history', data: { userId } }));
@@ -399,7 +404,8 @@ const Chat = () => {
     if (
       wsRef.current?.readyState === WebSocket.OPEN &&
       privateInput.trim() &&
-      privateChat
+      privateChat &&
+      privateChat.userId !== myId
     ) {
       wsRef.current.send(JSON.stringify({
         type: 'private_message',
@@ -413,7 +419,6 @@ const Chat = () => {
     <>
       <style>{`
         * { box-sizing: border-box; }
-
         :root {
           --bg: #f5f7fa;
           --text: #2c3e50;
@@ -444,185 +449,59 @@ const Chat = () => {
           --duel-text: #ffb3c1;
           --shadow: 0 8px 30px rgba(0,0,0,0.4);
         }
-
-        html, body, #root {
-          height: 100%;
-          margin: 0;
-          padding: 0;
-          overflow: hidden;
-        }
-        body {
-          background: var(--bg);
-          color: var(--text);
-          font-family: 'Segoe UI', sans-serif;
-        }
-
-        .chat-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          height: 100%;
-          display: flex;
-          gap: 20px;
-          flex-wrap: wrap;
-          padding: 20px;
-        }
-
-        .chat-main {
-          flex: 1;
-          min-width: 300px;
-          background: var(--card-bg);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-radius: 24px;
-          padding: 20px;
-          box-shadow: var(--shadow);
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-        }
-
-        .qr-wrap {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-
-        .messages {
-          flex: 1;
-          overflow-y: auto;
-          background: var(--messages-bg);
-          border-radius: 18px;
-          padding: 14px;
-          margin-bottom: 12px;
-          text-align: left;
-        }
-
-        .msg {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          margin-bottom: 12px;
-          cursor: pointer;
-        }
-
-        .msg-avatar {
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 12px;
-          font-weight: 700;
-          color: #fff;
-          flex-shrink: 0;
-        }
-        .msg-avatar::after {
-          content: '';
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          right: 2px;
-          height: 40%;
-          background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent);
-          border-radius: 6px 6px 50% 50% / 6px 6px 50% 50%;
-        }
-
+        html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; }
+        .chat-container { max-width: 1200px; margin: 0 auto; height: 100%; display: flex; gap: 20px; flex-wrap: wrap; padding: 20px; }
+        .chat-main { flex: 1; min-width: 300px; background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; height: 100%; }
+        .qr-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; }
+        .messages { flex: 1; overflow-y: auto; background: var(--messages-bg); border-radius: 18px; padding: 14px; margin-bottom: 12px; text-align: left; }
+        .msg { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; cursor: pointer; }
+        .msg-avatar { width: 28px; height: 28px; border-radius: 8px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+        .msg-avatar::after { content: ''; position: absolute; top: 2px; left: 2px; right: 2px; height: 40%; background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent); border-radius: 6px 6px 50% 50% / 6px 6px 50% 50%; }
         .msg-content { flex: 1; }
         .msg-header { display: flex; align-items: baseline; gap: 4px; }
         .msg-nick { font-weight: 600; color: var(--nick-color); font-size: 14px; }
         .msg-time { font-size: 10px; color: var(--time-color); margin-left: auto; }
         .msg-text { color: var(--msg-text); line-height: 1.4; font-size: 15px; white-space: pre-wrap; }
-
         .reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
         .reaction-badge { background: var(--input-bg); border: 1px solid var(--border); border-radius: 16px; padding: 2px 8px; font-size: 12px; }
-        .reaction-btn {
-          background: var(--input-bg);
-          border: 1px solid var(--border);
-          border-radius: 16px;
-          padding: 2px 8px;
-          cursor: pointer;
-          font-size: 12px;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text);
-        }
+        .reaction-btn { background: var(--input-bg); border: 1px solid var(--border); border-radius: 16px; padding: 2px 8px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
         .reaction-btn.active { background: var(--btn-bg); color: white; }
-
         .input-row { display: flex; gap: 10px; }
-        .input-row input {
-          flex: 1;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid var(--border);
-          background: var(--input-bg);
-          color: var(--text);
-          font-size: 15px;
-        }
-        .btn {
-          background: var(--btn-bg);
-          border: none;
-          color: white;
-          padding: 14px 24px;
-          border-radius: 14px;
-          cursor: pointer;
-          font-weight: 600;
-        }
-
+        .input-row input { flex: 1; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 15px; }
+        .btn { background: var(--btn-bg); border: none; color: white; padding: 14px 24px; border-radius: 14px; cursor: pointer; font-weight: 600; }
         .status { margin-top: 10px; font-size: 14px; color: #4caf50; }
         .typing-indicator { font-size: 13px; color: #7f8c8d; margin: 5px 0; min-height: 18px; }
-
         .version { position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: #aaa; z-index: 999; }
-
-        .theme-toggle, .players-toggle {
-          position: fixed; z-index: 1000; background: var(--card-bg); color: var(--text);
-          border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 18px;
-        }
+        .theme-toggle, .players-toggle { position: fixed; z-index: 1000; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 18px; }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
-
-        .players-overlay {
-          position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg);
-          border-radius: 16px; padding: 16px; box-shadow: var(--shadow); width: 250px; max-height: 70vh; overflow-y: auto;
-        }
-
-        .player-item {
-          display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); gap: 8px;
-        }
-        .player-item span { flex: 1; }
-
-        .private-chat-overlay {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: var(--card-bg); border-radius: 20px; padding: 20px; width: 320px; max-height: 70vh;
-          display: flex; flex-direction: column; z-index: 1000; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
+        .players-overlay { position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); width: 260px; max-height: 70vh; overflow-y: auto; }
+        .players-overlay h4 { margin-top: 0; color: var(--text); font-size: 16px; }
+        .players-list { display: flex; flex-direction: column; gap: 2px; }
+        .player-item { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 13px; }
+        .player-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .player-item button { padding: 4px 6px; font-size: 12px; border-radius: 8px; background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .player-item button:disabled { opacity: 0.4; }
+        .private-chat-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card-bg); border-radius: 20px; padding: 20px; width: 320px; max-height: 70vh; display: flex; flex-direction: column; z-index: 1000; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         .private-messages { flex: 1; overflow-y: auto; margin-bottom: 10px; }
         .private-input-row { display: flex; gap: 8px; }
         .private-input-row input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
-
         .duel-box { background: var(--duel-bg); border-radius: 12px; padding: 12px; margin-top: 10px; color: var(--duel-text); }
         .duel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
+        .duel-notice { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--btn-bg); color: white; padding: 10px 20px; border-radius: 20px; z-index: 1000; animation: fadeInUp 0.2s; }
         .blur-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 998; }
-
-        .auth-modal {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: var(--card-bg); border-radius: 24px; padding: 28px; width: 90%; max-width: 400px; z-index: 1000;
-          text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
+        .auth-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card-bg); border-radius: 24px; padding: 28px; width: 90%; max-width: 400px; z-index: 1000; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         .auth-modal h3 { margin-top: 0; color: var(--text); }
         .auth-modal input { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); margin: 10px 0; font-size: 16px; background: var(--input-bg); color: var(--text); }
         .auth-modal .btn { width: 100%; }
         .auth-switch { margin-top: 10px; cursor: pointer; color: var(--nick-color); }
-
         @media (max-width: 600px) {
           .chat-container { flex-direction: column; padding: 12px; }
           .chat-main { min-width: 0; }
-          .players-overlay { width: 200px; top: 50px; left: 5px; }
+          .players-overlay { width: 220px; top: 45px; left: 5px; padding: 10px; }
+          .player-item { font-size: 12px; padding: 3px 0; }
+          .player-item button { padding: 3px 5px; font-size: 11px; }
           .duel-box { position: fixed; bottom: 80px; left: 10px; right: 10px; z-index: 1000; }
           .private-chat-overlay { width: 90%; }
           .auth-modal { width: 95%; }
@@ -642,13 +521,22 @@ const Chat = () => {
       {showPlayers && isAuth && (
         <div className="players-overlay" ref={playersOverlayRef}>
           <h4>Онлайн: {players.length}</h4>
-          {players.map(p => (
-            <div className="player-item" key={p.id}>
-              <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
-              <button className="btn" onClick={() => requestDuel(p.id)}>⚔️</button>
-              <button className="btn" onClick={() => openPrivateChat(p.userId, p.nickname)}>✉️</button>
-            </div>
-          ))}
+          <div className="players-list">
+            {players.map(p => {
+              const isSelf = p.userId === myId;
+              return (
+                <div className="player-item" key={p.id}>
+                  <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
+                  {!isSelf && (
+                    <>
+                      <button onClick={() => requestDuel(p.id)}>⚔️</button>
+                      <button onClick={() => openPrivateChat(p.userId, p.nickname)}>✉️</button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -657,7 +545,7 @@ const Chat = () => {
           <div className="blur-overlay" onClick={closePrivateChat} />
           <div className="private-chat-overlay">
             <h4>Чат с {privateChat.nickname}</h4>
-            <div className="private-messages" ref={privateMessagesEndRef}>
+            <div className="private-messages">
               {privateChat.messages?.map((m, i) => (
                 <div key={i}><strong>{m.senderId === myId ? 'Я' : privateChat.nickname}:</strong> {m.text}</div>
               ))}
@@ -745,6 +633,8 @@ const Chat = () => {
             {bannedUntil && ` — бан до ${new Date(bannedUntil).toLocaleTimeString()}`}
             {errorMessage && <div style={{ color: '#e94560', marginTop: 4 }}>{errorMessage}</div>}
           </div>
+
+          {duelNotice && <div className="duel-notice">{duelNotice}</div>}
 
           {duelInvite && (
             <div className="duel-box">
