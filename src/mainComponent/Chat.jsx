@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.11';
+const VERSION = '2.0.12';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -760,21 +760,20 @@ const Chat = () => {
           background: var(--card-bg);
           color: var(--text);
           border: 1px solid var(--border);
-          border-radius: 20px;
-          padding: 6px 12px;
+          border-radius: 50%;
+          width: 44px;
+          height: 44px;
+          padding: 0;
           cursor: pointer;
           font-size: 18px;
           touch-action: manipulation;
-          width: auto;
-          height: auto;
-          flex: none;
-          display: inline-flex;
+          display: flex;
           align-items: center;
           justify-content: center;
+          flex: none;
         }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
-        .players-toggle { position: relative; }
 
         .unread-badge {
           position: absolute;
@@ -794,7 +793,7 @@ const Chat = () => {
         }
 
         .players-overlay {
-          position: fixed; top: 50px; left: 10px; z-index: 1000; background: var(--card-bg);
+          position: fixed; top: 60px; left: 10px; z-index: 1000; background: var(--card-bg);
           border-radius: 16px; padding: 10px; box-shadow: var(--shadow); width: 240px; max-height: 70vh; overflow-y: auto;
           touch-action: none; user-select: none; -webkit-user-drag: none;
         }
@@ -991,12 +990,12 @@ const Chat = () => {
           .chat-container {
             flex-direction: column;
             padding: 4px;
-            gap: 6px;
+            gap: 4px;
             height: 100%;
           }
           .chat-main {
             min-width: 0;
-            padding: 8px;
+            padding: 6px;
             border-radius: 12px;
           }
           .qr-wrap {
@@ -1031,7 +1030,7 @@ const Chat = () => {
           }
           .input-row input {
             padding: 8px 10px;
-            font-size: 16px; /* предотвращает зум на iOS */
+            font-size: 16px;
           }
           .btn {
             padding: 8px 12px;
@@ -1039,7 +1038,7 @@ const Chat = () => {
           }
           .players-overlay {
             width: 180px;
-            top: 35px;
+            top: 50px;
             left: 3px;
             padding: 6px;
             max-height: 60vh;
