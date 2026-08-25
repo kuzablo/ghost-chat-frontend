@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ConfirmBanModal from './ConfirmBanModal';
 import { QRCodeSVG } from 'qrcode.react';
 
 const VERSION = '2.4.0';
@@ -96,7 +97,8 @@ const Chat = () => {
   const [unreadByUser, setUnreadByUser] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sending, setSending] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // <-- новое состояние
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [banConfirm, setBanConfirm] = useState(null);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -1094,7 +1096,7 @@ const Chat = () => {
                       {isAdmin && (
                         <>
                           <button onClick={() => watchChat(p.userId)} title="Просмотр чата">ℹ️</button>
-                          <button onClick={() => banForever(p.userId)} title="Забанить навсегда">⛔</button>
+                          <button onClick={() => setBanConfirm({ userId: p.userId, nickname: p.nickname })} title="Забанить навсегда">⛔</button>
                         </>
                       )}
                       <button onClick={() => requestDuel(p.id)} title="Вызвать на дуэль">⚔️</button>
@@ -1147,6 +1149,18 @@ const Chat = () => {
           </div>
         </>
       )}
+
+      <ConfirmBanModal
+        open={!!banConfirm}
+        nickname={banConfirm?.nickname}
+        onConfirm={() => {
+          if (banConfirm) {
+            banForever(banConfirm.userId);
+            setBanConfirm(null);
+          }
+        }}
+        onCancel={() => setBanConfirm(null)}
+      />
 
       <div className="chat-container">
         <div className="chat-main">
