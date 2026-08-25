@@ -3,15 +3,17 @@ import React from 'react';
 const LatestVersionLink = ({ url = window.location.href }) => {
   const handleClick = (e) => {
     e.preventDefault();
-    window.location.reload(true); // принудительная перезагрузка без кэша
+    // Добавляем параметр версии, чтобы сбросить кэш
+    const base = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    params.set('v', Date.now()); // или фиксированная версия
+    window.location.href = base + '?' + params.toString();
   };
 
   return (
     <a
-      href={url}
+      href="#"
       onClick={handleClick}
-      target="_blank"
-      rel="noopener noreferrer"
       style={{
         position: 'fixed',
         bottom: '20px',
