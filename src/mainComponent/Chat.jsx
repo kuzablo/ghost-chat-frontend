@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
+import PrivateChat from './components/PrivateChat';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.5.6';
+const VERSION = '2.5.7';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -91,7 +92,6 @@ const Chat = () => {
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [privateChat, setPrivateChat] = useState(null);
-  const [privateInput, setPrivateInput] = useState('');
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
   const [duelNotice, setDuelNotice] = useState('');
   const [showIdleNotice, setShowIdleNotice] = useState(false);
@@ -103,7 +103,7 @@ const Chat = () => {
   const [banConfirm, setBanConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState(null); // для увеличения фото
+  const [fullscreenImage, setFullscreenImage] = useState(null);
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -113,8 +113,6 @@ const Chat = () => {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
-  const privateMessagesEndRef = useRef(null);
-  const privateTypingTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
@@ -249,8 +247,6 @@ const Chat = () => {
           case 'private_typing':
             if (msg.data.senderId !== myId) {
               setPrivateTypingUser(msg.data.isTyping ? msg.data.senderNickname : null);
-              clearTimeout(privateTypingTimeoutRef.current);
-              privateTypingTimeoutRef.current = setTimeout(() => setPrivateTypingUser(null), 2000);
             }
             break;
           case 'private_history':
@@ -350,12 +346,6 @@ const Chat = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (privateMessagesEndRef.current) {
-      privateMessagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [privateChat?.messages]);
 
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
@@ -541,53 +531,7 @@ const Chat = () => {
 
   const closePrivateChat = () => {
     setPrivateChat(null);
-    setPrivateInput('');
     setPrivateTypingUser(null);
-  };
-
-  const sendPrivateMessage = () => {
-    if (
-      wsRef.current?.readyState === WebSocket.OPEN &&
-      privateInput.trim() &&
-      privateChat &&
-      privateChat.userId !== myId
-    ) {
-      wsRef.current.send(JSON.stringify({
-        type: 'private_message',
-        data: { recipientId: privateChat.userId, text: privateInput.trim() }
-      }));
-      setPrivateInput('');
-      wsRef.current.send(JSON.stringify({
-        type: 'private_typing',
-        data: { recipientId: privateChat.userId, isTyping: false }
-      }));
-    }
-  };
-
-  const handlePrivateInputChange = (e) => {
-    setPrivateInput(e.target.value);
-    if (wsRef.current?.readyState === WebSocket.OPEN && privateChat && privateChat.userId !== myId) {
-      if (e.target.value.trim()) {
-        wsRef.current.send(JSON.stringify({
-          type: 'private_typing',
-          data: { recipientId: privateChat.userId, isTyping: true }
-        }));
-        clearTimeout(privateTypingTimeoutRef.current);
-        privateTypingTimeoutRef.current = setTimeout(() => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-              type: 'private_typing',
-              data: { recipientId: privateChat.userId, isTyping: false }
-            }));
-          }
-        }, 1500);
-      } else {
-        wsRef.current.send(JSON.stringify({
-          type: 'private_typing',
-          data: { recipientId: privateChat.userId, isTyping: false }
-        }));
-      }
-    }
   };
 
   const filteredPlayers = players.filter(p =>
@@ -597,7 +541,6 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  // ============== АДМИНСКИЕ ФУНКЦИИ ==============
   const banForever = (userId) => {
     if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
       wsRef.current.send(JSON.stringify({ type: 'ban_forever', data: { userId } }));
@@ -1115,7 +1058,6 @@ const Chat = () => {
         }
         .idle-notice.visible { opacity: 1; }
 
-        /* Фуллскрин картинки */
         .fullscreen-overlay {
           position: fixed;
           top: 0;
@@ -1240,40 +1182,15 @@ const Chat = () => {
       )}
 
       {privateChat && (
-        <>
-          <div className="blur-overlay" onClick={closePrivateChat} />
-          <div className="private-chat-overlay">
-            <div className="private-chat-header">
-              <h4>Чат с {privateChat.nickname}</h4>
-              <button className="private-chat-close" onClick={closePrivateChat}>×</button>
-            </div>
-            <div className="private-typing">
-              {privateTypingUser ? `${privateTypingUser} печатает...` : ''}
-            </div>
-            <div className="private-messages">
-              {privateChat.messages?.map((m, i) => (
-                <div key={i} className="private-msg">
-                  <span className="private-msg-nick">{m.senderId === myId ? 'Я' : privateChat.nickname}</span>
-                  <span className="private-msg-text">{m.text}</span>
-                </div>
-              ))}
-              <div ref={privateMessagesEndRef} />
-            </div>
-            <div className="private-input-row">
-              <input
-                value={privateInput}
-                onChange={handlePrivateInputChange}
-                onKeyDown={e => e.key === 'Enter' && sendPrivateMessage()}
-                placeholder="Напишите сообщение..."
-              />
-              <button className="btn" onClick={sendPrivateMessage}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </>
+        <PrivateChat
+          userId={privateChat.userId}
+          nickname={privateChat.nickname}
+          myId={myId}
+          ws={wsRef.current}
+          initialMessages={privateChat.messages || []}
+          typingUser={privateTypingUser}
+          onClose={closePrivateChat}
+        />
       )}
 
       <ConfirmBanModal
@@ -1512,7 +1429,6 @@ const Chat = () => {
       {isNewVersionAvailable && <LatestVersionLink />}
       <div className="version">v{VERSION}</div>
 
-      {/* Фуллскрин картинки */}
       {fullscreenImage && (
         <div className="fullscreen-overlay" onClick={() => setFullscreenImage(null)}>
           <img src={fullscreenImage} alt="fullscreen" />
