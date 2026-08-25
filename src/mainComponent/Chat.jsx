@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.6';
+const VERSION = '2.0.7';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -203,7 +203,7 @@ const Chat = () => {
               return {
                 ...prev,
                 messages: [...(prev.messages || []), {
-                  senderId: myId,
+                  senderId: msg.data.senderId, // ← исправлено: теперь всегда мой ID
                   text: msg.data.text,
                   created_at: msg.data.created_at,
                 }],
@@ -467,7 +467,6 @@ const Chat = () => {
         data: { recipientId: privateChat.userId, text: privateInput.trim() }
       }));
       setPrivateInput('');
-      // Отправляем событие окончания набора
       wsRef.current.send(JSON.stringify({
         type: 'private_typing',
         data: { recipientId: privateChat.userId, isTyping: false }
@@ -520,6 +519,7 @@ const Chat = () => {
           --duel-bg: #ffe5ec;
           --duel-text: #b03a5b;
           --shadow: 0 8px 30px rgba(0,0,0,0.06);
+          --msg-border: rgba(0,0,0,0.05);
         }
         body.dark {
           --bg: #1a2536;
@@ -535,6 +535,7 @@ const Chat = () => {
           --duel-bg: #4a2530;
           --duel-text: #ffb3c1;
           --shadow: 0 8px 30px rgba(0,0,0,0.4);
+          --msg-border: rgba(255,255,255,0.05);
         }
 
         html, body, #root {
@@ -599,6 +600,7 @@ const Chat = () => {
           margin-bottom: 12px;
           cursor: pointer;
           touch-action: manipulation;
+          justify-content: flex-start;
         }
 
         .msg-avatar {
@@ -626,8 +628,16 @@ const Chat = () => {
           border-radius: 6px 6px 50% 50% / 6px 6px 50% 50%;
         }
 
-        .msg-content { flex: 1; }
-        .msg-header { display: flex; align-items: baseline; gap: 4px; }
+        .msg-content {
+          flex: 1;
+          text-align: left;
+          background: var(--card-bg);
+          border: 1px solid var(--msg-border);
+          border-radius: 8px;
+          padding: 6px 10px;
+          transition: background 0.2s;
+        }
+        .msg-header { display: flex; align-items: baseline; gap: 4px; margin-bottom: 2px; }
         .msg-nick { font-weight: 600; color: var(--nick-color); font-size: 14px; }
         .reactions-header {
           display: flex;
@@ -762,6 +772,27 @@ const Chat = () => {
           padding: 10px;
           margin-bottom: 10px;
         }
+        .private-msg {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          margin-bottom: 8px;
+        }
+        .private-msg .private-msg-nick {
+          font-weight: 600;
+          color: var(--nick-color);
+          font-size: 12px;
+          margin-bottom: 2px;
+        }
+        .private-msg .private-msg-text {
+          color: var(--msg-text);
+          background: var(--card-bg);
+          border: 1px solid var(--msg-border);
+          border-radius: 8px;
+          padding: 6px 10px;
+          max-width: 80%;
+          word-break: break-word;
+        }
         .private-input-row {
           display: flex;
           gap: 10px;
@@ -837,6 +868,12 @@ const Chat = () => {
             height: 70vh;
             max-height: none;
           }
+          .msg-content {
+            padding: 4px 8px;
+          }
+          .msg-text {
+            font-size: 14px;
+          }
           .auth-modal { width: 95%; }
         }
       `}</style>
@@ -886,7 +923,10 @@ const Chat = () => {
             </div>
             <div className="private-messages">
               {privateChat.messages?.map((m, i) => (
-                <div key={i}><strong>{m.senderId === myId ? 'Я' : privateChat.nickname}:</strong> {m.text}</div>
+                <div key={i} className="private-msg">
+                  <span className="private-msg-nick">{m.senderId === myId ? 'Я' : privateChat.nickname}</span>
+                  <span className="private-msg-text">{m.text}</span>
+                </div>
               ))}
               <div ref={privateMessagesEndRef} />
             </div>
