@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '1.0.17';
+const VERSION = '1.0.18';
 
 const getAvatarColor = (nickname) => {
-  if (!nickname) return '#b0c4de';
+  if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
   let hash = 0;
   for (let i = 0; i < nickname.length; i++) {
     hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 60%, 62%)`;
+  const hue2 = (hue + 40) % 360;
+  return `linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue2}, 70%, 40%))`;
 };
 
 const getInitial = (nickname) => nickname ? nickname.charAt(0).toUpperCase() : '?';
@@ -297,6 +298,10 @@ const Chat = () => {
     setActiveMessageId(prev => prev === messageId ? null : messageId);
   };
 
+  const hasReactions = (message) => {
+    return message?.reactions && Object.keys(message.reactions).length > 0;
+  };
+
   return (
     <>
       <style>{`
@@ -409,7 +414,7 @@ const Chat = () => {
         .msg {
           display: flex;
           align-items: flex-start;
-          gap: 6px;
+          gap: 8px;
           margin-bottom: 12px;
           word-break: break-word;
           animation: fadeInUp 0.25s ease;
@@ -422,17 +427,31 @@ const Chat = () => {
         }
 
         .msg-avatar {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          position: relative;
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 8px;
-          font-weight: 600;
+          font-size: 12px;
+          font-weight: 700;
           color: #ffffff;
           flex-shrink: 0;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2), 0 0 8px rgba(255,255,255,0.2) inset;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .msg-avatar::after {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          right: 2px;
+          height: 40%;
+          background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent);
+          border-radius: 6px 6px 50% 50% / 6px 6px 50% 50%;
+          pointer-events: none;
         }
 
         .msg-content {
@@ -785,8 +804,17 @@ const Chat = () => {
                     <span className="msg-time">{formatTime(m.time)}</span>
                   </div>
                   <div className="msg-text">{m.text}</div>
-                  {activeMessageId === m.id && (
+                  {hasReactions(m) && (
                     <div className="reactions">
+                      {Object.entries(m.reactions).map(([emoji, users]) => (
+                        <span key={emoji} className="reaction-badge">
+                          {emoji} {users.length}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {activeMessageId === m.id && (
+                    <div className="reactions" onClick={(e) => e.stopPropagation()}>
                       {['👍', '🔥', '😂'].map(emoji => {
                         const count = m.reactions?.[emoji]?.length || 0;
                         const hasMyReaction = m.reactions?.[emoji]?.includes(nickname);
