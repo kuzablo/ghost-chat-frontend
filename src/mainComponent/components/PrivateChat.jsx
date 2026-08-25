@@ -1,20 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 
-const PrivateChat = ({ 
-  userId, 
-  nickname, 
-  myId, 
-  ws, 
+const PrivateChat = ({
+  userId,
+  nickname,
+  myId,
+  ws,
   onClose,
   initialMessages = [],
   typingUser = null,
-  onTyping,
 }) => {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const wsRef = useRef(ws);
+
+  useEffect(() => {
+    wsRef.current = ws;
+  }, [ws]);
 
   useEffect(() => {
     setMessages(initialMessages);
@@ -31,13 +35,17 @@ const PrivateChat = ({
   }, [messages]);
 
   const sendMessage = () => {
-    if (!input.trim() || !ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({
+    const currentWs = wsRef.current;
+    if (!input.trim() || !currentWs || currentWs.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket не готов');
+      return;
+    }
+    currentWs.send(JSON.stringify({
       type: 'private_message',
       data: { recipientId: userId, text: input.trim() }
     }));
     setInput('');
-    ws.send(JSON.stringify({
+    currentWs.send(JSON.stringify({
       type: 'private_typing',
       data: { recipientId: userId, isTyping: false }
     }));
@@ -45,23 +53,24 @@ const PrivateChat = ({
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const currentWs = wsRef.current;
+    if (!currentWs || currentWs.readyState !== WebSocket.OPEN) return;
     if (e.target.value.trim()) {
-      ws.send(JSON.stringify({
+      currentWs.send(JSON.stringify({
         type: 'private_typing',
         data: { recipientId: userId, isTyping: true }
       }));
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
+        if (currentWs.readyState === WebSocket.OPEN) {
+          currentWs.send(JSON.stringify({
             type: 'private_typing',
             data: { recipientId: userId, isTyping: false }
           }));
         }
       }, 1500);
     } else {
-      ws.send(JSON.stringify({
+      currentWs.send(JSON.stringify({
         type: 'private_typing',
         data: { recipientId: userId, isTyping: false }
       }));
