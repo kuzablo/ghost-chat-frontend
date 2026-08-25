@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.0.3';
+const VERSION = '2.0.4';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -91,6 +91,7 @@ const Chat = () => {
   const [privateChat, setPrivateChat] = useState(null);
   const [privateInput, setPrivateInput] = useState('');
   const [duelNotice, setDuelNotice] = useState('');
+  const [showIdleNotice, setShowIdleNotice] = useState(false);
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -173,6 +174,14 @@ const Chat = () => {
           case 'banned':
             setBannedUntil(msg.data.until);
             break;
+          case 'idle_disconnect':
+            setAuthError('Вы были отключены за неактивность. Войдите снова.');
+            setIsAuth(false);
+            localStorage.removeItem('ghost-chat-token');
+            localStorage.removeItem('ghost-chat-nickname');
+            setToken('');
+            setNickname('');
+            break;
           case 'private_message':
             setPrivateChat(prev => {
               if (!prev || prev.userId !== msg.data.senderId) return prev;
@@ -218,13 +227,19 @@ const Chat = () => {
         setIsAuth(false);
         setNickname('');
       } else if (e.code === 4002) {
-        // Аккаунт уже используется на другом устройстве
         localStorage.removeItem('ghost-chat-token');
         localStorage.removeItem('ghost-chat-nickname');
         setToken('');
         setIsAuth(false);
         setNickname('');
         setAuthError('Аккаунт уже используется на другом устройстве');
+      } else if (e.code === 4005) {
+        setAuthError('Вы были отключены за неактивность. Войдите снова.');
+        setIsAuth(false);
+        localStorage.removeItem('ghost-chat-token');
+        localStorage.removeItem('ghost-chat-nickname');
+        setToken('');
+        setNickname('');
       } else if (!unmountedRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = setTimeout(connect, 3000);
@@ -277,6 +292,16 @@ const Chat = () => {
     document.body.classList.toggle('dark', isDark);
     localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  useEffect(() => {
+    if (!isAuth) {
+      setShowIdleNotice(true);
+      const timer = setTimeout(() => setShowIdleNotice(false), 10000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowIdleNotice(false);
+    }
+  }, [isAuth]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -670,6 +695,17 @@ const Chat = () => {
         .auth-modal .btn { width: 100%; }
         .auth-switch { margin-top: 10px; cursor: pointer; color: var(--nick-color); }
 
+        .idle-notice {
+          font-size: 12px;
+          color: var(--nick-color);
+          margin-bottom: 10px;
+          opacity: 0;
+          transition: opacity 2s ease;
+        }
+        .idle-notice.visible {
+          opacity: 1;
+        }
+
         @media (max-width: 600px) {
           .chat-container { flex-direction: column; padding: 12px; }
           .chat-main { min-width: 0; }
@@ -856,6 +892,11 @@ const Chat = () => {
               onKeyDown={e => e.key === 'Enter' && handleAuthSubmit()}
             />
             {authError && <div style={{ color: '#e94560', marginBottom: 10 }}>{authError}</div>}
+            {showIdleNotice && (
+              <div className={`idle-notice ${showIdleNotice ? 'visible' : ''}`}>
+                ⏳ Неактивные пользователи будут автоматически отключены через 1 минуту бездействия.
+              </div>
+            )}
             {isRegisterMode && (
               <div style={{ fontSize: 12, color: 'var(--nick-color)', marginBottom: 10 }}>
                 Пароль будет сохранён в зашифрованном виде, но восстановить его не получится. Придумай надёжный пароль: чем длиннее, тем лучше. Если забудешь — доступ к нику вернуть нельзя.
