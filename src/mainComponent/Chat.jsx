@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
+import FriendRequestsModal from './components/FriendRequestsModal';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.6.5';
+const VERSION = '2.6.6';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -104,6 +105,8 @@ const Chat = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -258,6 +261,16 @@ const Chat = () => {
               const { [msg.data.userId]: _, ...rest } = prev;
               return rest;
             });
+            break;
+          case 'friend_requests_list':
+            setFriendRequests(msg.data);
+            break;
+          case 'new_friend_request':
+            setFriendRequests(prev => [...prev, msg.data]);
+            break;
+          case 'friend_request_accepted':
+          case 'friend_request_declined':
+            setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
             break;
           default:
             console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
@@ -923,7 +936,7 @@ const Chat = () => {
 
         .version { position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: #aaa; z-index: 999; }
 
-        .theme-toggle, .players-toggle {
+        .theme-toggle, .players-toggle, .friends-toggle {
           position: fixed;
           z-index: 1000;
           background: var(--card-bg);
@@ -943,6 +956,7 @@ const Chat = () => {
         }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
+        .friends-toggle { top: 60px; left: 10px; }
         .unread-badge {
           position: absolute;
           top: -5px;
@@ -1079,6 +1093,62 @@ const Chat = () => {
           border-radius: 8px;
         }
 
+        .friend-requests-modal {
+          position: fixed;
+          bottom: 50%;
+          left: 50%;
+          transform: translate(-50%, 50%);
+          background: var(--card-bg);
+          backdrop-filter: blur(12px);
+          border-radius: 16px;
+          padding: 15px;
+          width: 400px;
+          max-width: 90vw;
+          max-height: 60vh;
+          display: flex;
+          flex-direction: column;
+          z-index: 1000;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .friend-requests-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .friend-requests-close {
+          background: transparent;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: var(--text);
+        }
+        .friend-requests-list {
+          overflow-y: auto;
+          flex: 1;
+        }
+        .friend-request-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .friend-request-actions {
+          display: flex;
+          gap: 4px;
+        }
+        .friend-request-actions .btn {
+          padding: 4px 10px;
+          font-size: 12px;
+        }
+        @media (max-width: 600px) {
+          .friend-requests-modal {
+            bottom: 20%;
+            width: 95vw;
+          }
+        }
+
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
@@ -1122,6 +1192,7 @@ const Chat = () => {
           .duel-box { position: fixed; bottom: 60px; left: 10px; right: 10px; z-index: 1000; margin-top: 0; border-radius: 12px; }
           .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
+          .friends-toggle { top: 60px; left: 10px; }
         }
 
         @media (pointer: fine) {
@@ -1137,10 +1208,16 @@ const Chat = () => {
       </button>
 
       {isAuth && (
-        <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
-          👥
-          {unreadCount > 0 && <span className="unread-badge">!</span>}
-        </button>
+        <>
+          <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
+            👥
+            {unreadCount > 0 && <span className="unread-badge">!</span>}
+          </button>
+          <button className="friends-toggle" onClick={() => setShowFriendRequests(true)}>
+            🤝
+            {friendRequests.length > 0 && <span className="unread-badge">!</span>}
+          </button>
+        </>
       )}
 
       {showPlayers && isAuth && (
@@ -1172,6 +1249,19 @@ const Chat = () => {
                         ✉️
                         {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
                       </button>
+                      <button
+                        onClick={() => {
+                          if (wsRef.current?.readyState === WebSocket.OPEN) {
+                            wsRef.current.send(JSON.stringify({
+                              type: 'friend_request',
+                              data: { receiverId: p.userId }
+                            }));
+                          }
+                        }}
+                        title="Добавить в друзья"
+                      >
+                        🤝
+                      </button>
                     </>
                   )}
                 </div>
@@ -1179,6 +1269,31 @@ const Chat = () => {
             })}
           </div>
         </div>
+      )}
+
+      {showFriendRequests && (
+        <FriendRequestsModal
+          requests={friendRequests}
+          onAccept={(requestId) => {
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({
+                type: 'friend_request_accept',
+                data: { requestId }
+              }));
+            }
+            setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+          }}
+          onDecline={(requestId) => {
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({
+                type: 'friend_request_decline',
+                data: { requestId }
+              }));
+            }
+            setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+          }}
+          onClose={() => setShowFriendRequests(false)}
+        />
       )}
 
       {privateChat && (
