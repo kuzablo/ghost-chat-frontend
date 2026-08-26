@@ -5,7 +5,7 @@ import PrivateChat from './components/PrivateChat';
 import FriendRequestsModal from './components/FriendRequestsModal';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.6.6';
+const VERSION = '2.6.7';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -78,6 +78,7 @@ const Chat = () => {
   const [token, setToken] = useState(storedToken);
   const [isAuth, setIsAuth] = useState(!!storedToken);
   const [players, setPlayers] = useState([]);
+  const [friends, setFriends] = useState([]);
   const [myId, setMyId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [duelInvite, setDuelInvite] = useState(null);
@@ -88,6 +89,7 @@ const Chat = () => {
   const [isDark, setIsDark] = useState(storedTheme === 'dark');
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [showPlayers, setShowPlayers] = useState(false);
+  const [activeTab, setActiveTab] = useState('online');
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [authNickname, setAuthNickname] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -148,6 +150,10 @@ const Chat = () => {
             setIsAuth(true);
             setIsAdmin(msg.data.role === 'admin');
             setServerVersion(msg.data.serverVersion || '');
+            // Запросить список друзей
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+            }
             break;
           case 'history':
             setMessages(msg.data);
@@ -167,6 +173,9 @@ const Chat = () => {
             break;
           case 'players':
             setPlayers(msg.data);
+            break;
+          case 'friends_list':
+            setFriends(msg.data);
             break;
           case 'typing':
             const { nickname: typingNick, isTyping } = msg.data;
@@ -267,6 +276,14 @@ const Chat = () => {
             break;
           case 'new_friend_request':
             setFriendRequests(prev => [...prev, msg.data]);
+            break;
+          case 'friend_request_accepted_notification':
+            setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
+            setTimeout(() => setDuelNotice(''), 4000);
+            // Обновить список друзей
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+            }
             break;
           case 'friend_request_accepted':
           case 'friend_request_declined':
@@ -585,6 +602,8 @@ const Chat = () => {
   };
 
   const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
+
+  const isFriend = (userId) => friends.some(f => f.userId === userId);
 
   return (
     <>
@@ -936,7 +955,7 @@ const Chat = () => {
 
         .version { position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: #aaa; z-index: 999; }
 
-        .theme-toggle, .players-toggle, .friends-toggle {
+        .theme-toggle, .players-toggle {
           position: fixed;
           z-index: 1000;
           background: var(--card-bg);
@@ -956,7 +975,6 @@ const Chat = () => {
         }
         .theme-toggle { top: 10px; right: 10px; }
         .players-toggle { top: 10px; left: 10px; }
-        .friends-toggle { top: 60px; left: 10px; }
         .unread-badge {
           position: absolute;
           top: -5px;
@@ -999,6 +1017,24 @@ const Chat = () => {
           justify-content: center;
           margin-left: 2px;
           flex-shrink: 0;
+        }
+        .tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+        .tabs button {
+          background: transparent;
+          border: none;
+          padding: 4px 8px;
+          cursor: pointer;
+          color: var(--text);
+          font-weight: 600;
+          border-bottom: 2px solid transparent;
+          transition: border-color 0.2s;
+        }
+        .tabs button.active {
+          border-bottom-color: var(--btn-bg);
         }
 
         .private-chat-overlay {
@@ -1192,7 +1228,6 @@ const Chat = () => {
           .duel-box { position: fixed; bottom: 60px; left: 10px; right: 10px; z-index: 1000; margin-top: 0; border-radius: 12px; }
           .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
-          .friends-toggle { top: 60px; left: 10px; }
         }
 
         @media (pointer: fine) {
@@ -1208,21 +1243,15 @@ const Chat = () => {
       </button>
 
       {isAuth && (
-        <>
-          <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
-            👥
-            {unreadCount > 0 && <span className="unread-badge">!</span>}
-          </button>
-          <button className="friends-toggle" onClick={() => setShowFriendRequests(true)}>
-            🤝
-            {friendRequests.length > 0 && <span className="unread-badge">!</span>}
-          </button>
-        </>
+        <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
+          👥
+          {unreadCount > 0 && <span className="unread-badge">!</span>}
+        </button>
       )}
 
       {showPlayers && isAuth && (
         <div className="players-overlay" ref={playersOverlayRef}>
-          <h4>Онлайн: {filteredPlayers.length}</h4>
+          <h4>Онлайн: {players.length}</h4>
           <input
             className="search-input"
             type="text"
@@ -1230,9 +1259,19 @@ const Chat = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <div className="tabs">
+            <button className={activeTab === 'online' ? 'active' : ''} onClick={() => setActiveTab('online')}>Онлайн</button>
+            <button className={activeTab === 'friends' ? 'active' : ''} onClick={() => {
+              setActiveTab('friends');
+              if (wsRef.current?.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+              }
+            }}>Друзья</button>
+          </div>
           <div className="players-list">
-            {filteredPlayers.map(p => {
+            {activeTab === 'online' && filteredPlayers.map(p => {
               const isSelf = p.userId === myId;
+              const isFriend = friends.some(f => f.userId === p.userId);
               return (
                 <div className="player-item" key={p.id}>
                   <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
@@ -1249,24 +1288,36 @@ const Chat = () => {
                         ✉️
                         {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
                       </button>
-                      <button
-                        onClick={() => {
-                          if (wsRef.current?.readyState === WebSocket.OPEN) {
-                            wsRef.current.send(JSON.stringify({
-                              type: 'friend_request',
-                              data: { receiverId: p.userId }
-                            }));
-                          }
-                        }}
-                        title="Добавить в друзья"
-                      >
-                        🤝
-                      </button>
+                      {!isFriend && (
+                        <button
+                          onClick={() => {
+                            if (wsRef.current?.readyState === WebSocket.OPEN) {
+                              wsRef.current.send(JSON.stringify({
+                                type: 'friend_request',
+                                data: { receiverId: p.userId }
+                              }));
+                            }
+                          }}
+                          title="Добавить в друзья"
+                        >
+                          🤝
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
               );
             })}
+            {activeTab === 'friends' && friends.map(f => (
+              <div className="player-item" key={f.userId}>
+                <span>{f.nickname}</span>
+                <button onClick={() => openPrivateChat(f.userId, f.nickname)} title="Написать">
+                  ✉️
+                  {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
+                </button>
+                <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
+              </div>
+            ))}
           </div>
         </div>
       )}
