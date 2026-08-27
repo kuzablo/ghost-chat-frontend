@@ -4,7 +4,7 @@ import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.7.0';
+const VERSION = '2.7.2';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -1224,7 +1224,6 @@ const Chat = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="players-list">
-            {/* Список всех пользователей (отфильтрованных по поиску) */}
             {filteredPlayers.map(p => {
               const isSelf = p.userId === myId;
               const isFriend = friends.some(f => f.userId === p.userId);
@@ -1268,8 +1267,6 @@ const Chat = () => {
                 </div>
               );
             })}
-
-            {/* Заголовок "Друзья" и список друзей */}
             {friends.length > 0 && (
               <div className="friends-header">Друзья</div>
             )}
@@ -1286,6 +1283,37 @@ const Chat = () => {
                 <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
               </div>
             ))}
+            {/* Входящие запросы */}
+            {friendRequests.length > 0 && (
+              <>
+                <div className="friends-header">Входящие запросы</div>
+                {friendRequests.map(req => (
+                  <div className="friend-request-item" key={req.requestId}>
+                    <span>{req.senderNickname} хочет добавить вас в друзья</span>
+                    <div className="friend-request-actions">
+                      <button className="btn" onClick={() => {
+                        if (wsRef.current?.readyState === WebSocket.OPEN) {
+                          wsRef.current.send(JSON.stringify({
+                            type: 'friend_request_accept',
+                            data: { requestId: req.requestId }
+                          }));
+                        }
+                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
+                      }}>Принять</button>
+                      <button className="btn" onClick={() => {
+                        if (wsRef.current?.readyState === WebSocket.OPEN) {
+                          wsRef.current.send(JSON.stringify({
+                            type: 'friend_request_decline',
+                            data: { requestId: req.requestId }
+                          }));
+                        }
+                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
+                      }}>Отклонить</button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       )}
