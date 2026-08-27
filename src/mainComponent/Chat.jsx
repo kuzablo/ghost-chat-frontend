@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
@@ -6,6 +6,7 @@ import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
 import MessageList from './components/MessageList';
 import { QRCodeSVG } from 'qrcode.react';
+import { useWebSocket } from './useWebSocket';
 import {
   getAvatarColor,
   getInitial,
@@ -14,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.7.8';
+const VERSION = '2.7.9';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -70,259 +71,189 @@ const Chat = () => {
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
-  const connect = () => {
-    if (unmountedRef.current) return;
-
-    const ws = new WebSocket('wss://ghost-chat-backend-production-5faf.up.railway.app');
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setIsConnected(true);
-      setErrorMessage('');
-      console.log(`[CHAT v${VERSION}] Connected`);
-      if (tokenRef.current) {
-        ws.send(JSON.stringify({ type: 'auth', token: tokenRef.current }));
-      }
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        console.log('📩 Входящее сообщение:', msg.type, msg.data);
-        switch (msg.type) {
-          case 'friends_list':
-            console.log('📋 Список друзей:', msg.data);
-            setFriends(msg.data);
-            break;
-          case 'version':
-            console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
-            break;
-          case 'auth_ok':
-            setMyId(msg.data.userId);
-            setNickname(msg.data.nickname);
-            setIsAuth(true);
-            setIsAdmin(msg.data.role === 'admin');
-            setServerVersion(msg.data.serverVersion || '');
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
-            }
-            break;
-          case 'history':
-            setMessages(msg.data);
-            break;
-          case 'message':
-            console.log('📸 Новое сообщение с imageUrl:', msg.data.imageUrl);
-            setMessages(prev => [...prev, msg.data]);
-            playNotificationSound();
-            break;
-          case 'message_update':
-            if (msg.data.id) {
-              setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
-            }
-            break;
-          case 'message_deleted':
-            setMessages(prev => prev.filter(m => m.id !== msg.data.messageId));
-            break;
-          case 'players':
-            setPlayers(msg.data);
-            break;
-          case 'typing':
-            const { nickname: typingNick, isTyping } = msg.data;
-            setTypingUsers(prev => {
-              if (isTyping && !prev.includes(typingNick)) return [...prev, typingNick];
-              if (!isTyping) return prev.filter(n => n !== typingNick);
-              return prev;
-            });
-            break;
-          case 'duel_invite':
-            setDuelInvite(msg.data);
-            break;
-          case 'duel_request_sent':
-            setDuelNotice(`Вызов ${msg.data.targetNick} отправлен`);
-            setTimeout(() => setDuelNotice(''), 3000);
-            break;
-          case 'duel_timeout':
-            setDuelNotice(`${msg.data.targetNick} не ответил на вызов`);
-            setTimeout(() => setDuelNotice(''), 3000);
-            break;
-          case 'duel_start':
-            setDuelState({ opponentNick: msg.data.opponentNick, myChoice: null });
-            setDuelInvite(null);
-            break;
-          case 'duel_result':
-            setDuelState(prev => prev ? { ...prev, result: msg.data.result } : null);
-            setTimeout(() => setDuelState(null), 5000);
-            break;
-          case 'banned':
-            setBannedUntil(msg.data.until);
-            break;
-          case 'banned_forever':
-            setAuthError('У нас тут таких не любят');
-            setIsAuth(false);
-            localStorage.removeItem('ghost-chat-token');
-            localStorage.removeItem('ghost-chat-nickname');
-            setToken('');
-            setNickname('');
-            break;
-          case 'idle_disconnect':
-            setAuthError('Вы были отключены за неактивность. Войдите снова.');
-            setIsAuth(false);
-            localStorage.removeItem('ghost-chat-token');
-            localStorage.removeItem('ghost-chat-nickname');
-            setToken('');
-            setNickname('');
-            break;
-          case 'admin_error':
-            setDuelNotice(msg.data.message);
-            setTimeout(() => setDuelNotice(''), 3000);
-            break;
-          case 'friend_request_sent':
-            setDuelNotice(`Запрос дружбы отправлен пользователю ${msg.data.receiverNickname}`);
-            setTimeout(() => setDuelNotice(''), 3000);
-            break;
-          case 'new_friend_request':
-            setFriendRequests(prev => [...prev, msg.data]);
-            break;
-          case 'friend_request_accepted_notification':
-            setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
-            setTimeout(() => setDuelNotice(''), 4000);
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
-            }
-            break;
-          case 'friend_request_accepted':
-          case 'friend_request_declined':
-            setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
-            break;
-          case 'friend_requests_list':
-            setFriendRequests(msg.data);
-            break;
-          case 'private_message':
-            setPrivateChat(prev => {
-              if (!prev || prev.userId !== msg.data.senderId) return prev;
-              return {
-                ...prev,
-                messages: [...(prev.messages || []), {
-                  senderId: msg.data.senderId,
-                  text: msg.data.text,
-                  created_at: msg.data.created_at,
-                }],
-              };
-            });
-            if (!privateChat || privateChat.userId !== msg.data.senderId) {
-              setUnreadByUser(prev => ({ ...prev, [msg.data.senderId]: true }));
-            }
-            break;
-          case 'private_message_sent':
-            setPrivateChat(prev => {
-              if (!prev || prev.userId !== msg.data.recipientId) return prev;
-              return {
-                ...prev,
-                messages: [...(prev.messages || []), {
-                  senderId: msg.data.senderId,
-                  text: msg.data.text,
-                  created_at: msg.data.created_at,
-                }],
-              };
-            });
-            break;
-          case 'private_typing':
-            if (msg.data.senderId !== myId) {
-              setPrivateTypingUser(msg.data.isTyping ? msg.data.senderNickname : null);
-            }
-            break;
-          case 'private_history':
-            setPrivateChat(prev => {
-              if (!prev || prev.userId !== msg.data.userId) return prev;
-              return { ...prev, messages: msg.data.messages };
-            });
-            setUnreadByUser(prev => {
-              const { [msg.data.userId]: _, ...rest } = prev;
-              return rest;
-            });
-            break;
-          default:
-            console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
+  // ---- Обработчик входящих сообщений ----
+  const handleWebSocketMessage = useCallback((msg) => {
+    console.log('📩 Входящее сообщение:', msg.type, msg.data);
+    switch (msg.type) {
+      case 'friends_list':
+        console.log('📋 Список друзей:', msg.data);
+        setFriends(msg.data);
+        break;
+      case 'version':
+        console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
+        break;
+      case 'auth_ok':
+        setMyId(msg.data.userId);
+        setNickname(msg.data.nickname);
+        setIsAuth(true);
+        setIsAdmin(msg.data.role === 'admin');
+        setServerVersion(msg.data.serverVersion || '');
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
         }
-      } catch (err) {
-        console.error(`[CHAT v${VERSION}] Message parse error:`, err);
-        setErrorMessage(`v${VERSION}: Ошибка обработки сообщения`);
+        break;
+      case 'history':
+        setMessages(msg.data);
+        break;
+      case 'message':
+        console.log('📸 Новое сообщение с imageUrl:', msg.data.imageUrl);
+        setMessages(prev => [...prev, msg.data]);
+        playNotificationSound();
+        break;
+      case 'message_update':
+        if (msg.data.id) {
+          setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
+        }
+        break;
+      case 'message_deleted':
+        setMessages(prev => prev.filter(m => m.id !== msg.data.messageId));
+        break;
+      case 'players':
+        setPlayers(msg.data);
+        break;
+      case 'typing': {
+        const { nickname: typingNick, isTyping } = msg.data;
+        setTypingUsers(prev => {
+          if (isTyping && !prev.includes(typingNick)) return [...prev, typingNick];
+          if (!isTyping) return prev.filter(n => n !== typingNick);
+          return prev;
+        });
+        break;
       }
-    };
-
-    ws.onerror = (e) => {
-      console.error(`[CHAT v${VERSION}] WebSocket error`, e);
-      setErrorMessage(`v${VERSION}: WebSocket error`);
-      setIsConnected(false);
-    };
-
-    ws.onclose = (e) => {
-      console.warn(`[CHAT v${VERSION}] Closed (code ${e.code}, reason ${e.reason})`);
-      setErrorMessage(`v${VERSION}: Closed (code ${e.code})`);
-      setIsConnected(false);
-      if (e.code === 4003) {
-        localStorage.removeItem('ghost-chat-token');
-        localStorage.removeItem('ghost-chat-nickname');
-        setToken('');
-        setIsAuth(false);
-        setNickname('');
-      } else if (e.code === 4002) {
-        localStorage.removeItem('ghost-chat-token');
-        localStorage.removeItem('ghost-chat-nickname');
-        setToken('');
-        setIsAuth(false);
-        setNickname('');
-        setAuthError('Аккаунт уже используется на другом устройстве');
-      } else if (e.code === 4005) {
-        setAuthError('Вы были отключены за неактивность. Войдите снова.');
-        setIsAuth(false);
-        localStorage.removeItem('ghost-chat-token');
-        localStorage.removeItem('ghost-chat-nickname');
-        setToken('');
-        setNickname('');
-      } else if (e.code === 4006) {
+      case 'duel_invite':
+        setDuelInvite(msg.data);
+        break;
+      case 'duel_request_sent':
+        setDuelNotice(`Вызов ${msg.data.targetNick} отправлен`);
+        setTimeout(() => setDuelNotice(''), 3000);
+        break;
+      case 'duel_timeout':
+        setDuelNotice(`${msg.data.targetNick} не ответил на вызов`);
+        setTimeout(() => setDuelNotice(''), 3000);
+        break;
+      case 'duel_start':
+        setDuelState({ opponentNick: msg.data.opponentNick, myChoice: null });
+        setDuelInvite(null);
+        break;
+      case 'duel_result':
+        setDuelState(prev => prev ? { ...prev, result: msg.data.result } : null);
+        setTimeout(() => setDuelState(null), 5000);
+        break;
+      case 'banned':
+        setBannedUntil(msg.data.until);
+        break;
+      case 'banned_forever':
         setAuthError('У нас тут таких не любят');
         setIsAuth(false);
         localStorage.removeItem('ghost-chat-token');
         localStorage.removeItem('ghost-chat-nickname');
         setToken('');
         setNickname('');
-      } else if (!unmountedRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = setTimeout(connect, 3000);
+        break;
+      case 'idle_disconnect':
+        setAuthError('Вы были отключены за неактивность. Войдите снова.');
+        setIsAuth(false);
+        localStorage.removeItem('ghost-chat-token');
+        localStorage.removeItem('ghost-chat-nickname');
+        setToken('');
+        setNickname('');
+        break;
+      case 'admin_error':
+        setDuelNotice(msg.data.message);
+        setTimeout(() => setDuelNotice(''), 3000);
+        break;
+      case 'friend_request_sent':
+        setDuelNotice(`Запрос дружбы отправлен пользователю ${msg.data.receiverNickname}`);
+        setTimeout(() => setDuelNotice(''), 3000);
+        break;
+      case 'new_friend_request':
+        setFriendRequests(prev => [...prev, msg.data]);
+        break;
+      case 'friend_request_accepted_notification':
+        setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
+        setTimeout(() => setDuelNotice(''), 4000);
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+        }
+        break;
+      case 'friend_request_accepted':
+      case 'friend_request_declined':
+        setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
+        break;
+      case 'friend_requests_list':
+        setFriendRequests(msg.data);
+        break;
+      case 'private_message': {
+        setPrivateChat(prev => {
+          if (!prev || prev.userId !== msg.data.senderId) return prev;
+          return {
+            ...prev,
+            messages: [...(prev.messages || []), {
+              senderId: msg.data.senderId,
+              text: msg.data.text,
+              created_at: msg.data.created_at,
+            }],
+          };
+        });
+        if (!privateChat || privateChat.userId !== msg.data.senderId) {
+          setUnreadByUser(prev => ({ ...prev, [msg.data.senderId]: true }));
+        }
+        break;
       }
-    };
-  };
+      case 'private_message_sent': {
+        setPrivateChat(prev => {
+          if (!prev || prev.userId !== msg.data.recipientId) return prev;
+          return {
+            ...prev,
+            messages: [...(prev.messages || []), {
+              senderId: msg.data.senderId,
+              text: msg.data.text,
+              created_at: msg.data.created_at,
+            }],
+          };
+        });
+        break;
+      }
+      case 'private_typing':
+        if (msg.data.senderId !== myId) {
+          setPrivateTypingUser(msg.data.isTyping ? msg.data.senderNickname : null);
+        }
+        break;
+      case 'private_history':
+        setPrivateChat(prev => {
+          if (!prev || prev.userId !== msg.data.userId) return prev;
+          return { ...prev, messages: msg.data.messages };
+        });
+        setUnreadByUser(prev => {
+          const { [msg.data.userId]: _, ...rest } = prev;
+          return rest;
+        });
+        break;
+      default:
+        console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
+    }
+  }, [myId, privateChat]);
+
+  // ---- WebSocket хук ----
+  const { isConnected: wsConnected, error: wsError, sendMessage, close, ws } = useWebSocket(
+    'wss://ghost-chat-backend-production-5faf.up.railway.app',
+    tokenRef.current,
+    handleWebSocketMessage
+  );
+
+  // Синхронизируем wsRef и isConnected
+  useEffect(() => {
+    wsRef.current = ws;
+    setIsConnected(wsConnected);
+  }, [ws, wsConnected]);
 
   useEffect(() => {
-    unmountedRef.current = false;
-    if (tokenRef.current) {
-      connect();
-    } else {
-      setIsAuth(false);
+    if (wsError) {
+      setErrorMessage('WebSocket error: ' + wsError);
     }
+  }, [wsError]);
 
-    const unlockAudio = () => ensureAudioContext();
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-    document.addEventListener('click', unlockAudio, { once: true });
-
-    const handleVisibility = () => {
-      if (!document.hidden && tokenRef.current && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
-        connect();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      unmountedRef.current = true;
-      clearTimeout(reconnectTimeoutRef.current);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('click', unlockAudio);
-      if (wsRef.current) wsRef.current.close();
-    };
-  }, []);
-
+  // ---- Эффекты ----
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -360,6 +291,7 @@ const Chat = () => {
     };
   }, [showPlayers]);
 
+  // ---- Обработчики действий ----
   const handleAuthSubmit = async () => {
     if (!authNickname.trim() || !authPassword.trim()) {
       setAuthError('Заполни оба поля');
@@ -387,7 +319,6 @@ const Chat = () => {
       setIsAuth(true);
       setAuthNickname('');
       setAuthPassword('');
-      connect();
     } catch (error) {
       console.error('Auth error:', error);
       setAuthError('Сеть недоступна, попробуй позже');
@@ -395,15 +326,13 @@ const Chat = () => {
   };
 
   const handleSendMessage = () => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN || !input.trim() || !isAuth) return;
-
-    wsRef.current.send(JSON.stringify({
+    if (!sendMessage || !input.trim() || !isAuth) return;
+    sendMessage({
       type: 'message',
       data: { text: input.trim() }
-    }));
+    });
     setInput('');
-    wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
-
+    sendMessage({ type: 'typing', data: { isTyping: false } });
     setSending(true);
     setTimeout(() => setSending(false), 800);
   };
@@ -411,7 +340,7 @@ const Chat = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!isAuth || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (!isAuth || !sendMessage) {
       setErrorMessage('Не авторизован или нет соединения');
       return;
     }
@@ -430,13 +359,13 @@ const Chat = () => {
         throw new Error(data.error || 'Upload failed');
       }
 
-      wsRef.current.send(JSON.stringify({
+      sendMessage({
         type: 'message',
         data: {
           text: '',
           imageUrl: data.imageUrl
         }
-      }));
+      });
 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -451,42 +380,42 @@ const Chat = () => {
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuth) {
+    if (sendMessage && isAuth) {
       if (e.target.value.trim()) {
-        wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: true } }));
+        sendMessage({ type: 'typing', data: { isTyping: true } });
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
+          if (sendMessage) {
+            sendMessage({ type: 'typing', data: { isTyping: false } });
           }
         }, 1500);
       } else {
-        wsRef.current.send(JSON.stringify({ type: 'typing', data: { isTyping: false } }));
+        sendMessage({ type: 'typing', data: { isTyping: false } });
       }
     }
   };
 
   const sendReaction = (messageId, emoji) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuth) {
-      wsRef.current.send(JSON.stringify({ type: 'reaction', data: { messageId, emoji } }));
+    if (sendMessage && isAuth) {
+      sendMessage({ type: 'reaction', data: { messageId, emoji } });
     }
   };
 
   const requestDuel = (targetId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuth) {
-      wsRef.current.send(JSON.stringify({ type: 'duel_request', data: { targetId } }));
+    if (sendMessage && isAuth) {
+      sendMessage({ type: 'duel_request', data: { targetId } });
     }
   };
 
   const acceptDuel = () => {
-    if (duelInvite && wsRef.current?.readyState === WebSocket.OPEN && isAuth) {
-      wsRef.current.send(JSON.stringify({ type: 'duel_accept', data: { fromId: duelInvite.fromId } }));
+    if (duelInvite && sendMessage && isAuth) {
+      sendMessage({ type: 'duel_accept', data: { fromId: duelInvite.fromId } });
     }
   };
 
   const choose = (choice) => {
-    if (duelState && wsRef.current?.readyState === WebSocket.OPEN && isAuth) {
-      wsRef.current.send(JSON.stringify({ type: 'duel_choice', data: { choice } }));
+    if (duelState && sendMessage && isAuth) {
+      sendMessage({ type: 'duel_choice', data: { choice } });
       setDuelState(prev => ({ ...prev, myChoice: choice }));
     }
   };
@@ -502,8 +431,8 @@ const Chat = () => {
       const { [userId]: _, ...rest } = prev;
       return rest;
     });
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'private_history', data: { userId } }));
+    if (sendMessage) {
+      sendMessage({ type: 'private_history', data: { userId } });
     }
   };
 
@@ -513,20 +442,20 @@ const Chat = () => {
   };
 
   const banForever = (userId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
-      wsRef.current.send(JSON.stringify({ type: 'ban_forever', data: { userId } }));
+    if (sendMessage && isAdmin) {
+      sendMessage({ type: 'ban_forever', data: { userId } });
     }
   };
 
   const deleteMessage = (messageId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
-      wsRef.current.send(JSON.stringify({ type: 'delete_message', data: { messageId } }));
+    if (sendMessage && isAdmin) {
+      sendMessage({ type: 'delete_message', data: { messageId } });
     }
   };
 
   const watchChat = (userId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
-      wsRef.current.send(JSON.stringify({ type: 'watch_chat', data: { userId } }));
+    if (sendMessage && isAdmin) {
+      sendMessage({ type: 'watch_chat', data: { userId } });
     }
   };
 
@@ -545,38 +474,28 @@ const Chat = () => {
   const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
 
   const handleFriendRequest = (receiverId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'friend_request',
-        data: { receiverId }
-      }));
+    if (sendMessage) {
+      sendMessage({ type: 'friend_request', data: { receiverId } });
     }
   };
 
   const handleAcceptRequest = (requestId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'friend_request_accept',
-        data: { requestId }
-      }));
+    if (sendMessage) {
+      sendMessage({ type: 'friend_request_accept', data: { requestId } });
     }
     setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
   };
 
   const handleDeclineRequest = (requestId) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'friend_request_decline',
-        data: { requestId }
-      }));
+    if (sendMessage) {
+      sendMessage({ type: 'friend_request_decline', data: { requestId } });
     }
     setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
   };
 
-  // Новая функция для переключения панели с обновлением списка друзей
   const togglePlayers = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+    if (sendMessage) {
+      sendMessage({ type: 'get_friends' });
     }
     setShowPlayers(prev => !prev);
   };
@@ -584,6 +503,7 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
+  // ---- JSX со стилями ----
   return (
     <>
       <style>{`
