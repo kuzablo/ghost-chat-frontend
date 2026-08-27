@@ -2,70 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
+import PlayersPanel from './components/PlayersPanel';
+import AuthModal from './components/AuthModal';
+import MessageList from './components/MessageList';
 import { QRCodeSVG } from 'qrcode.react';
+import {
+  getAvatarColor,
+  getInitial,
+  formatTime,
+  ensureAudioContext,
+  playNotificationSound,
+} from './utils';
 
-const VERSION = '2.7.3';
-
-const getAvatarColor = (nickname) => {
-  if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
-  let hash = 0;
-  for (let i = 0; i < nickname.length; i++) {
-    hash = nickname.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  const hue2 = (hue + 40) % 360;
-  return `linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue2}, 70%, 40%))`;
-};
-
-const getInitial = (nickname) => nickname ? nickname.charAt(0).toUpperCase() : '?';
-
-const formatTime = (timestamp) => {
-  if (!timestamp) return '';
-  const d = new Date(timestamp);
-  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-};
-
-const ensureAudioContext = () => {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
-  if (!window.__chatAudioCtx) {
-    const ctx = new AudioContext();
-    window.__chatAudioCtx = ctx;
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
-  }
-  if (window.__chatAudioCtx.state === 'suspended') {
-    window.__chatAudioCtx.resume();
-  }
-};
-
-const playNotificationSound = () => {
-  const ctx = window.__chatAudioCtx;
-  if (!ctx) return;
-  const now = ctx.currentTime;
-
-  const gain = ctx.createGain();
-  gain.connect(ctx.destination);
-  gain.gain.setValueAtTime(0.15, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-
-  const osc1 = ctx.createOscillator();
-  osc1.type = 'sine';
-  osc1.frequency.value = 523.25;
-  osc1.connect(gain);
-  osc1.start(now);
-  osc1.stop(now + 0.2);
-
-  const osc2 = ctx.createOscillator();
-  osc2.type = 'sine';
-  osc2.frequency.value = 659.25;
-  osc2.connect(gain);
-  osc2.start(now + 0.1);
-  osc2.stop(now + 0.3);
-};
+const VERSION = '2.7.5';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -544,10 +493,6 @@ const Chat = () => {
     setActiveMessageId(prev => prev === messageId ? null : messageId);
   };
 
-  const hasReactions = (message) => {
-    return message?.reactions && Object.keys(message.reactions).length > 0;
-  };
-
   const openPrivateChat = (userId, nickname) => {
     if (userId === myId) return;
     setPrivateChat({ userId, nickname, messages: [] });
@@ -564,13 +509,6 @@ const Chat = () => {
     setPrivateChat(null);
     setPrivateTypingUser(null);
   };
-
-  const filteredPlayers = players.filter(p =>
-    p.nickname.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const sendText = 'ОТПРАВИТЬ';
-  const sendChars = sendText.split('');
 
   const banForever = (userId) => {
     if (wsRef.current?.readyState === WebSocket.OPEN && isAdmin) {
@@ -604,15 +542,37 @@ const Chat = () => {
 
   const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
 
-  const isFriendOnline = (friendId) => {
-    return players.some(p => p.userId === friendId);
+  const handleFriendRequest = (receiverId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'friend_request',
+        data: { receiverId }
+      }));
+    }
   };
 
-  // Разделяем filteredPlayers на друзей и не-друзей
-  const friendIds = new Set(friends.map(f => f.userId));
-  const friendsList = friends; // все друзья из состояния
-  const nonFriends = filteredPlayers.filter(p => !friendIds.has(p.userId) && p.userId !== myId);
-  const selfPlayer = filteredPlayers.find(p => p.userId === myId);
+  const handleAcceptRequest = (requestId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'friend_request_accept',
+        data: { requestId }
+      }));
+    }
+    setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+  };
+
+  const handleDeclineRequest = (requestId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'friend_request_decline',
+        data: { requestId }
+      }));
+    }
+    setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+  };
+
+  const sendText = 'ОТПРАВИТЬ';
+  const sendChars = sendText.split('');
 
   return (
     <>
@@ -1114,10 +1074,21 @@ const Chat = () => {
         }
 
         .auth-modal {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: var(--card-bg); border-radius: 20px; padding: 20px; width: 90%; max-width: 360px; z-index: 1000;
-          text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-          touch-action: none; user-select: none; -webkit-user-drag: none;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: var(--card-bg);
+          border-radius: 20px;
+          padding: 20px;
+          width: 90%;
+          max-width: 360px;
+          z-index: 1000;
+          text-align: center;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          touch-action: none;
+          user-select: none;
+          -webkit-user-drag: none;
         }
         .auth-modal h3 { margin-top: 0; color: var(--text); font-size: 16px; }
         .auth-modal input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); margin: 8px 0; font-size: 14px; background: var(--input-bg); color: var(--text); touch-action: manipulation; }
@@ -1220,108 +1191,23 @@ const Chat = () => {
       )}
 
       {showPlayers && isAuth && (
-        <div className="players-overlay" ref={playersOverlayRef}>
-          <h4>Онлайн</h4>
-          <input
-            className="search-input"
-            type="text"
-            placeholder="Поиск"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <div className="players-list">
-            {/* Секция: Друзья (всегда сверху) */}
-            {friendsList.length > 0 && <div className="friends-header">Друзья</div>}
-            {friendsList.map(f => (
-              <div className="player-item" key={f.userId}>
-                <span>
-                  {f.nickname}
-                  {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
-                </span>
-                <button onClick={() => openPrivateChat(f.userId, f.nickname)} title="Написать">
-                  ✉️
-                  {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
-                </button>
-                <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
-              </div>
-            ))}
-
-            {/* Секция: Остальные онлайн (не друзья) */}
-            {nonFriends.length > 0 && <div className="friends-header">Онлайн</div>}
-            {nonFriends.map(p => {
-              const isSelf = p.userId === myId;
-              return (
-                <div className="player-item" key={p.id}>
-                  <span>
-                    {p.nickname}
-                    <small>(W:{p.wins} L:{p.losses})</small>
-                  </span>
-                  {!isSelf && (
-                    <>
-                      {isAdmin && (
-                        <>
-                          <button onClick={() => watchChat(p.userId)} title="Просмотр чата">ℹ️</button>
-                          <button onClick={() => setBanConfirm({ userId: p.userId, nickname: p.nickname })} title="Забанить навсегда">⛔</button>
-                        </>
-                      )}
-                      <button onClick={() => requestDuel(p.id)} title="Вызвать на дуэль">⚔️</button>
-                      <button onClick={() => openPrivateChat(p.userId, p.nickname)} title="Написать">
-                        ✉️
-                        {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
-                      </button>
-                      {/* Кнопка добавления в друзья только для не-друзей */}
-                      <button
-                        onClick={() => {
-                          if (wsRef.current?.readyState === WebSocket.OPEN) {
-                            wsRef.current.send(JSON.stringify({
-                              type: 'friend_request',
-                              data: { receiverId: p.userId }
-                            }));
-                          }
-                        }}
-                        title="Добавить в друзья"
-                      >
-                        🤝
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-
-            {/* Секция: Входящие запросы */}
-            {friendRequests.length > 0 && (
-              <>
-                <div className="friends-header">Входящие запросы</div>
-                {friendRequests.map(req => (
-                  <div className="friend-request-item" key={req.requestId}>
-                    <span>{req.senderNickname} хочет добавить вас в друзья</span>
-                    <div className="friend-request-actions">
-                      <button className="btn" onClick={() => {
-                        if (wsRef.current?.readyState === WebSocket.OPEN) {
-                          wsRef.current.send(JSON.stringify({
-                            type: 'friend_request_accept',
-                            data: { requestId: req.requestId }
-                          }));
-                        }
-                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
-                      }}>Принять</button>
-                      <button className="btn" onClick={() => {
-                        if (wsRef.current?.readyState === WebSocket.OPEN) {
-                          wsRef.current.send(JSON.stringify({
-                            type: 'friend_request_decline',
-                            data: { requestId: req.requestId }
-                          }));
-                        }
-                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
-                      }}>Отклонить</button>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
+        <PlayersPanel
+          players={players}
+          friends={friends}
+          friendRequests={friendRequests}
+          myId={myId}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          unreadByUser={unreadByUser}
+          isAdmin={isAdmin}
+          onWatchChat={watchChat}
+          onBanConfirm={(userId, nickname) => setBanConfirm({ userId, nickname })}
+          onRequestDuel={requestDuel}
+          onOpenPrivateChat={openPrivateChat}
+          onFriendRequest={handleFriendRequest}
+          onAcceptRequest={handleAcceptRequest}
+          onDeclineRequest={handleDeclineRequest}
+        />
       )}
 
       {privateChat && (
@@ -1356,70 +1242,17 @@ const Chat = () => {
             <span style={{ fontSize: 12, marginTop: 4, color: '#8899aa' }}>QR для входа</span>
           </div>
 
-          <div className="messages">
-            {messages.map((m, i) => (
-              <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
-                <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
-                  {getInitial(m.nickname)}
-                </div>
-                <div className="msg-content">
-                  <div className="msg-header">
-                    <span className="msg-nick">{m.nickname}</span>
-                    {isAdmin && (
-                      <button
-                        className="admin-delete-btn"
-                        title="Удалить сообщение"
-                        onClick={(e) => { e.stopPropagation(); deleteMessage(m.id); }}
-                      >
-                        🗑
-                      </button>
-                    )}
-                    <div className="reactions-header">
-                      {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                        <span key={emoji} className="reaction-badge">
-                          {emoji} {users.length}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="msg-time">{formatTime(m.time)}</span>
-                  </div>
-                  <div className="msg-text">{m.text}</div>
-                  {m.imageUrl && (
-                    <div className="msg-image-wrapper">
-                      <img
-                        src={m.imageUrl}
-                        alt="photo"
-                        className="msg-image"
-                        loading="lazy"
-                        onError={(e) => {
-                          console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                          e.target.style.display = 'none';
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFullscreenImage(m.imageUrl);
-                        }}
-                      />
-                    </div>
-                  )}
-                  {activeMessageId === m.id && (
-                    <div className="reactions-panel">
-                      {['👍', '🔥', '😂'].map(emoji => (
-                        <button
-                          key={emoji}
-                          className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
-                          onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
-                        >
-                          {emoji} {m.reactions?.[emoji]?.length || 0}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+          <MessageList
+            messages={messages}
+            isAdmin={isAdmin}
+            deleteMessage={deleteMessage}
+            toggleReactions={toggleReactions}
+            activeMessageId={activeMessageId}
+            nickname={nickname}
+            sendReaction={sendReaction}
+            setFullscreenImage={setFullscreenImage}
+            messagesEndRef={messagesEndRef}
+          />
 
           <div className="typing-indicator">
             {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
@@ -1430,7 +1263,7 @@ const Chat = () => {
               type="text"
               value={input}
               onChange={handleInputChange}
-              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               disabled={!isAuth || isUploading}
               placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
             />
@@ -1514,60 +1347,19 @@ const Chat = () => {
       </div>
 
       {!isAuth && (
-        <>
-          <div className="blur-overlay" />
-          <div className="auth-modal">
-            <h3>{isRegisterMode ? 'ПИШИ НИКНЕЙМ' : 'ВХОД'}</h3>
-            <input
-              placeholder="Никнейм"
-              value={authNickname}
-              onChange={e => setAuthNickname(e.target.value)}
-            />
-            <div style={{ position: 'relative', width: '100%' }}>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Пароль"
-                value={authPassword}
-                onChange={e => setAuthPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleAuthSubmit()}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                  color: 'var(--nick-color)',
-                }}
-              >
-                {showPassword ? '🙈' : '👁'}
-              </button>
-            </div>
-            {authError && <div style={{ color: '#e94560', marginBottom: 8 }}>{authError}</div>}
-            {showIdleNotice && (
-              <div className={`idle-notice ${showIdleNotice ? 'visible' : ''}`}>
-                ⏳ Неактивные пользователи будут автоматически отключены через 3 минуты бездействия.
-              </div>
-            )}
-            {isRegisterMode && (
-              <div style={{ fontSize: 12, color: 'var(--nick-color)', marginBottom: 8 }}>
-                Пароль будет сохранён в зашифрованном виде, но восстановить его не получится. Придумай надёжный пароль: чем длиннее, тем лучше. Если забудешь — доступ к нику вернуть нельзя.
-              </div>
-            )}
-            <button className="btn" onClick={handleAuthSubmit}>
-              {isRegisterMode ? 'Зарегистрироваться' : 'Войти'}
-            </button>
-            <div className="auth-switch" onClick={() => setIsRegisterMode(!isRegisterMode)}>
-              {isRegisterMode ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
-            </div>
-          </div>
-        </>
+        <AuthModal
+          isRegisterMode={isRegisterMode}
+          setIsRegisterMode={setIsRegisterMode}
+          authNickname={authNickname}
+          setAuthNickname={setAuthNickname}
+          authPassword={authPassword}
+          setAuthPassword={setAuthPassword}
+          showPassword={showPassword}
+          setShowPassword={setShowPassword}
+          authError={authError}
+          showIdleNotice={showIdleNotice}
+          handleAuthSubmit={handleAuthSubmit}
+        />
       )}
 
       {isNewVersionAvailable && <LatestVersionLink />}
