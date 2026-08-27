@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.7.9';
+const VERSION = '2.8.0';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -71,7 +71,6 @@ const Chat = () => {
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
-  // ---- Обработчик входящих сообщений ----
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
     switch (msg.type) {
@@ -234,14 +233,12 @@ const Chat = () => {
     }
   }, [myId, privateChat]);
 
-  // ---- WebSocket хук ----
   const { isConnected: wsConnected, error: wsError, sendMessage, close, ws } = useWebSocket(
     'wss://ghost-chat-backend-production-5faf.up.railway.app',
     tokenRef.current,
     handleWebSocketMessage
   );
 
-  // Синхронизируем wsRef и isConnected
   useEffect(() => {
     wsRef.current = ws;
     setIsConnected(wsConnected);
@@ -253,7 +250,6 @@ const Chat = () => {
     }
   }, [wsError]);
 
-  // ---- Эффекты ----
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -291,7 +287,6 @@ const Chat = () => {
     };
   }, [showPlayers]);
 
-  // ---- Обработчики действий ----
   const handleAuthSubmit = async () => {
     if (!authNickname.trim() || !authPassword.trim()) {
       setAuthError('Заполни оба поля');
@@ -326,14 +321,14 @@ const Chat = () => {
   };
 
   const handleSendMessage = () => {
-    if (!sendMessage || !input.trim() || !isAuth) return;
+    if (sending || !sendMessage || !input.trim() || !isAuth) return;
+    setSending(true);
     sendMessage({
       type: 'message',
       data: { text: input.trim() }
     });
     setInput('');
     sendMessage({ type: 'typing', data: { isTyping: false } });
-    setSending(true);
     setTimeout(() => setSending(false), 800);
   };
 
@@ -503,7 +498,6 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  // ---- JSX со стилями ----
   return (
     <>
       <style>{`
@@ -1217,7 +1211,7 @@ const Chat = () => {
             <button
               className={`send-btn ${sending ? 'sending' : ''}`}
               onClick={handleSendMessage}
-              disabled={!isAuth || !input.trim() || isUploading}
+              disabled={!isAuth || !input.trim() || isUploading || sending}
             >
               <div className="rotating-text">
                 {sendChars.map((char, idx) => {
