@@ -4,7 +4,7 @@ import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.6.8';
+const VERSION = '2.7.0';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -88,7 +88,6 @@ const Chat = () => {
   const [isDark, setIsDark] = useState(storedTheme === 'dark');
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [showPlayers, setShowPlayers] = useState(false);
-  const [activeTab, setActiveTab] = useState('online');
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [authNickname, setAuthNickname] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -1022,35 +1021,6 @@ const Chat = () => {
           margin-left: 2px;
           flex-shrink: 0;
         }
-        .tabs {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 8px;
-          border-bottom: 1px solid var(--border);
-        }
-        .tabs button {
-          background: transparent;
-          border: none;
-          padding: 4px 8px;
-          cursor: pointer;
-          color: var(--text);
-          font-weight: 600;
-          border-bottom: 2px solid transparent;
-          transition: border-color 0.2s;
-          font-size: 13px;
-        }
-        .tabs button.active {
-          border-bottom-color: var(--btn-bg);
-        }
-        .tab-badge {
-          background: #ffd700;
-          color: #000;
-          border-radius: 50%;
-          padding: 1px 6px;
-          font-size: 11px;
-          font-weight: bold;
-          margin-left: 4px;
-        }
         .online-status {
           display: inline-block;
           width: 10px;
@@ -1076,6 +1046,14 @@ const Chat = () => {
           padding: 4px 10px;
           font-size: 11px;
           border-radius: 8px;
+        }
+        .friends-header {
+          margin-top: 12px;
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--nick-color);
+          border-top: 1px solid var(--border);
+          padding-top: 8px;
         }
 
         .private-chat-overlay {
@@ -1213,7 +1191,7 @@ const Chat = () => {
           .duel-box { position: fixed; bottom: 60px; left: 10px; right: 10px; z-index: 1000; margin-top: 0; border-radius: 12px; }
           .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
-          .tabs button { font-size: 12px; padding: 2px 6px; }
+          .friends-header { font-size: 13px; }
         }
 
         @media (pointer: fine) {
@@ -1237,7 +1215,7 @@ const Chat = () => {
 
       {showPlayers && isAuth && (
         <div className="players-overlay" ref={playersOverlayRef}>
-          <h4>Игроки</h4>
+          <h4>Онлайн</h4>
           <input
             className="search-input"
             type="text"
@@ -1245,25 +1223,9 @@ const Chat = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="tabs">
-            <button className={activeTab === 'online' ? 'active' : ''} onClick={() => setActiveTab('online')}>
-              Онлайн ({players.length})
-            </button>
-            <button className={activeTab === 'friends' ? 'active' : ''} onClick={() => {
-              setActiveTab('friends');
-              if (wsRef.current?.readyState === WebSocket.OPEN) {
-                wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
-              }
-            }}>
-              Друзья ({friends.length})
-            </button>
-            <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}>
-              Запросы
-              {friendRequestsCount > 0 && <span className="tab-badge">{friendRequestsCount}</span>}
-            </button>
-          </div>
           <div className="players-list">
-            {activeTab === 'online' && filteredPlayers.map(p => {
+            {/* Список всех пользователей (отфильтрованных по поиску) */}
+            {filteredPlayers.map(p => {
               const isSelf = p.userId === myId;
               const isFriend = friends.some(f => f.userId === p.userId);
               return (
@@ -1306,7 +1268,12 @@ const Chat = () => {
                 </div>
               );
             })}
-            {activeTab === 'friends' && friends.map(f => (
+
+            {/* Заголовок "Друзья" и список друзей */}
+            {friends.length > 0 && (
+              <div className="friends-header">Друзья</div>
+            )}
+            {friends.map(f => (
               <div className="player-item" key={f.userId}>
                 <span>
                   {f.nickname}
@@ -1319,37 +1286,6 @@ const Chat = () => {
                 <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
               </div>
             ))}
-            {activeTab === 'requests' && (
-              friendRequests.length === 0 ? (
-                <div style={{ padding: '8px', color: 'var(--nick-color)' }}>Нет входящих запросов</div>
-              ) : (
-                friendRequests.map(req => (
-                  <div className="friend-request-item" key={req.requestId}>
-                    <span>{req.senderNickname} хочет добавить вас в друзья</span>
-                    <div className="friend-request-actions">
-                      <button className="btn" onClick={() => {
-                        if (wsRef.current?.readyState === WebSocket.OPEN) {
-                          wsRef.current.send(JSON.stringify({
-                            type: 'friend_request_accept',
-                            data: { requestId: req.requestId }
-                          }));
-                        }
-                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
-                      }}>Принять</button>
-                      <button className="btn" onClick={() => {
-                        if (wsRef.current?.readyState === WebSocket.OPEN) {
-                          wsRef.current.send(JSON.stringify({
-                            type: 'friend_request_decline',
-                            data: { requestId: req.requestId }
-                          }));
-                        }
-                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
-                      }}>Отклонить</button>
-                    </div>
-                  </div>
-                ))
-              )
-            )}
           </div>
         </div>
       )}
