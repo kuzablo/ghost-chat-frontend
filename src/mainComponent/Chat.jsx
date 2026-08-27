@@ -126,9 +126,6 @@ const Chat = () => {
           case 'players':
             setPlayers(msg.data);
             break;
-          case 'friends_list':
-            setFriends(msg.data);
-            break;
           case 'typing':
             const { nickname: typingNick, isTyping } = msg.data;
             setTypingUsers(prev => {
