@@ -4,7 +4,7 @@ import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.7.2';
+const VERSION = '2.7.3';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -607,6 +607,12 @@ const Chat = () => {
   const isFriendOnline = (friendId) => {
     return players.some(p => p.userId === friendId);
   };
+
+  // Разделяем filteredPlayers на друзей и не-друзей
+  const friendIds = new Set(friends.map(f => f.userId));
+  const friendsList = friends; // все друзья из состояния
+  const nonFriends = filteredPlayers.filter(p => !friendIds.has(p.userId) && p.userId !== myId);
+  const selfPlayer = filteredPlayers.find(p => p.userId === myId);
 
   return (
     <>
@@ -1224,14 +1230,30 @@ const Chat = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="players-list">
-            {filteredPlayers.map(p => {
+            {/* Секция: Друзья (всегда сверху) */}
+            {friendsList.length > 0 && <div className="friends-header">Друзья</div>}
+            {friendsList.map(f => (
+              <div className="player-item" key={f.userId}>
+                <span>
+                  {f.nickname}
+                  {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
+                </span>
+                <button onClick={() => openPrivateChat(f.userId, f.nickname)} title="Написать">
+                  ✉️
+                  {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
+                </button>
+                <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
+              </div>
+            ))}
+
+            {/* Секция: Остальные онлайн (не друзья) */}
+            {nonFriends.length > 0 && <div className="friends-header">Онлайн</div>}
+            {nonFriends.map(p => {
               const isSelf = p.userId === myId;
-              const isFriend = friends.some(f => f.userId === p.userId);
               return (
                 <div className="player-item" key={p.id}>
                   <span>
                     {p.nickname}
-                    {isFriend && <span className="online-status" title="В сети"></span>}
                     <small>(W:{p.wins} L:{p.losses})</small>
                   </span>
                   {!isSelf && (
@@ -1247,43 +1269,27 @@ const Chat = () => {
                         ✉️
                         {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
                       </button>
-                      {!isFriend && (
-                        <button
-                          onClick={() => {
-                            if (wsRef.current?.readyState === WebSocket.OPEN) {
-                              wsRef.current.send(JSON.stringify({
-                                type: 'friend_request',
-                                data: { receiverId: p.userId }
-                              }));
-                            }
-                          }}
-                          title="Добавить в друзья"
-                        >
-                          🤝
-                        </button>
-                      )}
+                      {/* Кнопка добавления в друзья только для не-друзей */}
+                      <button
+                        onClick={() => {
+                          if (wsRef.current?.readyState === WebSocket.OPEN) {
+                            wsRef.current.send(JSON.stringify({
+                              type: 'friend_request',
+                              data: { receiverId: p.userId }
+                            }));
+                          }
+                        }}
+                        title="Добавить в друзья"
+                      >
+                        🤝
+                      </button>
                     </>
                   )}
                 </div>
               );
             })}
-            {friends.length > 0 && (
-              <div className="friends-header">Друзья</div>
-            )}
-            {friends.map(f => (
-              <div className="player-item" key={f.userId}>
-                <span>
-                  {f.nickname}
-                  {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
-                </span>
-                <button onClick={() => openPrivateChat(f.userId, f.nickname)} title="Написать">
-                  ✉️
-                  {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
-                </button>
-                <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
-              </div>
-            ))}
-            {/* Входящие запросы */}
+
+            {/* Секция: Входящие запросы */}
             {friendRequests.length > 0 && (
               <>
                 <div className="friends-header">Входящие запросы</div>
