@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.8.0';
+const VERSION = '2.8.01';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
