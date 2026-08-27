@@ -10,6 +10,7 @@ const MessageList = ({
   nickname,
   sendReaction,
   setFullscreenImage,
+  messagesEndRef,
 }) => {
   const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
 
