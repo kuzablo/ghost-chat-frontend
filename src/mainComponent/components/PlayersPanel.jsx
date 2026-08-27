@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { forwardRef } from 'react';
 
-const PlayersPanel = ({
+const PlayersPanel = forwardRef(({
   players,
   friends,
   friendRequests,
@@ -16,11 +16,7 @@ const PlayersPanel = ({
   onFriendRequest,
   onAcceptRequest,
   onDeclineRequest,
-  onClose,
-}) => {
-  const overlayRef = useRef(null);
-  const [showPanel, setShowPanel] = useState(true);
-
+}, ref) => {
   const isFriendOnline = (friendId) => players.some(p => p.userId === friendId);
 
   const filteredPlayers = players.filter(p =>
@@ -28,11 +24,13 @@ const PlayersPanel = ({
   );
 
   const friendIds = new Set(friends.map(f => f.userId));
-  const friendsList = friends;
   const nonFriends = filteredPlayers.filter(p => !friendIds.has(p.userId) && p.userId !== myId);
+  const filteredFriends = friends.filter(f =>
+    f.nickname.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="players-overlay" ref={overlayRef}>
+    <div className="players-overlay" ref={ref}>
       <h4>Онлайн</h4>
       <input
         className="search-input"
@@ -42,23 +40,6 @@ const PlayersPanel = ({
         onChange={(e) => setSearchQuery(e.target.value)}
       />
       <div className="players-list">
-        {/* Друзья */}
-        {friendsList.length > 0 && <div className="friends-header">Друзья</div>}
-        {friendsList.map(f => (
-          <div className="player-item" key={f.userId}>
-            <span>
-              {f.nickname}
-              {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
-            </span>
-            <button onClick={() => onOpenPrivateChat(f.userId, f.nickname)} title="Написать">
-              ✉️
-              {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
-            </button>
-            <button onClick={() => onRequestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
-          </div>
-        ))}
-
-        {/* Остальные онлайн */}
         {nonFriends.length > 0 && <div className="friends-header">Онлайн</div>}
         {nonFriends.map(p => {
           const isSelf = p.userId === myId;
@@ -93,7 +74,21 @@ const PlayersPanel = ({
           );
         })}
 
-        {/* Входящие запросы */}
+        {filteredFriends.length > 0 && <div className="friends-header">Друзья</div>}
+        {filteredFriends.map(f => (
+          <div className="player-item" key={f.userId}>
+            <span>
+              {f.nickname}
+              {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
+            </span>
+            <button onClick={() => onOpenPrivateChat(f.userId, f.nickname)} title="Написать">
+              ✉️
+              {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
+            </button>
+            <button onClick={() => onRequestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
+          </div>
+        ))}
+
         {friendRequests.length > 0 && (
           <>
             <div className="friends-header">Входящие запросы</div>
@@ -111,6 +106,6 @@ const PlayersPanel = ({
       </div>
     </div>
   );
-};
+});
 
 export default PlayersPanel;

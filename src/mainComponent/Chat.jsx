@@ -14,7 +14,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.7.5';
+const VERSION = '2.7.6';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -569,6 +569,14 @@ const Chat = () => {
       }));
     }
     setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+  };
+
+  // Новая функция для переключения панели с обновлением списка друзей
+  const togglePlayers = () => {
+    if (!showPlayers && wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+    }
+    setShowPlayers(prev => !prev);
   };
 
   const sendText = 'ОТПРАВИТЬ';
@@ -1184,7 +1192,7 @@ const Chat = () => {
       </button>
 
       {isAuth && (
-        <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
+        <button className="players-toggle" onClick={togglePlayers}>
           👥
           {totalNotifications > 0 && <span className="unread-badge">!</span>}
         </button>
@@ -1192,6 +1200,7 @@ const Chat = () => {
 
       {showPlayers && isAuth && (
         <PlayersPanel
+          ref={playersOverlayRef}
           players={players}
           friends={friends}
           friendRequests={friendRequests}
