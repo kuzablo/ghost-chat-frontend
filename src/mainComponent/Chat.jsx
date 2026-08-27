@@ -88,6 +88,7 @@ const Chat = () => {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+        console.log('📩 Входящее сообщение:', msg.type, msg.data);
         switch (msg.type) {
           case 'friends_list':
             console.log('📋 Список друзей:', msg.data);
