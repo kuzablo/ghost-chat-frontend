@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
-import FriendRequestsModal from './components/FriendRequestsModal';
 import { QRCodeSVG } from 'qrcode.react';
 
-const VERSION = '2.6.7';
+const VERSION = '2.6.8';
 
 const getAvatarColor = (nickname) => {
   if (!nickname) return 'linear-gradient(135deg, #b0c4de, #8a9bb5)';
@@ -108,7 +107,6 @@ const Chat = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [friendRequests, setFriendRequests] = useState([]);
-  const [showFriendRequests, setShowFriendRequests] = useState(false);
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -121,6 +119,8 @@ const Chat = () => {
   const fileInputRef = useRef(null);
 
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
+  const friendRequestsCount = friendRequests.length;
+  const totalNotifications = unreadCount + friendRequestsCount;
 
   const connect = () => {
     if (unmountedRef.current) return;
@@ -150,7 +150,6 @@ const Chat = () => {
             setIsAuth(true);
             setIsAdmin(msg.data.role === 'admin');
             setServerVersion(msg.data.serverVersion || '');
-            // Запросить список друзей
             if (wsRef.current?.readyState === WebSocket.OPEN) {
               wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
             }
@@ -227,6 +226,27 @@ const Chat = () => {
             setDuelNotice(msg.data.message);
             setTimeout(() => setDuelNotice(''), 3000);
             break;
+          case 'friend_request_sent':
+            setDuelNotice(`Запрос дружбы отправлен пользователю ${msg.data.receiverNickname}`);
+            setTimeout(() => setDuelNotice(''), 3000);
+            break;
+          case 'new_friend_request':
+            setFriendRequests(prev => [...prev, msg.data]);
+            break;
+          case 'friend_request_accepted_notification':
+            setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
+            setTimeout(() => setDuelNotice(''), 4000);
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
+            }
+            break;
+          case 'friend_request_accepted':
+          case 'friend_request_declined':
+            setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
+            break;
+          case 'friend_requests_list':
+            setFriendRequests(msg.data);
+            break;
           case 'private_message':
             setPrivateChat(prev => {
               if (!prev || prev.userId !== msg.data.senderId) return prev;
@@ -270,24 +290,6 @@ const Chat = () => {
               const { [msg.data.userId]: _, ...rest } = prev;
               return rest;
             });
-            break;
-          case 'friend_requests_list':
-            setFriendRequests(msg.data);
-            break;
-          case 'new_friend_request':
-            setFriendRequests(prev => [...prev, msg.data]);
-            break;
-          case 'friend_request_accepted_notification':
-            setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
-            setTimeout(() => setDuelNotice(''), 4000);
-            // Обновить список друзей
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
-            }
-            break;
-          case 'friend_request_accepted':
-          case 'friend_request_declined':
-            setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
             break;
           default:
             console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
@@ -603,7 +605,9 @@ const Chat = () => {
 
   const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
 
-  const isFriend = (userId) => friends.some(f => f.userId === userId);
+  const isFriendOnline = (friendId) => {
+    return players.some(p => p.userId === friendId);
+  };
 
   return (
     <>
@@ -1022,6 +1026,7 @@ const Chat = () => {
           display: flex;
           gap: 8px;
           margin-bottom: 8px;
+          border-bottom: 1px solid var(--border);
         }
         .tabs button {
           background: transparent;
@@ -1032,9 +1037,45 @@ const Chat = () => {
           font-weight: 600;
           border-bottom: 2px solid transparent;
           transition: border-color 0.2s;
+          font-size: 13px;
         }
         .tabs button.active {
           border-bottom-color: var(--btn-bg);
+        }
+        .tab-badge {
+          background: #ffd700;
+          color: #000;
+          border-radius: 50%;
+          padding: 1px 6px;
+          font-size: 11px;
+          font-weight: bold;
+          margin-left: 4px;
+        }
+        .online-status {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background-color: #4caf50;
+          margin-left: 4px;
+          flex-shrink: 0;
+        }
+        .friend-request-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 0;
+          border-bottom: 1px solid var(--border);
+          font-size: 12px;
+        }
+        .friend-request-actions {
+          display: flex;
+          gap: 4px;
+        }
+        .friend-request-actions .btn {
+          padding: 4px 10px;
+          font-size: 11px;
+          border-radius: 8px;
         }
 
         .private-chat-overlay {
@@ -1129,62 +1170,6 @@ const Chat = () => {
           border-radius: 8px;
         }
 
-        .friend-requests-modal {
-          position: fixed;
-          bottom: 50%;
-          left: 50%;
-          transform: translate(-50%, 50%);
-          background: var(--card-bg);
-          backdrop-filter: blur(12px);
-          border-radius: 16px;
-          padding: 15px;
-          width: 400px;
-          max-width: 90vw;
-          max-height: 60vh;
-          display: flex;
-          flex-direction: column;
-          z-index: 1000;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .friend-requests-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-        .friend-requests-close {
-          background: transparent;
-          border: none;
-          font-size: 20px;
-          cursor: pointer;
-          color: var(--text);
-        }
-        .friend-requests-list {
-          overflow-y: auto;
-          flex: 1;
-        }
-        .friend-request-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 6px 0;
-          border-bottom: 1px solid var(--border);
-        }
-        .friend-request-actions {
-          display: flex;
-          gap: 4px;
-        }
-        .friend-request-actions .btn {
-          padding: 4px 10px;
-          font-size: 12px;
-        }
-        @media (max-width: 600px) {
-          .friend-requests-modal {
-            bottom: 20%;
-            width: 95vw;
-          }
-        }
-
         @media (max-width: 600px) {
           .chat-container {
             flex-direction: column;
@@ -1228,6 +1213,7 @@ const Chat = () => {
           .duel-box { position: fixed; bottom: 60px; left: 10px; right: 10px; z-index: 1000; margin-top: 0; border-radius: 12px; }
           .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
+          .tabs button { font-size: 12px; padding: 2px 6px; }
         }
 
         @media (pointer: fine) {
@@ -1245,28 +1231,36 @@ const Chat = () => {
       {isAuth && (
         <button className="players-toggle" onClick={() => setShowPlayers(prev => !prev)}>
           👥
-          {unreadCount > 0 && <span className="unread-badge">!</span>}
+          {totalNotifications > 0 && <span className="unread-badge">!</span>}
         </button>
       )}
 
       {showPlayers && isAuth && (
         <div className="players-overlay" ref={playersOverlayRef}>
-          <h4>Онлайн: {players.length}</h4>
+          <h4>Игроки</h4>
           <input
             className="search-input"
             type="text"
-            placeholder="Поиск участника"
+            placeholder="Поиск"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="tabs">
-            <button className={activeTab === 'online' ? 'active' : ''} onClick={() => setActiveTab('online')}>Онлайн</button>
+            <button className={activeTab === 'online' ? 'active' : ''} onClick={() => setActiveTab('online')}>
+              Онлайн ({players.length})
+            </button>
             <button className={activeTab === 'friends' ? 'active' : ''} onClick={() => {
               setActiveTab('friends');
               if (wsRef.current?.readyState === WebSocket.OPEN) {
                 wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
               }
-            }}>Друзья</button>
+            }}>
+              Друзья ({friends.length})
+            </button>
+            <button className={activeTab === 'requests' ? 'active' : ''} onClick={() => setActiveTab('requests')}>
+              Запросы
+              {friendRequestsCount > 0 && <span className="tab-badge">{friendRequestsCount}</span>}
+            </button>
           </div>
           <div className="players-list">
             {activeTab === 'online' && filteredPlayers.map(p => {
@@ -1274,7 +1268,11 @@ const Chat = () => {
               const isFriend = friends.some(f => f.userId === p.userId);
               return (
                 <div className="player-item" key={p.id}>
-                  <span>{p.nickname} <small>(W:{p.wins} L:{p.losses})</small></span>
+                  <span>
+                    {p.nickname}
+                    {isFriend && <span className="online-status" title="В сети"></span>}
+                    <small>(W:{p.wins} L:{p.losses})</small>
+                  </span>
                   {!isSelf && (
                     <>
                       {isAdmin && (
@@ -1310,7 +1308,10 @@ const Chat = () => {
             })}
             {activeTab === 'friends' && friends.map(f => (
               <div className="player-item" key={f.userId}>
-                <span>{f.nickname}</span>
+                <span>
+                  {f.nickname}
+                  {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
+                </span>
                 <button onClick={() => openPrivateChat(f.userId, f.nickname)} title="Написать">
                   ✉️
                   {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
@@ -1318,33 +1319,39 @@ const Chat = () => {
                 <button onClick={() => requestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
               </div>
             ))}
+            {activeTab === 'requests' && (
+              friendRequests.length === 0 ? (
+                <div style={{ padding: '8px', color: 'var(--nick-color)' }}>Нет входящих запросов</div>
+              ) : (
+                friendRequests.map(req => (
+                  <div className="friend-request-item" key={req.requestId}>
+                    <span>{req.senderNickname} хочет добавить вас в друзья</span>
+                    <div className="friend-request-actions">
+                      <button className="btn" onClick={() => {
+                        if (wsRef.current?.readyState === WebSocket.OPEN) {
+                          wsRef.current.send(JSON.stringify({
+                            type: 'friend_request_accept',
+                            data: { requestId: req.requestId }
+                          }));
+                        }
+                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
+                      }}>Принять</button>
+                      <button className="btn" onClick={() => {
+                        if (wsRef.current?.readyState === WebSocket.OPEN) {
+                          wsRef.current.send(JSON.stringify({
+                            type: 'friend_request_decline',
+                            data: { requestId: req.requestId }
+                          }));
+                        }
+                        setFriendRequests(prev => prev.filter(r => r.requestId !== req.requestId));
+                      }}>Отклонить</button>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
           </div>
         </div>
-      )}
-
-      {showFriendRequests && (
-        <FriendRequestsModal
-          requests={friendRequests}
-          onAccept={(requestId) => {
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({
-                type: 'friend_request_accept',
-                data: { requestId }
-              }));
-            }
-            setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
-          }}
-          onDecline={(requestId) => {
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-              wsRef.current.send(JSON.stringify({
-                type: 'friend_request_decline',
-                data: { requestId }
-              }));
-            }
-            setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
-          }}
-          onClose={() => setShowFriendRequests(false)}
-        />
       )}
 
       {privateChat && (
