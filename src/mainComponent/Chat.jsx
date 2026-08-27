@@ -89,6 +89,10 @@ const Chat = () => {
       try {
         const msg = JSON.parse(event.data);
         switch (msg.type) {
+          case 'friends_list':
+            console.log('📋 Список друзей:', msg.data);
+            setFriends(msg.data);
+            break;
           case 'version':
             console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
             break;

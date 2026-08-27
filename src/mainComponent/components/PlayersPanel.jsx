@@ -28,6 +28,7 @@ const PlayersPanel = forwardRef(({
   const filteredFriends = friends.filter(f =>
     f.nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const myself = filteredPlayers.find(p => p.userId === myId);
 
   return (
     <div className="players-overlay" ref={ref}>
@@ -40,6 +41,21 @@ const PlayersPanel = forwardRef(({
         onChange={(e) => setSearchQuery(e.target.value)}
       />
       <div className="players-list">
+        {/* Секция: Вы */}
+        {myself && (
+          <>
+            <div className="friends-header">Вы</div>
+            <div className="player-item" key={myself.id}>
+              <span>
+                {myself.nickname}
+                <small>(W:{myself.wins} L:{myself.losses})</small>
+              </span>
+              {/* Кнопки для себя не показываем */}
+            </div>
+          </>
+        )}
+
+        {/* Секция: Онлайн (остальные) */}
         {nonFriends.length > 0 && <div className="friends-header">Онлайн</div>}
         {nonFriends.map(p => {
           const isSelf = p.userId === myId;
@@ -74,6 +90,7 @@ const PlayersPanel = forwardRef(({
           );
         })}
 
+        {/* Секция: Друзья */}
         {filteredFriends.length > 0 && <div className="friends-header">Друзья</div>}
         {filteredFriends.map(f => (
           <div className="player-item" key={f.userId}>
@@ -89,6 +106,7 @@ const PlayersPanel = forwardRef(({
           </div>
         ))}
 
+        {/* Входящие запросы */}
         {friendRequests.length > 0 && (
           <>
             <div className="friends-header">Входящие запросы</div>
