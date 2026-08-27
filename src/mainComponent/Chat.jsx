@@ -573,7 +573,7 @@ const Chat = () => {
 
   // Новая функция для переключения панели с обновлением списка друзей
   const togglePlayers = () => {
-    if (!showPlayers && wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
     }
     setShowPlayers(prev => !prev);
