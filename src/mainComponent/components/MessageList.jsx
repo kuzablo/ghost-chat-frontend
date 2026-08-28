@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Popconfirm } from '@cbkit/core';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 
 const MessageList = ({
@@ -37,6 +36,13 @@ const MessageList = ({
     cancelEdit();
   };
 
+  const handleDeleteClick = (messageId, e) => {
+    e.stopPropagation();
+    if (window.confirm('Вы подтверждаете удаление этого сообщения?')) {
+      deleteMessage(messageId);
+    }
+  };
+
   return (
     <div className="messages">
       {messages.map((m, i) => {
@@ -52,7 +58,6 @@ const MessageList = ({
               <div className="msg-header">
                 <span className="msg-nick">{m.nickname}</span>
 
-                {/* Кнопки действий для своих сообщений (и для админа – удаление любых) */}
                 <div className="msg-actions">
                   {isOwn && (
                     <button
@@ -64,23 +69,13 @@ const MessageList = ({
                     </button>
                   )}
                   {(isAdmin || isOwn) && (
-                    <Popconfirm
-                      title="Удалить сообщение?"
-                      description="Вы подтверждаете удаление этого сообщения?"
-                      okText="Удалить"
-                      cancelText="Отмена"
-                      placement="bottom-end"
-                      onConfirm={(e) => { e?.stopPropagation(); deleteMessage(m.id); }}
-                      onCancel={(e) => e?.stopPropagation()}
+                    <button
+                      className="msg-action-btn"
+                      onClick={(e) => handleDeleteClick(m.id, e)}
+                      title="Удалить"
                     >
-                      <button
-                        className="msg-action-btn"
-                        onClick={(e) => e.stopPropagation()}
-                        title="Удалить"
-                      >
-                        🗑️
-                      </button>
-                    </Popconfirm>
+                      🗑️
+                    </button>
                   )}
                 </div>
 
@@ -94,7 +89,6 @@ const MessageList = ({
                 <span className="msg-time">{formatMessageDate(m.time)}</span>
               </div>
 
-              {/* Текст или поле редактирования */}
               {isEditing ? (
                 <div className="msg-edit-area">
                   <input
