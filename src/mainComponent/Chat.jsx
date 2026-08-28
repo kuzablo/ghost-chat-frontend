@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.10.5';
+const VERSION = '2.10.6';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -85,9 +85,23 @@ const Chat = () => {
         setFriends(msg.data);
         break;
       case 'unread_private_list': {
+        const onlineUserIds = new Set(players.map(p => p.userId));
         const newUnread = {};
-        msg.data.forEach(senderId => { newUnread[senderId] = true; });
-        setUnreadByUser(prev => ({ ...prev, ...newUnread }));
+        msg.data.forEach(senderId => {
+          if (onlineUserIds.has(senderId)) {
+            newUnread[senderId] = true;
+          }
+        });
+        setUnreadByUser(prev => {
+          const updated = { ...prev, ...newUnread };
+          const filtered = {};
+          for (const [userId, val] of Object.entries(updated)) {
+            if (onlineUserIds.has(userId)) {
+              filtered[userId] = val;
+            }
+          }
+          return filtered;
+        });
         break;
       }
       case 'version':
