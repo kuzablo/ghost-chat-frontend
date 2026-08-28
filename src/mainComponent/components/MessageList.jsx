@@ -18,15 +18,17 @@ const MessageList = ({
   const [editText, setEditText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  // Блокировка скролла и зума
+  // Блокировка скролла и зума на время редактирования
   useEffect(() => {
     if (isEditing) {
       const html = document.documentElement;
       const body = document.body;
+
+      // Сохраняем текущий скролл и масштаб
       const scrollY = window.scrollY;
-      // Сохраняем текущий скролл
-      html.style.setProperty('--scroll-y', `${scrollY}px`);
-      // Блокируем
+      const scrollX = window.scrollX;
+
+      // Блокируем скролл
       html.style.overflow = 'hidden';
       body.style.overflow = 'hidden';
       body.style.position = 'fixed';
@@ -34,7 +36,9 @@ const MessageList = ({
       body.style.left = '0';
       body.style.width = '100%';
       body.style.height = '100%';
-      // Отключаем зум
+      body.style.transform = 'scale(1)';
+
+      // Принудительно сбрасываем зум через viewport
       const metaViewport = document.querySelector('meta[name=viewport]');
       if (metaViewport) {
         metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
@@ -44,12 +48,13 @@ const MessageList = ({
         meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
         document.head.appendChild(meta);
       }
-      // Принудительно скроллим вверх
+
+      // Принудительно возвращаем скролл в (0,0)
       window.scrollTo(0, 0);
 
       return () => {
-        // Восстанавливаем
-        const scrollY = parseInt(html.style.getPropertyValue('--scroll-y')) || 0;
+        // Восстанавливаем всё
+        const savedScrollY = parseInt(body.style.top) || 0;
         html.style.overflow = '';
         body.style.overflow = '';
         body.style.position = '';
@@ -57,7 +62,9 @@ const MessageList = ({
         body.style.left = '';
         body.style.width = '';
         body.style.height = '';
-        window.scrollTo(0, scrollY);
+        body.style.transform = '';
+        window.scrollTo(0, Math.abs(savedScrollY));
+
         // Восстанавливаем viewport
         if (metaViewport) {
           metaViewport.content = 'width=device-width, initial-scale=1.0';
@@ -70,6 +77,10 @@ const MessageList = ({
     setEditingMessageId(message.id);
     setEditText(message.text);
     setIsEditing(true);
+    // Дополнительный сброс зума через таймаут
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 50);
   };
 
   const cancelEdit = () => {
@@ -153,7 +164,15 @@ const MessageList = ({
                     }}
                     className="msg-edit-input"
                     inputMode="text"
-                    style={{ touchAction: 'manipulation' }}
+                    enterKeyHint="done"
+                    style={{
+                      touchAction: 'manipulation',
+                      fontSize: '16px', // предотвращает зум на iOS
+                    }}
+                    onFocus={(e) => {
+                      // При фокусе принудительно скроллим вверх
+                      setTimeout(() => window.scrollTo(0, 0), 10);
+                    }}
                   />
                   <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
                     Сохранить
