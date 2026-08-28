@@ -225,9 +225,8 @@ const Chat = () => {
           return {
             ...prev,
             messages: [...(prev.messages || []), {
-              senderId: msg.data.senderId,
-              text: msg.data.text,
-              created_at: msg.data.created_at,
+              ...msg.data,
+              is_read: false
             }],
           };
         });
