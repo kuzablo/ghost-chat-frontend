@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { formatTime } from '../utils';
 
 const PrivateChat = ({
   userId,
@@ -95,11 +96,14 @@ const PrivateChat = ({
                 {m.senderId === myId ? 'Я' : nickname}
               </span>
               <span className="private-msg-text">{m.text}</span>
-              {m.senderId !== myId && (
-                <span className="private-msg-status">
-                  {m.is_read ? 'прочитано' : 'не прочитано'}
-                </span>
-              )}
+              <div className="private-msg-footer">
+                <span className="private-msg-time">{formatTime(m.created_at)}</span>
+                {m.senderId !== myId && (
+                  <span className="private-msg-status">
+                    {m.is_read ? 'прочитано' : 'не прочитано'}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
           <div ref={messagesEndRef} />

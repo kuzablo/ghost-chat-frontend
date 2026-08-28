@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.10.0';
+const VERSION = '2.10.1';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -241,7 +241,9 @@ const Chat = () => {
       case 'private_history':
         setPrivateChat(prev => {
           if (!prev || prev.userId !== msg.data.userId) return prev;
-          return { ...prev, messages: msg.data.messages };
+          // Помечаем все сообщения в истории как прочитанные (локально)
+          const updatedMessages = msg.data.messages.map(m => ({ ...m, is_read: true }));
+          return { ...prev, messages: updatedMessages };
         });
         setUnreadByUser(prev => {
           const { [msg.data.userId]: _, ...rest } = prev;
@@ -1051,6 +1053,21 @@ const Chat = () => {
         .private-chat-close { background: transparent; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 0 4px; touch-action: manipulation; }
         .private-messages { flex: 1; overflow-y: auto; background: var(--messages-bg); border-radius: 10px; padding: 8px; margin-bottom: 8px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
         .private-msg { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 6px; }
+        .private-msg-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--time-color);
+  opacity: 0.7;
+  margin-top: 1px;
+  gap: 8px;
+}
+.private-msg-time {
+  font-weight: 300;
+}
+.private-msg-status {
+  font-weight: 300;
+}
         .private-msg .private-msg-nick { font-weight: 600; color: var(--nick-color); font-size: 11px; margin-bottom: 2px; }
         .private-msg .private-msg-text { color: var(--msg-text); background: var(--card-bg); border: 1px solid var(--msg-border); border-radius: 6px; padding: 4px 8px; max-width: 80%; word-break: break-word; font-size: 13px; }
         .private-msg-status {
