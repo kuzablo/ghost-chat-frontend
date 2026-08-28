@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.10.1';
+const VERSION = '2.10.2';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -250,6 +250,24 @@ const Chat = () => {
           return rest;
         });
         break;
+      case 'message_read': {
+        const { senderId, recipientId, messageIds } = msg.data;
+        // Обновить статус в privateChat
+        setPrivateChat(prev => {
+          if (!prev) return prev;
+          // Если текущий чат с этим отправителем или получателем, обновляем is_read
+          if (prev.userId === senderId || prev.userId === recipientId) {
+            return {
+              ...prev,
+              messages: prev.messages.map(m =>
+                messageIds.includes(m.id) ? { ...m, is_read: true } : m
+              )
+            };
+          }
+          return prev;
+        });
+        break;
+      }
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
