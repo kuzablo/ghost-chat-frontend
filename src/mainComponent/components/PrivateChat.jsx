@@ -98,7 +98,11 @@ const PrivateChat = ({
               <span className="private-msg-text">{m.text}</span>
               <div className="private-msg-footer">
                 <span className="private-msg-time">{formatTime(m.created_at)}</span>
-                {m.senderId !== myId && (
+                {m.senderId === myId ? (
+                  // Свои сообщения – показываем только статус "прочитано", если оно прочитано
+                  m.is_read ? <span className="private-msg-status">прочитано</span> : null
+                ) : (
+                  // Входящие – показываем всегда
                   <span className="private-msg-status">
                     {m.is_read ? 'прочитано' : 'не прочитано'}
                   </span>
