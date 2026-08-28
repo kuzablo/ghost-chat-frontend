@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.10.3';
+const VERSION = '2.10.4';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -84,6 +84,12 @@ const Chat = () => {
         console.log('📋 Список друзей:', msg.data);
         setFriends(msg.data);
         break;
+      case 'unread_private_list': {
+        const newUnread = {};
+        msg.data.forEach(senderId => { newUnread[senderId] = true; });
+        setUnreadByUser(prev => ({ ...prev, ...newUnread }));
+        break;
+      }
       case 'version':
         console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
         break;
