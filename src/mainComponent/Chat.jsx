@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.8.01';
+const VERSION = '2.9.0';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -332,6 +332,12 @@ const Chat = () => {
     setTimeout(() => setSending(false), 800);
   };
 
+  const handleEditMessage = (messageId, newText) => {
+    if (sendMessage) {
+      sendMessage({ type: 'edit_message', data: { messageId, text: newText } });
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -443,7 +449,7 @@ const Chat = () => {
   };
 
   const deleteMessage = (messageId) => {
-    if (sendMessage && isAdmin) {
+    if (sendMessage) {
       sendMessage({ type: 'delete_message', data: { messageId } });
     }
   };
@@ -735,6 +741,61 @@ const Chat = () => {
           align-items: center;
           justify-content: center;
           margin-left: 4px;
+        }
+
+        /* Новые стили для кнопок действий и редактирования */
+        .msg-actions {
+          display: flex;
+          gap: 4px;
+          margin-left: 4px;
+        }
+
+        .msg-action-btn {
+          background: var(--input-bg);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 0 3px;
+          font-size: 10px;
+          line-height: 1;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text);
+          opacity: 0.6;
+          transition: opacity 0.2s;
+        }
+
+        .msg-action-btn:hover {
+          opacity: 1;
+        }
+
+        .msg-edit-area {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          margin-top: 4px;
+        }
+
+        .msg-edit-input {
+          flex: 1;
+          padding: 4px 8px;
+          border-radius: 6px;
+          border: 1px solid var(--border);
+          background: var(--input-bg);
+          color: var(--text);
+          font-size: 13px;
+          outline: none;
+        }
+
+        .msg-edit-area .btn {
+          padding: 2px 10px;
+          font-size: 12px;
+          border-radius: 6px;
+          background: var(--btn-bg);
+          color: white;
+          border: none;
+          cursor: pointer;
         }
 
         .input-row {
@@ -1093,6 +1154,8 @@ const Chat = () => {
           .auth-modal { width: 95%; padding: 10px; border-radius: 12px; }
           .auth-modal input { font-size: 16px; }
           .friends-header { font-size: 13px; }
+          .msg-edit-area .btn { font-size: 11px; padding: 2px 6px; }
+          .msg-edit-input { font-size: 13px; }
         }
 
         @media (pointer: fine) {
@@ -1177,6 +1240,8 @@ const Chat = () => {
             sendReaction={sendReaction}
             setFullscreenImage={setFullscreenImage}
             messagesEndRef={messagesEndRef}
+            myId={myId}
+            onEditMessage={handleEditMessage}
           />
 
           <div className="typing-indicator">

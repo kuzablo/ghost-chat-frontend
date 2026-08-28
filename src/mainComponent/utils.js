@@ -55,3 +55,27 @@ export const playNotificationSound = () => {
   osc2.start(now + 0.1);
   osc2.stop(now + 0.3);
 };
+
+export const formatMessageDate = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dayBeforeYesterday = new Date(today);
+  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+
+  const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const monthYear = date.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+
+  if (date >= today) {
+    return `сегодня в ${timeStr}`;
+  } else if (date >= yesterday) {
+    return `вчера в ${timeStr}`;
+  } else if (date >= dayBeforeYesterday) {
+    return `позавчера в ${timeStr}`;
+  } else {
+    return `${timeStr} ${monthYear}`;
+  }
+};
