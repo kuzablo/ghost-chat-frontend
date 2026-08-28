@@ -32,7 +32,7 @@ const PlayersPanel = forwardRef(({
 
   return (
     <div className="players-overlay" ref={ref}>
-      <h4>Онлайн</h4>
+      <h4>ghost-chat</h4>
       <input
         className="search-input"
         type="text"
