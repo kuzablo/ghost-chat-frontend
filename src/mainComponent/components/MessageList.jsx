@@ -22,11 +22,19 @@ const MessageList = ({
   const startEdit = (message) => {
     setEditingMessageId(message.id);
     setEditText(message.text);
+    // Блокируем скролл на время редактирования
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
   };
 
   const cancelEdit = () => {
     setEditingMessageId(null);
     setEditText('');
+    // Восстанавливаем скролл
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
   };
 
   const saveEdit = (messageId) => {
@@ -101,6 +109,7 @@ const MessageList = ({
                       if (e.key === 'Escape') cancelEdit();
                     }}
                     className="msg-edit-input"
+                    inputMode="text"
                   />
                   <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
                     Сохранить
