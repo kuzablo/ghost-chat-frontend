@@ -18,25 +18,50 @@ const MessageList = ({
   const [editText, setEditText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
-  // Блокировка скролла
+  // Блокировка скролла и зума
   useEffect(() => {
     if (isEditing) {
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      // Блокируем скролл через touchmove
-      const preventTouchMove = (e) => {
-        if (e.target.closest('.msg-edit-area')) return;
-        e.preventDefault();
-      };
-      document.addEventListener('touchmove', preventTouchMove, { passive: false });
+      const html = document.documentElement;
+      const body = document.body;
+      const scrollY = window.scrollY;
+      // Сохраняем текущий скролл
+      html.style.setProperty('--scroll-y', `${scrollY}px`);
+      // Блокируем
+      html.style.overflow = 'hidden';
+      body.style.overflow = 'hidden';
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.left = '0';
+      body.style.width = '100%';
+      body.style.height = '100%';
+      // Отключаем зум
+      const metaViewport = document.querySelector('meta[name=viewport]');
+      if (metaViewport) {
+        metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+        document.head.appendChild(meta);
+      }
+      // Принудительно скроллим вверх
+      window.scrollTo(0, 0);
+
       return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.position = originalPosition;
-        document.body.style.width = '';
-        document.removeEventListener('touchmove', preventTouchMove);
+        // Восстанавливаем
+        const scrollY = parseInt(html.style.getPropertyValue('--scroll-y')) || 0;
+        html.style.overflow = '';
+        body.style.overflow = '';
+        body.style.position = '';
+        body.style.top = '';
+        body.style.left = '';
+        body.style.width = '';
+        body.style.height = '';
+        window.scrollTo(0, scrollY);
+        // Восстанавливаем viewport
+        if (metaViewport) {
+          metaViewport.content = 'width=device-width, initial-scale=1.0';
+        }
       };
     }
   }, [isEditing]);
@@ -45,8 +70,6 @@ const MessageList = ({
     setEditingMessageId(message.id);
     setEditText(message.text);
     setIsEditing(true);
-    // Принудительно скроллим к началу, чтобы инпут не уезжал
-    window.scrollTo(0, 0);
   };
 
   const cancelEdit = () => {
