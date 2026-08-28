@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.10.4';
+const VERSION = '2.10.5';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -329,6 +329,19 @@ const Chat = () => {
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showPlayers]);
+
+  useEffect(() => {
+    const onlineUserIds = new Set(players.map(p => p.userId));
+    setUnreadByUser(prev => {
+      const newUnread = {};
+      for (const [userId, hasUnread] of Object.entries(prev)) {
+        if (onlineUserIds.has(userId)) {
+          newUnread[userId] = hasUnread;
+        }
+      }
+      return newUnread;
+    });
+  }, [players]);
 
   const handleAuthSubmit = async () => {
     if (!authNickname.trim() || !authPassword.trim()) {
