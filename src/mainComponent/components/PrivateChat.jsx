@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { formatTime } from '../utils';
 
 const PrivateChat = ({
@@ -10,7 +10,6 @@ const PrivateChat = ({
   initialMessages = [],
   typingUser = null,
 }) => {
-  const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const messagesEndRef = useRef(null);
@@ -22,10 +21,6 @@ const PrivateChat = ({
   }, [ws]);
 
   useEffect(() => {
-    setMessages(initialMessages);
-  }, [initialMessages]);
-
-  useEffect(() => {
     setLocalTypingUser(typingUser);
   }, [typingUser]);
 
@@ -33,7 +28,7 @@ const PrivateChat = ({
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [initialMessages]); // теперь зависим от initialMessages
 
   const sendMessage = () => {
     const currentWs = wsRef.current;
@@ -90,7 +85,7 @@ const PrivateChat = ({
           {localTypingUser ? `${localTypingUser} печатает...` : ''}
         </div>
         <div className="private-messages">
-          {messages.map((m, i) => (
+          {initialMessages.map((m, i) => (
             <div key={i} className="private-msg">
               <span className="private-msg-nick">
                 {m.senderId === myId ? 'Я' : nickname}
@@ -99,10 +94,8 @@ const PrivateChat = ({
               <div className="private-msg-footer">
                 <span className="private-msg-time">{formatTime(m.created_at)}</span>
                 {m.senderId === myId ? (
-                  // Свои сообщения – показываем только статус "прочитано", если оно прочитано
                   m.is_read ? <span className="private-msg-status">прочитано</span> : null
                 ) : (
-                  // Входящие – показываем всегда
                   <span className="private-msg-status">
                     {m.is_read ? 'прочитано' : 'не прочитано'}
                   </span>
