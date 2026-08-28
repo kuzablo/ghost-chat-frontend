@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 
 const MessageList = ({
@@ -16,25 +16,43 @@ const MessageList = ({
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
-  const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
+  // Блокировка скролла
+  useEffect(() => {
+    if (isEditing) {
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      // Блокируем скролл через touchmove
+      const preventTouchMove = (e) => {
+        if (e.target.closest('.msg-edit-area')) return;
+        e.preventDefault();
+      };
+      document.addEventListener('touchmove', preventTouchMove, { passive: false });
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.width = '';
+        document.removeEventListener('touchmove', preventTouchMove);
+      };
+    }
+  }, [isEditing]);
 
   const startEdit = (message) => {
     setEditingMessageId(message.id);
     setEditText(message.text);
-    // Блокируем скролл на время редактирования
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
+    setIsEditing(true);
+    // Принудительно скроллим к началу, чтобы инпут не уезжал
+    window.scrollTo(0, 0);
   };
 
   const cancelEdit = () => {
     setEditingMessageId(null);
     setEditText('');
-    // Восстанавливаем скролл
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
+    setIsEditing(false);
   };
 
   const saveEdit = (messageId) => {
@@ -51,11 +69,13 @@ const MessageList = ({
     }
   };
 
+  const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
+
   return (
     <div className="messages">
       {messages.map((m, i) => {
         const isOwn = m.userId === myId;
-        const isEditing = editingMessageId === m.id;
+        const isEditingThis = editingMessageId === m.id;
 
         return (
           <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
@@ -97,7 +117,7 @@ const MessageList = ({
                 <span className="msg-time">{formatMessageDate(m.time)}</span>
               </div>
 
-              {isEditing ? (
+              {isEditingThis ? (
                 <div className="msg-edit-area">
                   <input
                     type="text"
@@ -110,6 +130,7 @@ const MessageList = ({
                     }}
                     className="msg-edit-input"
                     inputMode="text"
+                    style={{ touchAction: 'manipulation' }}
                   />
                   <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
                     Сохранить
@@ -141,7 +162,7 @@ const MessageList = ({
                 </div>
               )}
 
-              {activeMessageId === m.id && !isEditing && (
+              {activeMessageId === m.id && !isEditingThis && (
                 <div className="reactions-panel">
                   {['👍', '🔥', '😂'].map(emoji => (
                     <button
