@@ -95,6 +95,11 @@ const PrivateChat = ({
                 {m.senderId === myId ? 'Я' : nickname}
               </span>
               <span className="private-msg-text">{m.text}</span>
+              {m.senderId !== myId && (
+                <span className="private-msg-status">
+                  {m.is_read ? 'прочитано' : 'не прочитано'}
+                </span>
+              )}
             </div>
           ))}
           <div ref={messagesEndRef} />

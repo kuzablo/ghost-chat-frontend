@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.9.0';
+const VERSION = '2.10.0';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -70,6 +70,12 @@ const Chat = () => {
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
+
+  const { isConnected: wsConnected, error: wsError, sendMessage, close, ws } = useWebSocket(
+    'wss://ghost-chat-backend-production-5faf.up.railway.app',
+    tokenRef.current,
+    (msg) => handleWebSocketMessage(msg)
+  );
 
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
@@ -188,14 +194,28 @@ const Chat = () => {
           return {
             ...prev,
             messages: [...(prev.messages || []), {
-              senderId: msg.data.senderId,
-              text: msg.data.text,
-              created_at: msg.data.created_at,
+              ...msg.data,
+              is_read: false
             }],
           };
         });
         if (!privateChat || privateChat.userId !== msg.data.senderId) {
           setUnreadByUser(prev => ({ ...prev, [msg.data.senderId]: true }));
+        } else {
+          // чат уже открыт – отметим прочитанным
+          if (sendMessage) {
+            sendMessage({ type: 'mark_read', data: { senderId: msg.data.senderId } });
+          }
+          // обновить is_read для всех сообщений от этого отправителя
+          setPrivateChat(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              messages: prev.messages.map(m =>
+                m.senderId === msg.data.senderId ? { ...m, is_read: true } : m
+              )
+            };
+          });
         }
         break;
       }
@@ -231,13 +251,7 @@ const Chat = () => {
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [myId, privateChat]);
-
-  const { isConnected: wsConnected, error: wsError, sendMessage, close, ws } = useWebSocket(
-    'wss://ghost-chat-backend-production-5faf.up.railway.app',
-    tokenRef.current,
-    handleWebSocketMessage
-  );
+  }, [myId, privateChat, sendMessage]);
 
   useEffect(() => {
     wsRef.current = ws;
@@ -436,6 +450,7 @@ const Chat = () => {
     });
     if (sendMessage) {
       sendMessage({ type: 'private_history', data: { userId } });
+      sendMessage({ type: 'mark_read', data: { senderId: userId } });
     }
   };
 
@@ -1038,6 +1053,13 @@ const Chat = () => {
         .private-msg { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 6px; }
         .private-msg .private-msg-nick { font-weight: 600; color: var(--nick-color); font-size: 11px; margin-bottom: 2px; }
         .private-msg .private-msg-text { color: var(--msg-text); background: var(--card-bg); border: 1px solid var(--msg-border); border-radius: 6px; padding: 4px 8px; max-width: 80%; word-break: break-word; font-size: 13px; }
+        .private-msg-status {
+          font-size: 8px;
+          font-weight: 300;
+          color: var(--time-color);
+          margin-top: 1px;
+          opacity: 0.7;
+        }
         .private-input-row { display: flex; gap: 8px; flex-shrink: 0; }
         .private-input-row input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 13px; outline: none; touch-action: manipulation; }
         .private-input-row .btn { padding: 8px 14px; border-radius: 8px; white-space: nowrap; touch-action: manipulation; font-size: 13px; }
@@ -1158,6 +1180,7 @@ const Chat = () => {
           .friends-header { font-size: 13px; }
           .msg-edit-area .btn { font-size: 11px; padding: 2px 6px; }
           .msg-edit-input { font-size: 13px; }
+          .private-msg-status { font-size: 7px; }
         }
 
         @media (pointer: fine) {
