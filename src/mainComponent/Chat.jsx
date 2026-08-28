@@ -252,17 +252,19 @@ const Chat = () => {
         break;
       case 'message_read': {
         const { senderId, recipientId, messageIds } = msg.data;
-        // Обновить статус в privateChat
+        console.log('📨 message_read received:', { senderId, recipientId, messageIds });
         setPrivateChat(prev => {
+          console.log('📨 current privateChat:', prev);
           if (!prev) return prev;
-          // Если текущий чат с этим отправителем или получателем, обновляем is_read
           if (prev.userId === senderId || prev.userId === recipientId) {
-            return {
+            const updated = {
               ...prev,
               messages: prev.messages.map(m =>
                 messageIds.includes(m.id) ? { ...m, is_read: true } : m
               )
             };
+            console.log('📨 updated privateChat:', updated);
+            return updated;
           }
           return prev;
         });
