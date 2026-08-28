@@ -247,6 +247,8 @@ const Chat = () => {
   useEffect(() => {
     if (wsError) {
       setErrorMessage('WebSocket error: ' + wsError);
+      const timer = setTimeout(() => setErrorMessage(''), 3000);
+      return () => clearTimeout(timer);
     }
   }, [wsError]);
 
