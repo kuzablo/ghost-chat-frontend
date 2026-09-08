@@ -28,7 +28,7 @@ const PrivateChat = ({
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [initialMessages]); // теперь зависим от initialMessages
+  }, [initialMessages]);
 
   const sendMessage = () => {
     const currentWs = wsRef.current;
@@ -93,13 +93,9 @@ const PrivateChat = ({
               <span className="private-msg-text">{m.text}</span>
               <div className="private-msg-footer">
                 <span className="private-msg-time">{formatTime(m.created_at)}</span>
-                {m.senderId === myId ? (
-                  m.is_read ? <span className="private-msg-status">прочитано</span> : null
-                ) : (
-                  <span className="private-msg-status">
-                    {m.is_read ? 'прочитано' : 'не прочитано'}
-                  </span>
-                )}
+                <span className="private-msg-status">
+                  {m.is_read ? 'прочитано' : 'не прочитано'}
+                </span>
               </div>
             </div>
           ))}
