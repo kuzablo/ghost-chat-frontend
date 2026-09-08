@@ -15,7 +15,7 @@ import {
   playNotificationSound,
 } from './utils';
 
-const VERSION = '2.10.12';
+const VERSION = '2.10.13';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -1256,6 +1256,45 @@ const Chat = () => {
         @media (pointer: coarse) {
           .attach-btn { display: inline-block; }
         }
+          .confirm-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 360px;
+  z-index: 1000;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+.confirm-modal-content h3 {
+  margin-top: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+.confirm-modal-content p {
+  color: var(--text);
+  margin: 10px 0 20px;
+  font-size: 14px;
+}
+.confirm-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.confirm-btn {
+  background: var(--btn-bg);
+}
+.cancel-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
       `}</style>
 
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>

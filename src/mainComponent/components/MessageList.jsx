@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
+import ConfirmModal from './ConfirmModal';
 
 const MessageList = ({
   messages,
@@ -17,6 +18,7 @@ const MessageList = ({
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [confirmData, setConfirmData] = useState(null); // { messageId }
 
   // Блокировка скролла и зума на время редактирования
   useEffect(() => {
@@ -24,11 +26,7 @@ const MessageList = ({
       const html = document.documentElement;
       const body = document.body;
 
-      // Сохраняем текущий скролл и масштаб
       const scrollY = window.scrollY;
-      const scrollX = window.scrollX;
-
-      // Блокируем скролл
       html.style.overflow = 'hidden';
       body.style.overflow = 'hidden';
       body.style.position = 'fixed';
@@ -38,7 +36,6 @@ const MessageList = ({
       body.style.height = '100%';
       body.style.transform = 'scale(1)';
 
-      // Принудительно сбрасываем зум через viewport
       const metaViewport = document.querySelector('meta[name=viewport]');
       if (metaViewport) {
         metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
@@ -49,11 +46,9 @@ const MessageList = ({
         document.head.appendChild(meta);
       }
 
-      // Принудительно возвращаем скролл в (0,0)
       window.scrollTo(0, 0);
 
       return () => {
-        // Восстанавливаем всё
         const savedScrollY = parseInt(body.style.top) || 0;
         html.style.overflow = '';
         body.style.overflow = '';
@@ -65,7 +60,6 @@ const MessageList = ({
         body.style.transform = '';
         window.scrollTo(0, Math.abs(savedScrollY));
 
-        // Восстанавливаем viewport
         if (metaViewport) {
           metaViewport.content = 'width=device-width, initial-scale=1.0';
         }
@@ -77,7 +71,6 @@ const MessageList = ({
     setEditingMessageId(message.id);
     setEditText(message.text);
     setIsEditing(true);
-    // Дополнительный сброс зума через таймаут
     setTimeout(() => {
       window.scrollTo(0, 0);
     }, 50);
@@ -98,131 +91,145 @@ const MessageList = ({
 
   const handleDeleteClick = (messageId, e) => {
     e.stopPropagation();
-    if (window.confirm('Вы подтверждаете удаление этого сообщения?')) {
-      deleteMessage(messageId);
+    setConfirmData({ messageId });
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmData) {
+      deleteMessage(confirmData.messageId);
+      setConfirmData(null);
     }
   };
 
   const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
 
   return (
-    <div className="messages">
-      {messages.map((m, i) => {
-        const isOwn = m.userId === myId;
-        const isEditingThis = editingMessageId === m.id;
+    <>
+      <div className="messages">
+        {messages.map((m, i) => {
+          const isOwn = m.userId === myId;
+          const isEditingThis = editingMessageId === m.id;
 
-        return (
-          <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
-            <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
-              {getInitial(m.nickname)}
-            </div>
-            <div className="msg-content">
-              <div className="msg-header">
-                <span className="msg-nick">{m.nickname}</span>
-
-                <div className="msg-actions">
-                  {isOwn && (
-                    <button
-                      className="msg-action-btn"
-                      onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                      title="Редактировать"
-                    >
-                      ✏️
-                    </button>
-                  )}
-                  {(isAdmin || isOwn) && (
-                    <button
-                      className="msg-action-btn"
-                      onClick={(e) => handleDeleteClick(m.id, e)}
-                      title="Удалить"
-                    >
-                      🗑️
-                    </button>
-                  )}
-                </div>
-
-                <div className="reactions-header">
-                  {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                    <span key={emoji} className="reaction-badge">
-                      {emoji} {users.length}
-                    </span>
-                  ))}
-                </div>
-                <span className="msg-time">{formatMessageDate(m.time)}</span>
+          return (
+            <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
+              <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
+                {getInitial(m.nickname)}
               </div>
+              <div className="msg-content">
+                <div className="msg-header">
+                  <span className="msg-nick">{m.nickname}</span>
 
-              {isEditingThis ? (
-                <div className="msg-edit-area">
-                  <input
-                    type="text"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveEdit(m.id);
-                      if (e.key === 'Escape') cancelEdit();
-                    }}
-                    className="msg-edit-input"
-                    inputMode="text"
-                    enterKeyHint="done"
-                    style={{
-                      touchAction: 'manipulation',
-                      fontSize: '16px', // предотвращает зум на iOS
-                    }}
-                    onFocus={(e) => {
-                      // При фокусе принудительно скроллим вверх
-                      setTimeout(() => window.scrollTo(0, 0), 10);
-                    }}
-                  />
-                  <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
-                    Сохранить
-                  </button>
-                  <button className="btn" onClick={(e) => { e.stopPropagation(); cancelEdit(); }}>
-                    Отмена
-                  </button>
+                  <div className="msg-actions">
+                    {isOwn && (
+                      <button
+                        className="msg-action-btn"
+                        onClick={(e) => { e.stopPropagation(); startEdit(m); }}
+                        title="Редактировать"
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    {(isAdmin || isOwn) && (
+                      <button
+                        className="msg-action-btn"
+                        onClick={(e) => handleDeleteClick(m.id, e)}
+                        title="Удалить"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="reactions-header">
+                    {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
+                      <span key={emoji} className="reaction-badge">
+                        {emoji} {users.length}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="msg-time">{formatMessageDate(m.time)}</span>
                 </div>
-              ) : (
-                <div className="msg-text">{m.text}</div>
-              )}
 
-              {m.imageUrl && (
-                <div className="msg-image-wrapper">
-                  <img
-                    src={m.imageUrl}
-                    alt="photo"
-                    className="msg-image"
-                    loading="lazy"
-                    onError={(e) => {
-                      console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                      e.target.style.display = 'none';
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFullscreenImage(m.imageUrl);
-                    }}
-                  />
-                </div>
-              )}
-
-              {activeMessageId === m.id && !isEditingThis && (
-                <div className="reactions-panel">
-                  {['👍', '🔥', '😂'].map(emoji => (
-                    <button
-                      key={emoji}
-                      className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
-                      onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
-                    >
-                      {emoji} {m.reactions?.[emoji]?.length || 0}
+                {isEditingThis ? (
+                  <div className="msg-edit-area">
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEdit(m.id);
+                        if (e.key === 'Escape') cancelEdit();
+                      }}
+                      className="msg-edit-input"
+                      inputMode="text"
+                      enterKeyHint="done"
+                      style={{
+                        touchAction: 'manipulation',
+                        fontSize: '16px',
+                      }}
+                      onFocus={() => {
+                        setTimeout(() => window.scrollTo(0, 0), 10);
+                      }}
+                    />
+                    <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
+                      Сохранить
                     </button>
-                  ))}
-                </div>
-              )}
+                    <button className="btn" onClick={(e) => { e.stopPropagation(); cancelEdit(); }}>
+                      Отмена
+                    </button>
+                  </div>
+                ) : (
+                  <div className="msg-text">{m.text}</div>
+                )}
+
+                {m.imageUrl && (
+                  <div className="msg-image-wrapper">
+                    <img
+                      src={m.imageUrl}
+                      alt="photo"
+                      className="msg-image"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                        e.target.style.display = 'none';
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFullscreenImage(m.imageUrl);
+                      }}
+                    />
+                  </div>
+                )}
+
+                {activeMessageId === m.id && !isEditingThis && (
+                  <div className="reactions-panel">
+                    {['👍', '🔥', '😂'].map(emoji => (
+                      <button
+                        key={emoji}
+                        className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
+                      >
+                        {emoji} {m.reactions?.[emoji]?.length || 0}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
-      <div ref={messagesEndRef} />
-    </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <ConfirmModal
+        open={!!confirmData}
+        title="Удалить сообщение?"
+        description="Вы подтверждаете удаление этого сообщения?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmData(null)}
+      />
+    </>
   );
 };
 
