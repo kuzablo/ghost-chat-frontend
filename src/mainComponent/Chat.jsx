@@ -260,9 +260,7 @@ const Chat = () => {
       case 'private_history':
         setPrivateChat(prev => {
           if (!prev || prev.userId !== msg.data.userId) return prev;
-          // Помечаем все сообщения в истории как прочитанные (локально)
-          const updatedMessages = msg.data.messages.map(m => ({ ...m, is_read: true }));
-          return { ...prev, messages: updatedMessages };
+          return { ...prev, messages: msg.data.messages };
         });
         setUnreadByUser(prev => {
           const { [msg.data.userId]: _, ...rest } = prev;
