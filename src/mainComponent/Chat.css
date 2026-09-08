@@ -718,3 +718,17 @@ body {
 @media (pointer: coarse) {
   .attach-btn { display: inline-block; }
 }
+
+/* Отклик на нажатие для всех кнопок */
+button:active {
+  transform: scale(0.95);
+  transition: transform 0.05s ease;
+}
+
+/* Для кнопок дуэли — выделение выбранного варианта */
+.duel-actions .btn.selected {
+  background: var(--btn-bg);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--btn-bg);
+  transform: scale(1.05);
+  color: white;
+}

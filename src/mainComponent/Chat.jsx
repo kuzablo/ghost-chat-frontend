@@ -5,6 +5,7 @@ import PrivateChat from './components/PrivateChat';
 import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
 import MessageList from './components/MessageList';
+import DuelBox from './components/DuelBox';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -16,7 +17,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.10.14';
+const VERSION = '2.10.16';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -714,35 +715,15 @@ const Chat = () => {
             {isUploading && <div style={{ color: '#ff8fa3', marginTop: 4 }}>Загрузка фото...</div>}
           </div>
 
-          {duelNotice && <div className="duel-notice">{duelNotice}</div>}
-
-          {duelInvite && (
-            <div className="duel-box">
-              <p>{duelInvite.fromNick} вызывает вас!</p>
-              <div className="duel-actions">
-                <button className="btn" onClick={acceptDuel}>Принять</button>
-                <button className="btn" onClick={() => setDuelInvite(null)}>Отклонить</button>
-              </div>
-            </div>
-          )}
-
-          {duelState && !duelState.result && (
-            <div className="duel-box">
-              <p>Дуэль против {duelState.opponentNick}. Твой выбор:</p>
-              <div className="duel-actions">
-                <button className="btn" onClick={() => choose('rock')}>Камень</button>
-                <button className="btn" onClick={() => choose('scissors')}>Ножницы</button>
-                <button className="btn" onClick={() => choose('paper')}>Бумага</button>
-              </div>
-            </div>
-          )}
-          {duelState?.result && (
-            <div className="duel-box">
-              {duelState.result === 'win' && '🏆 Победа!'}
-              {duelState.result === 'lose' && '💀 Поражение'}
-              {duelState.result === 'draw' && '🤝 Ничья'}
-            </div>
-          )}
+          <DuelBox
+            duelInvite={duelInvite}
+            duelState={duelState}
+            duelNotice={duelNotice}
+            onAcceptDuel={acceptDuel}
+            onDeclineDuel={() => setDuelInvite(null)}
+            onChoose={choose}
+            onCloseDuelNotice={() => setDuelNotice('')}
+          />
         </div>
       </div>
 
