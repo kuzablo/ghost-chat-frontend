@@ -9,7 +9,6 @@
   -ms-user-select: none;
   user-select: none;
   -webkit-user-drag: none;
-  user-drag: none;
 }
 
 :root {
@@ -1024,7 +1023,7 @@ body.dark .blur-overlay {
   scrollbar-color: var(--btn-bg) transparent;
 }
 
-/* ===== Image-only: компактная ширина на ПК, во всю на мобиле ===== */
+/* ===== Image-only ===== */
 .msg--image-only {
   max-width: 500px;
   width: fit-content;
@@ -1192,7 +1191,6 @@ body.dark .blur-overlay {
     border-width: 1.5px;
   }
 
-  /* Image-only — во всю ширину на мобиле */
   .msg--image-only {
     max-width: 100%;
     width: 100%;
