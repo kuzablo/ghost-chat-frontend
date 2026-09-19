@@ -18,7 +18,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.13';
+const VERSION = '2.12.14';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -883,7 +883,7 @@ const Chat = () => {
                 })}
               </div>
               <div className="send-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               </div>
