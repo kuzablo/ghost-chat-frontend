@@ -17,7 +17,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.0';
+const VERSION = '2.12.1';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -655,7 +655,7 @@ const Chat = () => {
         <div className="chat-main">
           <div className="qr-wrap">
             <QRCodeSVG value={window.location.href} size={100} />
-            <span style={{ fontSize: 12, marginTop: 4, color: '#8899aa' }}>QR для входа</span>
+            <span className="qr-label">QR для входа</span>
           </div>
 
           <MessageList

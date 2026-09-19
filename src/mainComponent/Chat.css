@@ -986,83 +986,6 @@ body.dark .blur-overlay {
   }
 }
 
-@media (max-width: 600px) {
-  .chat-container {
-    flex-direction: column;
-    padding: 10px;
-    gap: 10px;
-    height: 100%;
-    width: 100%;
-    max-width: 100%;
-  }
-  .chat-main {
-    min-width: 0;
-    width: 100%;
-    padding: 10px;
-    border-radius: var(--radius-md);
-  }
-  .qr-wrap { margin-bottom: 4px; }
-  .qr-wrap svg { width: 60px; height: 60px; }
-  .messages { padding: 8px; min-height: 80px; }
-  .msg { gap: 6px; margin-bottom: 8px; }
-  .msg-avatar { width: 28px; height: 28px; font-size: 11px; }
-  .msg-content { padding: 4px 8px; max-width: 82%; }
-  .msg-text { font-size: 13px; }
-  .msg-image { max-width: 180px; max-height: 180px; }
-  .input-row { gap: 6px; }
-  .input-row input[type="text"] { padding: 8px 10px; font-size: 16px; }
-  .send-btn { width: 52px; height: 52px; }
-  .send-btn .rotating-text span { font-size: 9px; }
-  .send-btn .send-icon { font-size: 22px; }
-  .attach-btn { font-size: 24px; }
-  .players-overlay { width: 200px; top: 50px; left: 3px; padding: 8px; max-height: 60vh; }
-  .search-input { font-size: 16px; padding: 6px 8px; }
-  .player-item { font-size: 12px; padding: 4px 0; }
-  .player-item button { padding: 3px 6px; font-size: 11px; }
-  .private-chat-overlay {
-    bottom: 0;
-    width: 100vw;
-    height: 90vh;
-    max-height: none;
-    padding: 10px;
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-  }
-  .private-input-row input { font-size: 16px; }
-  .duel-box {
-    position: fixed;
-    bottom: 60px;
-    left: 10px;
-    right: 10px;
-    z-index: 1000;
-    margin-top: 0;
-  }
-  .auth-modal { width: 95%; padding: 16px; }
-  .auth-modal input { font-size: 16px; }
-  .friends-header { font-size: 13px; }
-  .msg-edit-area .btn { font-size: 11px; padding: 2px 6px; }
-  .msg-edit-input { font-size: 13px; }
-  .private-msg-status { font-size: 8px; }
-}
-
-@media (pointer: fine) {
-  .attach-btn { display: none !important; }
-}
-@media (pointer: coarse) {
-  .attach-btn { display: inline-block; }
-}
-
-button:active {
-  transform: scale(0.95);
-  transition: transform 0.05s ease;
-}
-
-.duel-actions .btn.selected {
-  background: var(--btn-bg);
-  box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 5px var(--btn-bg);
-  transform: scale(1.05);
-  color: var(--btn-text);
-}
-
 /* ===== Стилизация скроллбара ===== */
 .messages::-webkit-scrollbar,
 .private-messages::-webkit-scrollbar,
@@ -1190,21 +1113,249 @@ button:active {
   border-top: 2px solid var(--msg-border);
 }
 
+/* ===== Мобильная версия ===== */
 @media (max-width: 600px) {
+  /* Прячем QR на мобиле — он тут бесполезен */
+  .qr-wrap { display: none; }
+
+  .chat-container {
+    flex-direction: column;
+    padding: 6px;
+    gap: 6px;
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .chat-main {
+    min-width: 0;
+    width: 100%;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    border-width: 2px;
+  }
+
+  .messages {
+    padding: 6px;
+    min-height: 80px;
+    border-width: 2px;
+    border-radius: 12px;
+    /* Прячем скроллбар на мобиле — он режет глаза */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .messages::-webkit-scrollbar { display: none; }
+
+  /* Сообщения */
+  .msg {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+    border-width: 1.5px;
+  }
+  .msg-content {
+    padding: 5px 9px;
+    max-width: 82%;
+    border-width: 1.5px;
+    border-radius: 12px;
+  }
+  .msg-header { gap: 4px; }
+  .msg-nick { font-size: 12px; }
+  .msg-text { font-size: 13px; line-height: 1.35; }
+  .msg-time { font-size: 9px; }
+  .msg-action-btn {
+    padding: 0 4px;
+    font-size: 10px;
+    border-width: 1.5px;
+  }
+
+  /* Image-only — компактнее */
+  .msg--image-only { max-width: 78%; }
   .msg-content--image-only {
-    max-width: 240px;
+    max-width: 260px;
+    border-width: 2px;
   }
   .msg-image-only-img {
-    max-width: 240px;
-    max-height: 320px;
+    max-width: 260px;
+    max-height: 340px;
   }
-  .msg--image-only {
-    max-width: 82%;
+  .msg-image-overlay { padding: 5px 8px; }
+  .msg-nick--overlay { font-size: 11px; }
+  .msg-time--overlay { font-size: 9px; }
+  .msg-action-btn--overlay { padding: 0 3px; font-size: 9px; }
+
+  /* Обычные картинки — компактнее */
+  .msg-image {
+    max-width: 200px;
+    max-height: 220px;
+    border-width: 1.5px;
   }
-  .msg-image-overlay {
-    padding: 6px 8px;
+
+  /* Реакции */
+  .reaction-btn {
+    padding: 2px 6px;
+    font-size: 11px;
+    border-width: 1.5px;
   }
-  .msg-nick--overlay {
+  .reaction-badge {
+    font-size: 9px;
+    padding: 0 4px;
+    border-width: 1.5px;
+  }
+
+  /* Input-строка — компактнее */
+  .input-row {
+    gap: 6px;
+    align-items: center;
+  }
+  .input-row input[type="text"] {
+    padding: 9px 12px;
+    font-size: 16px;
+    border-width: 2px;
+    border-radius: 14px;
+  }
+  .attach-btn {
+    font-size: 20px;
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .send-btn {
+    width: 48px;
+    height: 48px;
+    border-width: 2px;
+    flex-shrink: 0;
+  }
+  .send-btn .rotating-text span { font-size: 8px; }
+  .send-btn .send-icon { font-size: 20px; }
+  .send-btn .send-spinner { width: 18px; height: 18px; }
+
+  /* Хедер-кнопки */
+  .theme-toggle, .players-toggle {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+    border-width: 2px;
+  }
+  .theme-toggle { top: 8px; right: 8px; }
+  .players-toggle { top: 8px; left: 8px; }
+
+  /* Статус */
+  .status {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .typing-indicator { font-size: 11px; }
+
+  /* Version */
+  .version {
+    font-size: 10px;
+    bottom: 4px;
+    right: 8px;
+  }
+
+  /* Панель игроков */
+  .players-overlay {
+    width: 220px;
+    top: 50px;
+    left: 6px;
+    padding: 10px;
+    max-height: 65vh;
+    border-width: 2px;
+  }
+  .search-input {
+    font-size: 16px;
+    padding: 6px 10px;
+    border-width: 1.5px;
+  }
+  .player-item {
     font-size: 12px;
+    padding: 5px 0;
   }
+  .player-item button {
+    padding: 4px 6px;
+    font-size: 11px;
+    border-width: 1.5px;
+  }
+  .friend-request-item { font-size: 12px; padding: 6px 0; }
+  .friend-request-actions .btn { padding: 4px 8px; font-size: 11px; }
+  .friends-header { font-size: 13px; }
+
+  /* Private chat */
+  .private-chat-overlay {
+    bottom: 0;
+    width: 100vw;
+    height: 90vh;
+    max-height: none;
+    padding: 10px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-width: 2px;
+  }
+  .private-chat-header h4 { font-size: 14px; }
+  .private-input-row input { font-size: 16px; padding: 8px 10px; }
+  .private-input-row .btn { padding: 8px 12px; font-size: 12px; }
+
+  /* Duel */
+  .duel-box {
+    position: fixed;
+    bottom: 60px;
+    left: 8px;
+    right: 8px;
+    z-index: 1000;
+    margin-top: 0;
+    padding: 10px;
+    border-width: 2px;
+  }
+  .duel-actions .btn { padding: 8px 10px; font-size: 12px; }
+  .duel-notice {
+    padding: 8px 14px;
+    font-size: 12px;
+    border-width: 2px;
+  }
+
+  /* Auth modal */
+  .auth-modal {
+    width: 92%;
+    padding: 18px 16px;
+    border-width: 3px;
+  }
+  .auth-modal h3 { font-size: 15px; }
+  .auth-modal input {
+    font-size: 16px;
+    padding: 10px 12px;
+    border-width: 2px;
+  }
+  .auth-modal .btn { font-size: 14px; }
+
+  /* Edit */
+  .msg-edit-area { flex-wrap: wrap; gap: 4px; }
+  .msg-edit-input { font-size: 14px; padding: 5px 8px; }
+  .msg-edit-area .btn { font-size: 11px; padding: 4px 8px; }
+}
+
+@media (pointer: fine) {
+  .attach-btn { display: none !important; }
+}
+@media (pointer: coarse) {
+  .attach-btn { display: inline-block; }
+}
+
+button:active {
+  transform: scale(0.95);
+  transition: transform 0.05s ease;
+}
+
+.duel-actions .btn.selected {
+  background: var(--btn-bg);
+  box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 5px var(--btn-bg);
+  transform: scale(1.05);
+  color: var(--btn-text);
 }
