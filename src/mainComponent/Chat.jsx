@@ -18,7 +18,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.12';
+const VERSION = '2.12.13';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -876,7 +876,7 @@ const Chat = () => {
                 {sendChars.map((char, idx) => {
                   const angle = (360 / sendChars.length) * idx;
                   return (
-                    <span key={idx} style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}>
+                    <span key={idx} style={{ transform: `rotate(${angle}deg) translate(0, -20px)` }}>
                       {char}
                     </span>
                   );
