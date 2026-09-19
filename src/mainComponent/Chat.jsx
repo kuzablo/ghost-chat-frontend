@@ -58,7 +58,8 @@ const Chat = () => {
   const [banConfirm, setBanConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [fullscreenImage, setFullscreenImage] = useState(null); // { url, messageId } | null
+  const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
 
   const wsRef = useRef(null);
@@ -85,7 +86,6 @@ const Chat = () => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
     switch (msg.type) {
       case 'friends_list':
-        console.log('📋 Список друзей:', msg.data);
         setFriends(msg.data);
         break;
       case 'unread_private_list': {
@@ -125,7 +125,6 @@ const Chat = () => {
         setMessages(msg.data);
         break;
       case 'message':
-        console.log('📸 Новое сообщение с imageUrl:', msg.data.imageUrl);
         setMessages(prev => [...prev, msg.data]);
         playNotificationSound();
         break;
@@ -226,11 +225,9 @@ const Chat = () => {
         if (!privateChat || privateChat.userId !== msg.data.senderId) {
           setUnreadByUser(prev => ({ ...prev, [msg.data.senderId]: true }));
         } else {
-          // чат уже открыт – отметим прочитанным
           if (sendMessage) {
             sendMessage({ type: 'mark_read', data: { senderId: msg.data.senderId } });
           }
-          // обновить is_read для всех сообщений от этого отправителя
           setPrivateChat(prev => {
             if (!prev) return prev;
             return {
@@ -273,19 +270,15 @@ const Chat = () => {
         break;
       case 'message_read': {
         const { senderId, recipientId, messageIds } = msg.data;
-        console.log('📨 message_read received:', { senderId, recipientId, messageIds });
         setPrivateChat(prev => {
-          console.log('📨 current privateChat:', prev);
           if (!prev) return prev;
           if (prev.userId === senderId || prev.userId === recipientId) {
-            const updated = {
+            return {
               ...prev,
               messages: prev.messages.map(m =>
                 messageIds.includes(m.id) ? { ...m, is_read: true } : m
               )
             };
-            console.log('📨 updated privateChat:', updated);
-            return updated;
           }
           return prev;
         });
@@ -431,20 +424,9 @@ const Chat = () => {
         method: 'POST',
         body: formData,
       });
-
-      let data = {};
-      try {
-        data = await res.json();
-      } catch (e) {
-        setErrorMessage('Status: ' + res.status + ' (нет JSON)');
-        setIsUploading(false);
-        return;
-      }
-
+      const data = await res.json();
       if (!res.ok) {
-        setErrorMessage('Status: ' + res.status + ' | ' + (data.error || 'unknown'));
-        setIsUploading(false);
-        return;
+        throw new Error(data.error || 'Upload failed');
       }
 
       sendMessage({
@@ -460,7 +442,7 @@ const Chat = () => {
       }
     } catch (err) {
       console.error('Ошибка загрузки фото:', err);
-      setErrorMessage('Upload error: ' + (err?.message || 'unknown') + ' | name: ' + (err?.name || ''));
+      setErrorMessage('Не удалось загрузить фото: ' + (err?.message || ''));
     } finally {
       setIsUploading(false);
     }
@@ -587,6 +569,11 @@ const Chat = () => {
       sendMessage({ type: 'get_friends' });
     }
     setShowPlayers(prev => !prev);
+  };
+
+  const closeFullscreen = () => {
+    setFullscreenImage(null);
+    setShowFullscreenReactions(false);
   };
 
   const sendText = 'ОТПРАВИТЬ';
@@ -728,8 +715,8 @@ const Chat = () => {
           <div className="status">
             {isConnected ? 'Онлайн' : 'Оффлайн'}
             {bannedUntil && ` — бан до ${new Date(bannedUntil).toLocaleTimeString()}`}
-            {errorMessage && <div style={{ color: '#e94560', marginTop: 4 }}>{errorMessage}</div>}
-            {isUploading && <div style={{ color: '#ff8fa3', marginTop: 4 }}>Загрузка фото...</div>}
+            {errorMessage && <div style={{ color: 'var(--danger)', marginTop: 4 }}>{errorMessage}</div>}
+            {isUploading && <div style={{ color: 'var(--btn-bg)', marginTop: 4 }}>Загрузка фото...</div>}
           </div>
 
           <DuelBox
@@ -764,8 +751,38 @@ const Chat = () => {
       <div className="version">v{VERSION}</div>
 
       {fullscreenImage && (
-        <div className="fullscreen-overlay" onClick={() => setFullscreenImage(null)}>
-          <img src={fullscreenImage} alt="fullscreen" />
+        <div className="fullscreen-overlay" onClick={closeFullscreen}>
+          <div className="fullscreen-reactions">
+            <button
+              className="fullscreen-reactions-toggle"
+              onClick={(e) => { e.stopPropagation(); setShowFullscreenReactions(v => !v); }}
+              title="Реакции"
+            >
+              😀
+            </button>
+            {showFullscreenReactions && (
+              <div className="fullscreen-reactions-picker" onClick={(e) => e.stopPropagation()}>
+                {['👍', '🔥', '😂'].map(emoji => (
+                  <button
+                    key={emoji}
+                    className="fullscreen-reaction-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sendReaction(fullscreenImage.messageId, emoji);
+                      setShowFullscreenReactions(false);
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <img
+            src={fullscreenImage.url}
+            alt="fullscreen"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </>

@@ -18,7 +18,7 @@ const MessageList = ({
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [confirmData, setConfirmData] = useState(null); // { messageId }
+  const [confirmData, setConfirmData] = useState(null);
 
   // Блокировка скролла и зума на время редактирования
   useEffect(() => {
@@ -111,14 +111,17 @@ const MessageList = ({
           const isEditingThis = editingMessageId === m.id;
           const isImageOnly = !m.text?.trim() && !!m.imageUrl && !isEditingThis;
 
-          // ==== Image-only: изображение вместо бабла, оверлей поверх ====
+          // ==== Image-only ====
           if (isImageOnly) {
             return (
-              <div className="msg msg--image-only" key={i} onClick={() => toggleReactions(m.id)}>
+              <div className="msg msg--image-only" key={i}>
                 <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                   {getInitial(m.nickname)}
                 </div>
-                <div className="msg-content msg-content--image-only">
+                <div
+                  className="msg-content msg-content--image-only"
+                  onClick={() => toggleReactions(m.id)}
+                >
                   <div className="msg-image-only-wrap">
                     <img
                       src={m.imageUrl}
@@ -131,7 +134,7 @@ const MessageList = ({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setFullscreenImage(m.imageUrl);
+                        setFullscreenImage({ url: m.imageUrl, messageId: m.id });
                       }}
                     />
 
@@ -191,11 +194,14 @@ const MessageList = ({
 
           // ==== Обычное сообщение ====
           return (
-            <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
+            <div className="msg" key={i}>
               <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                 {getInitial(m.nickname)}
               </div>
-              <div className="msg-content">
+              <div
+                className="msg-content"
+                onClick={() => toggleReactions(m.id)}
+              >
                 <div className="msg-header">
                   <span className="msg-nick">{m.nickname}</span>
 
@@ -276,7 +282,7 @@ const MessageList = ({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setFullscreenImage(m.imageUrl);
+                        setFullscreenImage({ url: m.imageUrl, messageId: m.id });
                       }}
                     />
                   </div>
