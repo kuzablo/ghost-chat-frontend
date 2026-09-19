@@ -17,7 +17,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.10.18';
+const VERSION = '2.10.19';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -363,19 +363,22 @@ const Chat = () => {
       return;
     }
     setAuthError('Отправка...');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
     try {
-      // ДЕБАГ: тестовый URL вместо Railway
-      const response = await fetch('https://httpbin.org/post', {
+      const response = await fetch(`https://ghost-chat-backend-production-5faf.up.railway.app/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nickname: authNickname.trim(), password: authPassword }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
       setAuthError('Ответ: ' + response.status);
       const data = await response.json();
-      setAuthError('Успех! JSON получен');
-      console.log('httpbin ответ:', data);
+      setAuthError('OK: ' + JSON.stringify(data).slice(0, 80));
     } catch (error) {
-      setAuthError('Catch: ' + error.message);
+      clearTimeout(timer);
+      setAuthError('Catch: ' + error.name + ' — ' + error.message);
     }
   };
 
