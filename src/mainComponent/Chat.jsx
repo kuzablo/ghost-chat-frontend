@@ -18,7 +18,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.11';
+const VERSION = '2.12.12';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -118,6 +118,7 @@ const Chat = () => {
   const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [notices, setNotices] = useState([]);
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -130,6 +131,8 @@ const Chat = () => {
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
   const fileInputRef = useRef(null);
+  const prevPlayerNicksRef = useRef(new Set());
+  const firstPlayersLoadRef = useRef(true);
 
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
@@ -391,6 +394,48 @@ const Chat = () => {
 
     return () => el.removeEventListener('scroll', handleScroll);
   }, [isAuth]);
+
+  // ===== Уведомления "ник зашёл/вышел" =====
+  useEffect(() => {
+    const currentNicks = new Set(players.map(p => p.nickname));
+
+    // Первый раз — запоминаем список без показа уведомлений
+    if (firstPlayersLoadRef.current) {
+      prevPlayerNicksRef.current = currentNicks;
+      firstPlayersLoadRef.current = false;
+      return;
+    }
+
+    const prev = prevPlayerNicksRef.current;
+    const joined = [...currentNicks].filter(n => !prev.has(n));
+    const left = [...prev].filter(n => !currentNicks.has(n));
+
+    prevPlayerNicksRef.current = currentNicks;
+
+    // Отфильтровываем себя — не показываем свой же заход/выход
+    const myNick = nicknameRef.current;
+    const filteredJoined = joined.filter(n => n !== myNick);
+    const filteredLeft = left.filter(n => n !== myNick);
+
+    if (filteredJoined.length === 0 && filteredLeft.length === 0) return;
+
+    const stamp = Date.now();
+    const added = [];
+    filteredJoined.forEach((nick, i) => {
+      added.push({ id: `j-${stamp}-${i}`, nickname: nick, type: 'join' });
+    });
+    filteredLeft.forEach((nick, i) => {
+      added.push({ id: `l-${stamp}-${i}`, nickname: nick, type: 'leave' });
+    });
+
+    setNotices(p => [...p, ...added].slice(-3));
+
+    added.forEach(n => {
+      setTimeout(() => {
+        setNotices(p => p.filter(x => x.id !== n.id));
+      }, 4000);
+    });
+  }, [players]);
 
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
@@ -766,6 +811,25 @@ const Chat = () => {
               onEditMessage={handleEditMessage}
               containerRef={messagesContainerRef}
             />
+
+            {/* ===== Уведомления "зашёл/вышел" ===== */}
+            {notices.length > 0 && (
+              <div className="join-notices">
+                {notices.map(n => (
+                  <div key={n.id} className="join-notice">
+                    <div
+                      className="join-notice-avatar"
+                      style={{ background: getAvatarColor(n.nickname) }}
+                    >
+                      {getInitial(n.nickname)}
+                    </div>
+                    <span className="join-notice-text">
+                      {n.nickname} {n.type === 'join' ? 'зашёл' : 'вышел'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {showScrollDown && (
               <button className="scroll-down-btn" onClick={scrollToBottom} title="Вниз">
