@@ -17,7 +17,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.10.17';
+const VERSION = '2.10.18';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -363,35 +363,17 @@ const Chat = () => {
       return;
     }
     setAuthError('Отправка...');
-    const endpoint = isRegisterMode ? '/api/register' : '/api/login';
     try {
-      const response = await fetch(`https://ghost-chat-backend-production-5faf.up.railway.app${endpoint}`, {
+      // ДЕБАГ: тестовый URL вместо Railway
+      const response = await fetch('https://httpbin.org/post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nickname: authNickname.trim(), password: authPassword }),
       });
       setAuthError('Ответ: ' + response.status);
       const data = await response.json();
-      if (!response.ok) {
-        setAuthError('Ошибка: ' + (data.error || 'неизвестно'));
-        return;
-      }
-      setAuthError('Пробую localStorage...');
-      try {
-        localStorage.setItem('ghost-chat-token', data.token);
-        localStorage.setItem('ghost-chat-nickname', data.nickname);
-      } catch (e) {
-        setAuthError('localStorage: ' + e.message);
-        return;
-      }
-      setAuthError('Всё ок, входим');
-      tokenRef.current = data.token;
-      nicknameRef.current = data.nickname;
-      setToken(data.token);
-      setNickname(data.nickname);
-      setIsAuth(true);
-      setAuthNickname('');
-      setAuthPassword('');
+      setAuthError('Успех! JSON получен');
+      console.log('httpbin ответ:', data);
     } catch (error) {
       setAuthError('Catch: ' + error.message);
     }
