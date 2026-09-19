@@ -990,7 +990,7 @@ body.dark .blur-overlay {
   }
 }
 
-/* ===== Стилизация скроллбара ===== */
+/* ===== Скроллбар ===== */
 .messages::-webkit-scrollbar,
 .private-messages::-webkit-scrollbar,
 .players-overlay::-webkit-scrollbar {
@@ -1024,35 +1024,45 @@ body.dark .blur-overlay {
   scrollbar-color: var(--btn-bg) transparent;
 }
 
-/* ===== Image-only сообщение ===== */
+/* ===== Image-only: картинка занимает всё, рамок нет, оверлей поверх ===== */
 .msg--image-only {
-  max-width: 75%;
+  max-width: 100%;
+  width: 100%;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: flex-start;
 }
 
 .msg-content--image-only {
   padding: 0;
-  border: 3px solid var(--msg-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
   position: relative;
-  max-width: 320px;
-  width: fit-content;
-  background: var(--messages-bg);
+  flex: 1;
+  max-width: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .msg-image-only-img {
   display: block;
-  max-width: 320px;
-  max-height: 400px;
   width: 100%;
+  max-width: 100%;
+  max-height: 70vh;
   height: auto;
-  object-fit: cover;
+  object-fit: contain;
   cursor: pointer;
+  border-radius: var(--radius-md);
+  background: #000;
   transition: transform 0.15s;
 }
 
 .msg-image-only-img:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
 .msg-image-overlay {
@@ -1066,10 +1076,11 @@ body.dark .blur-overlay {
   padding: 8px 12px;
   min-height: 44px;
   box-sizing: border-box;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.55) 60%,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.35) 60%,
     rgba(0, 0, 0, 0) 100%
   );
   pointer-events: none;
@@ -1124,12 +1135,11 @@ body.dark .blur-overlay {
   margin-top: 0 !important;
   padding: 6px 8px;
   background: var(--messages-bg);
-  border-top: 2px solid var(--msg-border);
+  border-radius: var(--radius-sm);
 }
 
 /* ===== Мобильная версия ===== */
 @media (max-width: 600px) {
-  /* Прячем QR на мобиле — он тут бесполезен */
   .qr-wrap { display: none; }
 
   .chat-container {
@@ -1159,7 +1169,6 @@ body.dark .blur-overlay {
   }
   .messages::-webkit-scrollbar { display: none; }
 
-  /* Сообщения */
   .msg {
     gap: 6px;
     margin-bottom: 10px;
@@ -1186,24 +1195,28 @@ body.dark .blur-overlay {
     border-width: 1.5px;
   }
 
-  /* Image-only — на всю ширину экрана, без обрезки */
+  /* Image-only — во всю ширину, скругления у картинки */
   .msg--image-only {
-    max-width: calc(100% - 36px);
+    max-width: 100%;
+    width: 100%;
+    gap: 6px;
+    margin-bottom: 12px;
   }
   .msg-content--image-only {
     max-width: 100%;
     width: 100%;
-    border-width: 2px;
+    gap: 4px;
   }
   .msg-image-only-img {
     max-width: 100%;
     width: 100%;
-    max-height: 60vh;
-    object-fit: cover;
+    max-height: 70vh;
+    border-radius: var(--radius-md);
   }
   .msg-image-overlay {
     padding: 6px 10px;
     min-height: 38px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
   .msg-nick--overlay { font-size: 12px; }
   .msg-time--overlay { font-size: 9px; }
@@ -1212,14 +1225,12 @@ body.dark .blur-overlay {
     font-size: 10px !important;
   }
 
-  /* Обычные картинки внутри текстовых сообщений */
   .msg-image {
     max-width: 200px;
     max-height: 220px;
     border-width: 1.5px;
   }
 
-  /* Реакции */
   .reaction-btn {
     padding: 2px 6px;
     font-size: 11px;
@@ -1231,7 +1242,6 @@ body.dark .blur-overlay {
     border-width: 1.5px;
   }
 
-  /* Input-строка */
   .input-row {
     gap: 6px;
     align-items: center;
@@ -1262,7 +1272,6 @@ body.dark .blur-overlay {
   .send-btn .send-icon { font-size: 20px; }
   .send-btn .send-spinner { width: 18px; height: 18px; }
 
-  /* Хедер-кнопки */
   .theme-toggle, .players-toggle {
     width: 38px;
     height: 38px;
@@ -1272,14 +1281,11 @@ body.dark .blur-overlay {
   .theme-toggle { top: 8px; right: 8px; }
   .players-toggle { top: 8px; left: 8px; }
 
-  /* Статус */
   .status { font-size: 11px; margin-top: 4px; }
   .typing-indicator { font-size: 11px; }
 
-  /* Version */
   .version { font-size: 10px; bottom: 4px; right: 8px; }
 
-  /* Панель игроков */
   .players-overlay {
     width: 220px;
     top: 50px;
@@ -1303,7 +1309,6 @@ body.dark .blur-overlay {
   .friend-request-actions .btn { padding: 4px 8px; font-size: 11px; }
   .friends-header { font-size: 13px; }
 
-  /* Private chat */
   .private-chat-overlay {
     bottom: 0;
     width: 100vw;
@@ -1317,7 +1322,6 @@ body.dark .blur-overlay {
   .private-input-row input { font-size: 16px; padding: 8px 10px; }
   .private-input-row .btn { padding: 8px 12px; font-size: 12px; }
 
-  /* Duel */
   .duel-box {
     position: fixed;
     bottom: 60px;
@@ -1335,7 +1339,6 @@ body.dark .blur-overlay {
     border-width: 2px;
   }
 
-  /* Auth modal */
   .auth-modal {
     width: 92%;
     padding: 18px 16px;
@@ -1349,7 +1352,6 @@ body.dark .blur-overlay {
   }
   .auth-modal .btn { font-size: 14px; }
 
-  /* Edit */
   .msg-edit-area { flex-wrap: wrap; gap: 4px; }
   .msg-edit-input { font-size: 14px; padding: 5px 8px; }
   .msg-edit-area .btn { font-size: 11px; padding: 4px 8px; }
