@@ -1,4 +1,5 @@
 import React from 'react';
+import Mascot from '../Mascot';
 
 const AuthModal = ({
   isRegisterMode,
@@ -17,6 +18,7 @@ const AuthModal = ({
     <>
       <div className="blur-overlay" />
       <div className="auth-modal">
+        <Mascot size={80} />
         <h3>{isRegisterMode ? 'ПИШИ НИКНЕЙМ' : 'ВХОД'}</h3>
         <input
           placeholder="Никнейм"

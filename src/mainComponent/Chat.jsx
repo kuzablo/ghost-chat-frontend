@@ -17,7 +17,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.10.20';
+const VERSION = '2.10.21';
 const API_URL = 'https://backend-service-banjoboy420.amvera.io';
 const WS_URL = 'wss://backend-service-banjoboy420.amvera.io';
 
