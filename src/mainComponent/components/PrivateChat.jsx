@@ -15,6 +15,7 @@ const PrivateChat = ({
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const [pickerFor, setPickerFor] = useState(null);
+  const [poppingId, setPoppingId] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const wsRef = useRef(ws);
@@ -60,6 +61,16 @@ const PrivateChat = ({
     setPickerFor(null);
   };
 
+  // Клик по сообщению → «пуньк» + открыть/закрыть пикер
+  const handleMessageTap = (id, e) => {
+    // если клик пришёл из пикера или его кнопок — не обрабатываем
+    if (e.target.closest('.private-reaction-picker')) return;
+
+    setPoppingId(id);
+    setTimeout(() => setPoppingId(null), 380);
+    setPickerFor(prev => (prev === id ? null : id));
+  };
+
   const handleInputChange = (e) => {
     setInput(e.target.value);
     const currentWs = wsRef.current;
@@ -102,36 +113,39 @@ const PrivateChat = ({
             const isOwn = m.senderId === myId;
             const reactions = m.reactions || {};
             const reactionEntries = Object.entries(reactions);
+            const hasReactions = reactionEntries.length > 0;
             return (
               <div
                 key={i}
-                className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
+                className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''}`}
+                onClick={(e) => handleMessageTap(m.id, e)}
               >
                 <span className="private-msg-nick">
                   {isOwn ? 'Я' : nickname}
                 </span>
                 <span className="private-msg-text">{m.text}</span>
 
-                <div className="private-msg-reactions">
-                  {reactionEntries.map(([emoji, users]) => (
-                    <span
-                      key={`${emoji}-${users.length}`}
-                      className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}
-                    >
-                      {emoji} {users.length}
-                    </span>
-                  ))}
-                  <button
-                    className="private-msg-react-btn"
-                    onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
-                    title="Реакция"
-                  >
-                    ＋
-                  </button>
-                </div>
+                {hasReactions && (
+                  <div className="private-msg-reactions">
+                    {reactionEntries.map(([emoji, users]) => (
+                      <span
+                        key={`${emoji}-${users.length}`}
+                        className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}
+                      >
+                        {emoji}
+                        {users.length > 1 && (
+                          <span className="private-reaction-count">{users.length}</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {pickerFor === m.id && (
-                  <div className="private-reaction-picker">
+                  <div
+                    className="private-reaction-picker"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {REACTIONS.map(emoji => {
                       const isActive = reactions[emoji]?.includes(myId);
                       return (

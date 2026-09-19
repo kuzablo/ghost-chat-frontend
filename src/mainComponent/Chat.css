@@ -752,6 +752,8 @@ body.dark .unread-badge {
   flex-direction: column;
   margin-bottom: 10px;
   max-width: 80%;
+  position: relative;
+  cursor: pointer;
 }
 
 .private-msg--other {
@@ -803,7 +805,7 @@ body.dark .unread-badge {
   border: 2px solid var(--msg-border);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
-  max-width: 80%;
+  max-width: 100%;
   word-break: break-word;
   font-size: 13px;
 }
@@ -1633,73 +1635,88 @@ body.dark .player-action-btn--unread {
 }
 
 /* ===== Реакции в личке ===== */
+.private-msg--has-reactions {
+  margin-bottom: 22px;
+}
+
+.private-msg--pop {
+  animation: msgPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes msgPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
 .private-msg-reactions {
+  position: absolute;
+  bottom: -12px;
+  left: 12px;
   display: flex;
-  gap: 4px;
-  margin-top: 4px;
-  flex-wrap: wrap;
-  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .private-msg--own .private-msg-reactions {
-  justify-content: flex-end;
+  left: auto;
+  right: 12px;
 }
 
 .private-reaction-badge {
-  background: var(--input-bg);
-  border: 1.5px solid var(--msg-border);
-  border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  display: flex;
   align-items: center;
-  gap: 3px;
-  color: var(--text);
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  position: relative;
+  padding: 0;
   animation: reactionPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
 }
 
 .private-reaction-badge.own {
   background: var(--btn-bg);
-  color: var(--btn-text);
   border-color: var(--btn-border);
+}
+
+.private-reaction-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--nick-color);
+  color: #FFF;
+  border: 1.5px solid var(--card-bg);
+  font-size: 8px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+body.dark .private-reaction-count {
+  background: #3BB5E8;
+  color: #0E1726;
 }
 
 @keyframes reactionPop {
   0%   { transform: scale(0.4); opacity: 0; }
-  55%  { transform: scale(1.18); opacity: 1; }
+  55%  { transform: scale(1.25); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 
-.private-msg-react-btn {
-  background: transparent;
-  border: 1.5px dashed var(--msg-border);
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  opacity: 0.55;
-  transition: opacity 0.15s, transform 0.12s;
-  touch-action: manipulation;
-  flex-shrink: 0;
-}
-
-.private-msg-react-btn:hover,
-.private-msg-react-btn:active {
-  opacity: 1;
-}
-
-.private-msg-react-btn:active {
-  transform: scale(0.9);
-}
-
+/* Пикер */
 .private-reaction-picker {
   display: flex;
   gap: 2px;
@@ -1707,10 +1724,11 @@ body.dark .player-action-btn--unread {
   border: 2px solid var(--card-border);
   border-radius: 24px;
   padding: 4px 8px;
-  margin-top: 4px;
+  margin-top: 6px;
   animation: reactionPop 0.25s ease-out;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   align-self: flex-start;
+  z-index: 3;
 }
 
 .private-msg--own .private-reaction-picker {

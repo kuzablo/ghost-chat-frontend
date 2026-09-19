@@ -388,18 +388,22 @@
     border-width: 1.5px;
   }
 
-    /* Реакции в личке — мобильная версия */
+  /* Реакции в личке — мобильная версия */
   .private-reaction-badge {
+    width: 24px;
+    height: 24px;
     font-size: 13px;
-    padding: 3px 9px;
-    border-width: 1.5px;
+    border-width: 2px;
   }
 
-  .private-msg-react-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 15px;
-    border-width: 1.5px;
+  .private-reaction-count {
+    min-width: 14px;
+    height: 14px;
+    font-size: 9px;
+  }
+
+  .private-msg--has-reactions {
+    margin-bottom: 24px;
   }
 
   .private-reaction-picker {
