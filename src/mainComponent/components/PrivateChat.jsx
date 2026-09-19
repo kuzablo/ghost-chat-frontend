@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { formatTime } from '../utils';
 
+const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
+
 const PrivateChat = ({
   userId,
   nickname,
@@ -12,6 +14,7 @@ const PrivateChat = ({
 }) => {
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
+  const [pickerFor, setPickerFor] = useState(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const wsRef = useRef(ws);
@@ -45,6 +48,16 @@ const PrivateChat = ({
       type: 'private_typing',
       data: { recipientId: userId, isTyping: false }
     }));
+  };
+
+  const sendReaction = (messageId, emoji) => {
+    const currentWs = wsRef.current;
+    if (!currentWs || currentWs.readyState !== WebSocket.OPEN) return;
+    currentWs.send(JSON.stringify({
+      type: 'private_reaction',
+      data: { messageId, emoji },
+    }));
+    setPickerFor(null);
   };
 
   const handleInputChange = (e) => {
@@ -87,6 +100,8 @@ const PrivateChat = ({
         <div className="private-messages">
           {initialMessages.map((m, i) => {
             const isOwn = m.senderId === myId;
+            const reactions = m.reactions || {};
+            const reactionEntries = Object.entries(reactions);
             return (
               <div
                 key={i}
@@ -96,6 +111,42 @@ const PrivateChat = ({
                   {isOwn ? 'Я' : nickname}
                 </span>
                 <span className="private-msg-text">{m.text}</span>
+
+                <div className="private-msg-reactions">
+                  {reactionEntries.map(([emoji, users]) => (
+                    <span
+                      key={`${emoji}-${users.length}`}
+                      className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}
+                    >
+                      {emoji} {users.length}
+                    </span>
+                  ))}
+                  <button
+                    className="private-msg-react-btn"
+                    onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
+                    title="Реакция"
+                  >
+                    ＋
+                  </button>
+                </div>
+
+                {pickerFor === m.id && (
+                  <div className="private-reaction-picker">
+                    {REACTIONS.map(emoji => {
+                      const isActive = reactions[emoji]?.includes(myId);
+                      return (
+                        <button
+                          key={emoji}
+                          className={isActive ? 'active' : ''}
+                          onClick={() => sendReaction(m.id, emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div className="private-msg-footer">
                   <span className="private-msg-time">{formatTime(m.created_at)}</span>
                   <span className="private-msg-status">

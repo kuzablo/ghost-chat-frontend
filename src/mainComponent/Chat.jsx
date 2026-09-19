@@ -19,7 +19,7 @@ import {
 import './Chat.css';
 import './Chat.mobile.css';
 
-const VERSION = '2.13.8';
+const VERSION = '2.14.0';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -335,6 +335,19 @@ const Chat = () => {
           return rest;
         });
         break;
+      case 'private_reaction_update': {
+        const { messageId, reactions } = msg.data;
+        setPrivateChat(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: prev.messages.map(m =>
+              m.id === messageId ? { ...m, reactions } : m
+            ),
+          };
+        });
+        break;
+      }
       case 'message_read': {
         const { senderId, recipientId, messageIds } = msg.data;
         setPrivateChat(prev => {
