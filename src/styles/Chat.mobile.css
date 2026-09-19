@@ -300,16 +300,16 @@
 
   /* Реакции в личке — мобильная версия */
   .private-reaction-badge {
-    width: 24px;
-    height: 24px;
-    font-size: 13px;
-    border-width: 2px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    border-width: 1.5px;
   }
 
   .private-reaction-count {
-    min-width: 14px;
-    height: 14px;
-    font-size: 9px;
+    min-width: 11px;
+    height: 11px;
+    font-size: 7px;
   }
 
   .private-msg--has-reactions {

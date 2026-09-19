@@ -117,7 +117,7 @@
   border-color: var(--btn-border);
 }
 
-/* ===== Футер сообщения (время / статус) ===== */
+/* ===== Футер сообщения ===== */
 .private-msg-footer {
   display: flex;
   justify-content: space-between;
@@ -158,8 +158,8 @@
 .private-msg-reactions {
   position: absolute;
   bottom: 0;
-  left: 10px;
-  transform: translateY(50%);
+  left: 8px;
+  transform: translateY(65%);
   display: flex;
   gap: 3px;
   z-index: 2;
@@ -168,19 +168,19 @@
 
 .private-msg--own .private-msg-reactions {
   left: auto;
-  right: 10px;
+  right: 8px;
 }
 
 .private-reaction-badge {
-  width: 22px;
-  height: 22px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: var(--card-bg);
-  border: 2px solid var(--card-border);
+  border: 1.5px solid var(--card-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 9px;
   line-height: 1;
   position: relative;
   padding: 0;
@@ -195,16 +195,16 @@
 
 .private-reaction-count {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 13px;
-  height: 13px;
-  padding: 0 3px;
-  border-radius: 7px;
+  top: -4px;
+  right: -4px;
+  min-width: 10px;
+  height: 10px;
+  padding: 0 2px;
+  border-radius: 5px;
   background: var(--nick-color);
   color: #FFF;
-  border: 1.5px solid var(--card-bg);
-  font-size: 8px;
+  border: 1px solid var(--card-bg);
+  font-size: 7px;
   font-weight: 800;
   display: flex;
   align-items: center;
