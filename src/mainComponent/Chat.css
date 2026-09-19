@@ -578,7 +578,9 @@ body.dark .unread-badge {
   width: 260px;
   max-height: 70vh;
   overflow-y: auto;
-  touch-action: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   user-select: none;
   -webkit-user-drag: none;
 }

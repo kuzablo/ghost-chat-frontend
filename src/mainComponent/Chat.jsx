@@ -19,7 +19,7 @@ import {
 import './Chat.css';
 import './Chat.mobile.css';
 
-const VERSION = '2.13.2';
+const VERSION = '2.13.3';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
