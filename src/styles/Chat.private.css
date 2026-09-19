@@ -1,0 +1,314 @@
+/* ===== Приватный чат ===== */
+.private-chat-overlay {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 15px;
+  width: 480px;
+  max-width: 90vw;
+  height: 60vh;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.private-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.private-chat-header h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.private-chat-close {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 6px;
+  touch-action: manipulation;
+}
+
+.private-typing {
+  font-size: 11px;
+  color: var(--nick-color);
+  margin-bottom: 4px;
+  min-height: 14px;
+  flex-shrink: 0;
+  font-style: italic;
+}
+
+/* ===== Список сообщений ===== */
+.private-messages {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--messages-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  margin-bottom: 8px;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.private-msg {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  max-width: 80%;
+  position: relative;
+  cursor: pointer;
+}
+
+.private-msg--other {
+  align-items: flex-start;
+  align-self: flex-start;
+}
+
+.private-msg--own {
+  align-items: flex-end;
+  align-self: flex-end;
+}
+
+.private-msg .private-msg-nick {
+  font-weight: 700;
+  color: var(--nick-color);
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.private-msg--own .private-msg-nick {
+  color: var(--nick-color);
+}
+
+.private-msg .private-msg-text {
+  color: var(--msg-text);
+  background: var(--card-bg);
+  border: 2px solid var(--msg-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  max-width: 100%;
+  word-break: break-word;
+  font-size: 13px;
+}
+
+.private-msg--own .private-msg-text {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+}
+
+/* ===== Футер сообщения (время / статус) ===== */
+.private-msg-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--time-color);
+  margin-top: 2px;
+  gap: 8px;
+}
+
+.private-msg--own .private-msg-footer {
+  flex-direction: row-reverse;
+}
+
+.private-msg-time { font-weight: 300; }
+.private-msg-status { font-weight: 300; }
+
+/* ===== Реакции в личке ===== */
+.private-msg-text-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.private-msg--has-reactions {
+  margin-bottom: 10px;
+}
+
+.private-msg--pop {
+  animation: msgPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes msgPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.private-msg-reactions {
+  position: absolute;
+  bottom: 0;
+  left: 10px;
+  transform: translateY(50%);
+  display: flex;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.private-msg--own .private-msg-reactions {
+  left: auto;
+  right: 10px;
+}
+
+.private-reaction-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  position: relative;
+  padding: 0;
+  animation: reactionPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+}
+
+.private-reaction-badge.own {
+  background: var(--btn-bg);
+  border-color: var(--btn-border);
+}
+
+.private-reaction-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--nick-color);
+  color: #FFF;
+  border: 1.5px solid var(--card-bg);
+  font-size: 8px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+body.dark .private-reaction-count {
+  background: #3BB5E8;
+  color: #0E1726;
+}
+
+@keyframes reactionPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  55%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== Пикер реакций ===== */
+.private-reaction-picker {
+  display: flex;
+  gap: 2px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 24px;
+  padding: 4px 8px;
+  margin-top: 6px;
+  animation: reactionPop 0.25s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  align-self: flex-start;
+  z-index: 3;
+}
+
+.private-msg--own .private-reaction-picker {
+  align-self: flex-end;
+}
+
+.private-reaction-picker button {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 50%;
+  transition: transform 0.12s, background 0.15s;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+.private-reaction-picker button:active {
+  transform: scale(0.85);
+}
+
+.private-reaction-picker button.active {
+  background: rgba(59, 181, 232, 0.25);
+}
+
+/* ===== Поле ввода ===== */
+.private-input-row {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.private-input-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  touch-action: manipulation;
+}
+
+.private-input-row .btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  touch-action: manipulation;
+  font-size: 13px;
+}
+
+/* ===== Скроллбар ===== */
+.private-messages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.private-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.private-messages::-webkit-scrollbar-thumb {
+  background: var(--btn-bg);
+  border-radius: 10px;
+  border: 2px solid var(--messages-bg);
+}
+
+.private-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--nick-color);
+}
+
+.private-messages {
+  scrollbar-width: thin;
+  scrollbar-color: var(--btn-bg) transparent;
+}

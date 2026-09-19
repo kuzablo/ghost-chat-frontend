@@ -117,7 +117,7 @@
     border-width: 1.5px;
   }
 
-  /* Реакции */
+  /* Реакции общего чата */
   .reaction-btn {
     padding: 2px 6px;
     font-size: 11px;
@@ -129,7 +129,7 @@
     border-width: 1.5px;
   }
 
-  /* ==== Инпут-строка: скрыта по умолчанию, показывается по .mobile-input-open ==== */
+  /* Инпут-строка: скрыта, показывается по .mobile-input-open */
   .input-row {
     display: none;
     gap: 6px;
@@ -161,7 +161,7 @@
   .send-btn .send-icon { font-size: 20px; }
   .send-btn .send-spinner { width: 18px; height: 18px; }
 
-  /* ==== Мобильная панель 4 кнопок ==== */
+  /* Мобильная панель 4 кнопок */
   .mobile-bottom-bar {
     display: flex;
     justify-content: space-around;
@@ -231,7 +231,7 @@
   .status { font-size: 11px; margin-top: 4px; }
   .typing-indicator { font-size: 11px; min-height: 14px; }
 
-  /* ===== Панель игроков: мобильная версия ===== */
+  /* Панель игроков */
   .players-overlay {
     width: 260px;
     top: 50px;
@@ -297,6 +297,43 @@
   .private-input-row input { font-size: 16px; padding: 8px 10px; }
   .private-input-row .btn { padding: 8px 12px; font-size: 12px; }
   .private-msg { max-width: 88%; }
+
+  /* Реакции в личке — мобильная версия */
+  .private-reaction-badge {
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+    border-width: 2px;
+  }
+
+  .private-reaction-count {
+    min-width: 14px;
+    height: 14px;
+    font-size: 9px;
+  }
+
+  .private-msg--has-reactions {
+    margin-bottom: 10px;
+  }
+
+  .private-msg-reactions {
+    left: 8px;
+  }
+
+  .private-msg--own .private-msg-reactions {
+    left: auto;
+    right: 8px;
+  }
+
+  .private-reaction-picker {
+    padding: 5px 10px;
+    gap: 3px;
+  }
+
+  .private-reaction-picker button {
+    font-size: 24px;
+    padding: 3px 5px;
+  }
 
   /* Дуэль */
   .duel-box {
@@ -386,42 +423,5 @@
     padding: 3px 8px;
     font-size: 12px;
     border-width: 1.5px;
-  }
-
-  /* Реакции в личке — мобильная версия */
-  .private-reaction-badge {
-    width: 24px;
-    height: 24px;
-    font-size: 13px;
-    border-width: 2px;
-  }
-
-  .private-reaction-count {
-    min-width: 14px;
-    height: 14px;
-    font-size: 9px;
-  }
-
-  .private-msg--has-reactions {
-    margin-bottom: 10px;
-  }
-
-  .private-msg-reactions {
-    left: 8px;
-  }
-
-  .private-msg--own .private-msg-reactions {
-    left: auto;
-    right: 8px;
-  }
-
-  .private-reaction-picker {
-    padding: 5px 10px;
-    gap: 3px;
-  }
-
-  .private-reaction-picker button {
-    font-size: 24px;
-    padding: 3px 5px;
   }
 }
