@@ -100,7 +100,6 @@ const MessageList = ({
 
   const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
 
-  // Проверка — поставил ли текущий пользователь эту реакцию
   const didIReact = (message, emoji) =>
     !!message?.reactions?.[emoji]?.includes(nickname);
 
@@ -129,10 +128,7 @@ const MessageList = ({
                   <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                     {getInitial(m.nickname)}
                   </div>
-                  <div
-                    className="msg-content msg-content--image-only"
-                    onClick={() => toggleReactions(m.id)}
-                  >
+                  <div className="msg-content msg-content--image-only">
                     <div className="msg-image-only-wrap">
                       <img
                         src={m.imageUrl}
@@ -187,20 +183,6 @@ const MessageList = ({
                         <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
                       </div>
                     </div>
-
-                    {activeMessageId === m.id && (
-                      <div className="reactions-panel reactions-panel--below">
-                        {['👍', '🔥', '😂'].map(emoji => (
-                          <button
-                            key={emoji}
-                            className={`reaction-btn ${didIReact(m, emoji) ? 'active' : ''}`}
-                            onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
-                          >
-                            {emoji} {m.reactions?.[emoji]?.length || 0}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </React.Fragment>
