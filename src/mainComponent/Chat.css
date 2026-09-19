@@ -741,6 +741,10 @@ body.dark .unread-badge {
   margin-bottom: 8px;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .private-msg {
