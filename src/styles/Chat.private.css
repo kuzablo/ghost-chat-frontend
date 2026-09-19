@@ -225,21 +225,23 @@ body.dark .private-reaction-count {
 
 /* ===== Пикер реакций ===== */
 .private-reaction-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
   display: flex;
   gap: 2px;
   background: var(--card-bg);
   border: 2px solid var(--card-border);
   border-radius: 24px;
   padding: 4px 8px;
-  margin-top: 6px;
   animation: reactionPop 0.25s ease-out;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-  align-self: flex-start;
-  z-index: 3;
+  z-index: 10;
 }
 
 .private-msg--own .private-reaction-picker {
-  align-self: flex-end;
+  left: auto;
+  right: 0;
 }
 
 .private-reaction-picker button {
