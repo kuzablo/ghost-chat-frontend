@@ -231,29 +231,57 @@
   .status { font-size: 11px; margin-top: 4px; }
   .typing-indicator { font-size: 11px; min-height: 14px; }
 
-  /* Панель игроков */
+  /* ===== Панель игроков: мобильная версия ===== */
   .players-overlay {
-    width: 220px;
+    width: 260px;
     top: 50px;
     left: 6px;
-    padding: 10px;
-    max-height: 65vh;
+    padding: 12px;
+    max-height: 70vh;
     border-width: 2px;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
-  .search-input {
+
+  .players-overlay h4 { font-size: 14px; }
+
+  .players-overlay .search-input {
     font-size: 16px;
-    padding: 6px 10px;
+    padding: 8px 10px;
+    border-width: 1.5px;
+    margin-bottom: 10px;
+  }
+
+  .player-item { padding: 8px 0; gap: 6px; }
+
+  .player-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+  }
+
+  .player-name { font-size: 13px; }
+  .player-stats { font-size: 9px; }
+
+  .player-actions { gap: 3px; }
+
+  .player-action-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
     border-width: 1.5px;
   }
-  .player-item { font-size: 12px; padding: 5px 0; }
-  .player-item button {
-    padding: 4px 6px;
-    font-size: 11px;
-    border-width: 1.5px;
-  }
-  .friend-request-item { font-size: 12px; padding: 6px 0; }
+
+  .friend-request-item { font-size: 12px; padding: 8px 0; }
   .friend-request-actions .btn { padding: 4px 8px; font-size: 11px; }
-  .friends-header { font-size: 13px; }
+
+  .friends-header {
+    font-size: 10px;
+    padding-top: 8px;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
 
   /* Приватный чат */
   .private-chat-overlay {

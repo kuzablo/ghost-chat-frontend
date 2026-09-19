@@ -1447,3 +1447,129 @@ button:active {
   transform: scale(1.05);
   color: var(--btn-text);
 }
+
+/* ===== Players panel: обновлённый дизайн ===== */
+.players-overlay h4 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.players-overlay .search-input {
+  margin-bottom: 12px;
+}
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.friends-header {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-top: 1px solid var(--card-border);
+  padding-top: 10px;
+}
+
+.players-list > .friends-header:first-child {
+  margin-top: 0;
+  border-top: none;
+  padding-top: 0;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+body.dark .player-item {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.player-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #FFF;
+  border: 1.5px solid var(--card-border);
+  flex-shrink: 0;
+}
+
+.player-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.player-stats {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.player-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.player-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1.5px solid var(--card-border);
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text);
+  position: relative;
+  transition: transform 0.12s, background 0.15s;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+.player-action-btn:active {
+  transform: scale(0.9);
+  background: var(--messages-bg);
+}
+
+.player-action-btn--danger {
+  border-color: var(--danger);
+}
+
+.player-item .online-status {
+  margin-left: 6px;
+}

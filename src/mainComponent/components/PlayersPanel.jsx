@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { getAvatarColor, getInitial } from '../utils';
 
 const PlayersPanel = forwardRef(({
   players,
@@ -32,84 +33,141 @@ const PlayersPanel = forwardRef(({
 
   return (
     <div className="players-overlay" ref={ref}>
-      <h4>ghost-chat</h4>
+      <h4>banjoboy's crew</h4>
       <input
         className="search-input"
         type="text"
-        placeholder="Поиск"
+        placeholder="Поиск по нику..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />
       <div className="players-list">
+
         {/* Секция: Вы */}
         {myself && (
           <>
             <div className="friends-header">Вы</div>
-            <div className="player-item" key={myself.id}>
-              <span>
+            <div className="player-item">
+              <div
+                className="player-avatar"
+                style={{ background: getAvatarColor(myself.nickname) }}
+              >
+                {getInitial(myself.nickname)}
+              </div>
+              <span className="player-name">
                 {myself.nickname}
-                <small>(W:{myself.wins} L:{myself.losses})</small>
+                <small className="player-stats">W:{myself.wins} L:{myself.losses}</small>
               </span>
-              {/* Кнопки для себя не показываем */}
             </div>
           </>
         )}
 
-        {/* Секция: Онлайн (остальные) */}
-        {nonFriends.length > 0 && <div className="friends-header">Онлайн</div>}
+        {/* Секция: Онлайн */}
+        {nonFriends.length > 0 && (
+          <div className="friends-header">Онлайн ({nonFriends.length})</div>
+        )}
         {nonFriends.map(p => {
           const isSelf = p.userId === myId;
           return (
             <div className="player-item" key={p.id}>
-              <span>
+              <div
+                className="player-avatar"
+                style={{ background: getAvatarColor(p.nickname) }}
+              >
+                {getInitial(p.nickname)}
+              </div>
+              <span className="player-name">
                 {p.nickname}
-                <small>(W:{p.wins} L:{p.losses})</small>
+                <small className="player-stats">W:{p.wins} L:{p.losses}</small>
               </span>
               {!isSelf && (
-                <>
+                <div className="player-actions">
                   {isAdmin && (
                     <>
-                      <button onClick={() => onWatchChat(p.userId)} title="Просмотр чата">ℹ️</button>
-                      <button onClick={() => onBanConfirm(p.userId, p.nickname)} title="Забанить навсегда">⛔</button>
+                      <button
+                        className="player-action-btn"
+                        onClick={() => onWatchChat(p.userId)}
+                        title="Просмотр чата"
+                      >
+                        ℹ️
+                      </button>
+                      <button
+                        className="player-action-btn player-action-btn--danger"
+                        onClick={() => onBanConfirm(p.userId, p.nickname)}
+                        title="Забанить навсегда"
+                      >
+                        ⛔
+                      </button>
                     </>
                   )}
-                  <button onClick={() => onRequestDuel(p.id)} title="Вызвать на дуэль">⚔️</button>
-                  <button onClick={() => onOpenPrivateChat(p.userId, p.nickname)} title="Написать">
+                  <button
+                    className="player-action-btn"
+                    onClick={() => onRequestDuel(p.id)}
+                    title="Вызвать на дуэль"
+                  >
+                    ⚔️
+                  </button>
+                  <button
+                    className="player-action-btn"
+                    onClick={() => onOpenPrivateChat(p.userId, p.nickname)}
+                    title="Написать"
+                  >
                     ✉️
                     {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
                   </button>
                   <button
+                    className="player-action-btn"
                     onClick={() => onFriendRequest(p.userId)}
                     title="Добавить в друзья"
                   >
                     🤝
                   </button>
-                </>
+                </div>
               )}
             </div>
           );
         })}
 
         {/* Секция: Друзья */}
-        {filteredFriends.length > 0 && <div className="friends-header">Друзья</div>}
+        {filteredFriends.length > 0 && (
+          <div className="friends-header">Друзья ({filteredFriends.length})</div>
+        )}
         {filteredFriends.map(f => (
           <div className="player-item" key={f.userId}>
-            <span>
+            <div
+              className="player-avatar"
+              style={{ background: getAvatarColor(f.nickname) }}
+            >
+              {getInitial(f.nickname)}
+            </div>
+            <span className="player-name">
               {f.nickname}
-              {isFriendOnline(f.userId) && <span className="online-status" title="В сети"></span>}
+              {isFriendOnline(f.userId) && <span className="online-status" title="В сети" />}
             </span>
-            <button onClick={() => onOpenPrivateChat(f.userId, f.nickname)} title="Написать">
-              ✉️
-              {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
-            </button>
-            <button onClick={() => onRequestDuel(f.userId)} title="Вызвать на дуэль">⚔️</button>
+            <div className="player-actions">
+              <button
+                className="player-action-btn"
+                onClick={() => onOpenPrivateChat(f.userId, f.nickname)}
+                title="Написать"
+              >
+                ✉️
+                {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
+              </button>
+              <button
+                className="player-action-btn"
+                onClick={() => onRequestDuel(f.userId)}
+                title="Вызвать на дуэль"
+              >
+                ⚔️
+              </button>
+            </div>
           </div>
         ))}
 
         {/* Входящие запросы */}
         {friendRequests.length > 0 && (
           <>
-            <div className="friends-header">Входящие запросы</div>
+            <div className="friends-header">Входящие запросы ({friendRequests.length})</div>
             {friendRequests.map(req => (
               <div className="friend-request-item" key={req.requestId}>
                 <span>{req.senderNickname} хочет добавить вас в друзья</span>
