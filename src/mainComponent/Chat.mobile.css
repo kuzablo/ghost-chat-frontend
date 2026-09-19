@@ -403,7 +403,16 @@
   }
 
   .private-msg--has-reactions {
-    margin-bottom: 24px;
+    margin-bottom: 10px;
+  }
+
+  .private-msg-reactions {
+    left: 8px;
+  }
+
+  .private-msg--own .private-msg-reactions {
+    left: auto;
+    right: 8px;
   }
 
   .private-reaction-picker {

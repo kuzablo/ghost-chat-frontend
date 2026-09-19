@@ -1635,8 +1635,14 @@ body.dark .player-action-btn--unread {
 }
 
 /* ===== Реакции в личке ===== */
+.private-msg-text-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
 .private-msg--has-reactions {
-  margin-bottom: 22px;
+  margin-bottom: 10px;
 }
 
 .private-msg--pop {
@@ -1651,8 +1657,9 @@ body.dark .player-action-btn--unread {
 
 .private-msg-reactions {
   position: absolute;
-  bottom: -12px;
-  left: 12px;
+  bottom: 0;
+  left: 10px;
+  transform: translateY(50%);
   display: flex;
   gap: 3px;
   z-index: 2;
@@ -1661,7 +1668,7 @@ body.dark .player-action-btn--unread {
 
 .private-msg--own .private-msg-reactions {
   left: auto;
-  right: 12px;
+  right: 10px;
 }
 
 .private-reaction-badge {
@@ -1716,7 +1723,6 @@ body.dark .private-reaction-count {
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Пикер */
 .private-reaction-picker {
   display: flex;
   gap: 2px;

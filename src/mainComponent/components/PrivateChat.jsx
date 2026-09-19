@@ -61,9 +61,7 @@ const PrivateChat = ({
     setPickerFor(null);
   };
 
-  // Клик по сообщению → «пуньк» + открыть/закрыть пикер
   const handleMessageTap = (id, e) => {
-    // если клик пришёл из пикера или его кнопок — не обрабатываем
     if (e.target.closest('.private-reaction-picker')) return;
 
     setPoppingId(id);
@@ -123,23 +121,26 @@ const PrivateChat = ({
                 <span className="private-msg-nick">
                   {isOwn ? 'Я' : nickname}
                 </span>
-                <span className="private-msg-text">{m.text}</span>
 
-                {hasReactions && (
-                  <div className="private-msg-reactions">
-                    {reactionEntries.map(([emoji, users]) => (
-                      <span
-                        key={`${emoji}-${users.length}`}
-                        className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}
-                      >
-                        {emoji}
-                        {users.length > 1 && (
-                          <span className="private-reaction-count">{users.length}</span>
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <div className="private-msg-text-wrap">
+                  <span className="private-msg-text">{m.text}</span>
+
+                  {hasReactions && (
+                    <div className="private-msg-reactions">
+                      {reactionEntries.map(([emoji, users]) => (
+                        <span
+                          key={`${emoji}-${users.length}`}
+                          className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}
+                        >
+                          {emoji}
+                          {users.length > 1 && (
+                            <span className="private-reaction-count">{users.length}</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {pickerFor === m.id && (
                   <div
