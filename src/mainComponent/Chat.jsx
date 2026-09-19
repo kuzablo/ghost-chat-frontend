@@ -17,8 +17,9 @@ import {
   playSendSound,
 } from './utils';
 import './Chat.css';
+import './Chat.mobile.css';
 
-const VERSION = '2.12.14';
+const VERSION = '2.13.0';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -119,6 +120,7 @@ const Chat = () => {
   const [friendRequests, setFriendRequests] = useState([]);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [notices, setNotices] = useState([]);
+  const [showMobileInput, setShowMobileInput] = useState(false);
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -131,6 +133,7 @@ const Chat = () => {
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
   const fileInputRef = useRef(null);
+  const inputRef = useRef(null);
   const prevPlayerNicksRef = useRef(new Set());
   const firstPlayersLoadRef = useRef(true);
 
@@ -395,11 +398,10 @@ const Chat = () => {
     return () => el.removeEventListener('scroll', handleScroll);
   }, [isAuth]);
 
-  // ===== Уведомления "ник зашёл/вышел" =====
+  // ===== Уведомления «ник зашёл/вышел» =====
   useEffect(() => {
     const currentNicks = new Set(players.map(p => p.nickname));
 
-    // Первый раз — запоминаем список без показа уведомлений
     if (firstPlayersLoadRef.current) {
       prevPlayerNicksRef.current = currentNicks;
       firstPlayersLoadRef.current = false;
@@ -412,7 +414,6 @@ const Chat = () => {
 
     prevPlayerNicksRef.current = currentNicks;
 
-    // Отфильтровываем себя — не показываем свой же заход/выход
     const myNick = nicknameRef.current;
     const filteredJoined = joined.filter(n => n !== myNick);
     const filteredLeft = left.filter(n => n !== myNick);
@@ -480,6 +481,13 @@ const Chat = () => {
       return newUnread;
     });
   }, [players]);
+
+  // Фокус на инпут при открытии на мобилке
+  useEffect(() => {
+    if (showMobileInput && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [showMobileInput]);
 
   const handleAuthSubmit = async () => {
     if (!authNickname.trim() || !authPassword.trim()) {
@@ -780,7 +788,7 @@ const Chat = () => {
       />
 
       <div className="chat-container">
-        <div className="chat-main">
+        <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
             <img src="/mascot.png" alt="banjoboy" className="chat-header-logo" />
             <div className="chat-header-text">
@@ -788,6 +796,7 @@ const Chat = () => {
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
+              <div className="chat-header-version">v{VERSION}</div>
             </div>
           </div>
 
@@ -812,7 +821,6 @@ const Chat = () => {
               containerRef={messagesContainerRef}
             />
 
-            {/* ===== Уведомления "зашёл/вышел" ===== */}
             {notices.length > 0 && (
               <div className="join-notices">
                 {notices.map(n => (
@@ -844,6 +852,7 @@ const Chat = () => {
 
           <div className="input-row">
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={handleInputChange}
@@ -883,11 +892,45 @@ const Chat = () => {
                 })}
               </div>
               <div className="send-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
               </div>
               <div className="send-spinner" />
+            </button>
+          </div>
+
+          {/* ===== Мобильная панель 4 кнопок ===== */}
+          <div className="mobile-bottom-bar">
+            <button
+              className="mobile-bar-btn"
+              onClick={togglePlayers}
+              title="Игроки"
+            >
+              👥
+              {totalNotifications > 0 && <span className="mobile-bar-badge">!</span>}
+            </button>
+            <button
+              className="mobile-bar-btn"
+              onClick={() => setIsDark(!isDark)}
+              title="Тема"
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+            <button
+              className="mobile-bar-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={!isAuth || isUploading}
+              title="Фото"
+            >
+              📷
+            </button>
+            <button
+              className="mobile-bar-btn"
+              onClick={() => setShowMobileInput(v => !v)}
+              title="Написать"
+            >
+              💬
             </button>
           </div>
 
@@ -926,7 +969,6 @@ const Chat = () => {
       )}
 
       {isNewVersionAvailable && <LatestVersionLink />}
-      <div className="version">v{VERSION}</div>
 
       {fullscreenImage && (
         <div className="fullscreen-overlay" onClick={closeFullscreen}>
