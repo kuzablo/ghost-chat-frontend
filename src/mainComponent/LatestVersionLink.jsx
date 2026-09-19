@@ -1,7 +1,7 @@
 import React from 'react';
 
 const LatestVersionLink = () => {
-  const NEW_VERSION_URL = 'https://ghost-chat-frontend-roan.vercel.app/';
+  const NEW_VERSION_URL = 'https://banjoboy420.ru/';
 
   return (
     <a
@@ -14,14 +14,15 @@ const LatestVersionLink = () => {
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
-        background: 'linear-gradient(135deg, #ff8fa3 0%, #ff6b8a 100%)',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '20px',
+        background: '#3BB5E8',
+        color: '#FFFFFF',
+        padding: '10px 22px',
+        borderRadius: '24px',
         textDecoration: 'none',
-        fontWeight: 600,
+        fontWeight: 700,
         fontSize: '14px',
-        boxShadow: '0 4px 12px rgba(255, 143, 163, 0.3)',
+        border: '3px solid #111111',
+        boxShadow: '0 4px 0 rgba(0, 0, 0, 0.18)',
       }}
     >
       Скорее жми сюда
