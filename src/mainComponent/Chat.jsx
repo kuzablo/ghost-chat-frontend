@@ -17,7 +17,9 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.10.19';
+const VERSION = '2.10.20';
+const API_URL = 'https://backend-service-banjoboy420.amvera.io';
+const WS_URL = 'wss://backend-service-banjoboy420.amvera.io';
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -74,7 +76,7 @@ const Chat = () => {
   const totalNotifications = unreadCount + friendRequestsCount;
 
   const { isConnected: wsConnected, error: wsError, sendMessage, close, ws } = useWebSocket(
-    'wss://ghost-chat-backend-production-5faf.up.railway.app',
+    WS_URL,
     tokenRef.current,
     (msg) => handleWebSocketMessage(msg)
   );
@@ -362,23 +364,35 @@ const Chat = () => {
       setAuthError('Заполни оба поля');
       return;
     }
-    setAuthError('Отправка...');
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
+    setAuthError('');
+    const endpoint = isRegisterMode ? '/api/register' : '/api/login';
     try {
-      const response = await fetch(`https://ghost-chat-backend-production-5faf.up.railway.app/api/login`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nickname: authNickname.trim(), password: authPassword }),
-        signal: controller.signal,
       });
-      clearTimeout(timer);
-      setAuthError('Ответ: ' + response.status);
       const data = await response.json();
-      setAuthError('OK: ' + JSON.stringify(data).slice(0, 80));
+      if (!response.ok) {
+        setAuthError(data.error || 'Ошибка');
+        return;
+      }
+      try {
+        localStorage.setItem('ghost-chat-token', data.token);
+        localStorage.setItem('ghost-chat-nickname', data.nickname);
+      } catch (e) {
+        console.error('localStorage error:', e);
+      }
+      tokenRef.current = data.token;
+      nicknameRef.current = data.nickname;
+      setToken(data.token);
+      setNickname(data.nickname);
+      setIsAuth(true);
+      setAuthNickname('');
+      setAuthPassword('');
     } catch (error) {
-      clearTimeout(timer);
-      setAuthError('Catch: ' + error.name + ' — ' + error.message);
+      console.error('Auth error:', error);
+      setAuthError('Сеть недоступна, попробуй позже');
     }
   };
 
@@ -413,7 +427,7 @@ const Chat = () => {
     formData.append('file', file);
 
     try {
-      const res = await fetch('https://ghost-chat-backend-production-5faf.up.railway.app/api/upload', {
+      const res = await fetch(`${API_URL}/api/upload`, {
         method: 'POST',
         body: formData,
       });
