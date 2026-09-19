@@ -17,11 +17,11 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.7';
+const VERSION = '2.12.8';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
-// ===== Cubic-bezier эвалиатор (как в CSS) =====
+// ===== Cubic-bezier эмулятор (как в CSS) =====
 const cubicBezier = (p1x, p1y, p2x, p2y) => {
   const cx = 3 * p1x;
   const bx = 3 * (p2x - p1x) - cx;
@@ -58,7 +58,6 @@ const cubicBezier = (p1x, p1y, p2x, p2y) => {
   return (x) => sampleY(solveT(x));
 };
 
-// Анимация скролла контейнера вниз с ease-out
 const animateScrollToBottom = (el, duration = 1400) => {
   if (!el) return;
   const startTop = el.scrollTop;
@@ -365,7 +364,6 @@ const Chat = () => {
   useEffect(() => {
     if (messages.length === 0) return;
 
-    // Первая загрузка — анимированный скролл с cubic-bezier
     if (!hasAutoScrolledRef.current) {
       setTimeout(() => {
         animateScrollToBottom(messagesContainerRef.current, 1400);
@@ -374,7 +372,6 @@ const Chat = () => {
       return;
     }
 
-    // Последующие — стандартный smooth
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -651,6 +648,13 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
+  // ===== Реакции на текущем открытом изображении =====
+  const fullscreenMessage = fullscreenImage
+    ? messages.find(m => m.id === fullscreenImage.messageId)
+    : null;
+  const fullscreenReactions = fullscreenMessage?.reactions || {};
+  const fullscreenReactionEntries = Object.entries(fullscreenReactions);
+
   return (
     <>
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
@@ -825,6 +829,7 @@ const Chat = () => {
 
       {fullscreenImage && (
         <div className="fullscreen-overlay" onClick={closeFullscreen}>
+          {/* Кнопка открытия пикера реакций */}
           <div className="fullscreen-reactions">
             <button
               className="fullscreen-reactions-toggle"
@@ -851,6 +856,18 @@ const Chat = () => {
               </div>
             )}
           </div>
+
+          {/* Отображение существующих реакций под кнопкой */}
+          {fullscreenReactionEntries.length > 0 && (
+            <div className="fullscreen-existing-reactions" onClick={(e) => e.stopPropagation()}>
+              {fullscreenReactionEntries.map(([emoji, users]) => (
+                <span key={emoji} className="fullscreen-reaction-badge">
+                  {emoji} {users.length}
+                </span>
+              ))}
+            </div>
+          )}
+
           <img
             src={fullscreenImage.url}
             alt="fullscreen"

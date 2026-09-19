@@ -1438,8 +1438,43 @@ button:active {
   background: rgba(59, 181, 232, 0.2);
 }
 
+/* ===== Fullscreen: существующие реакции под кнопкой ===== */
+.fullscreen-existing-reactions {
+  position: absolute;
+  top: 80px;
+  left: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 10000;
+  max-width: 60vw;
+}
+
+.fullscreen-reaction-badge {
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #111;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
 @media (max-width: 600px) {
   .fullscreen-reactions { top: 12px; left: 12px; }
   .fullscreen-reactions-toggle { width: 42px; height: 42px; font-size: 22px; }
   .fullscreen-reaction-btn { font-size: 24px; padding: 2px; }
+
+  .fullscreen-existing-reactions {
+    top: 62px;
+    left: 12px;
+    max-width: calc(100vw - 24px);
+  }
+  .fullscreen-reaction-badge {
+    padding: 3px 8px;
+    font-size: 12px;
+    border-width: 1.5px;
+  }
 }
