@@ -119,54 +119,56 @@ const MessageList = ({
                   {getInitial(m.nickname)}
                 </div>
                 <div className="msg-content msg-content--image-only">
-                  <img
-                    src={m.imageUrl}
-                    alt="photo"
-                    className="msg-image-only-img"
-                    loading="lazy"
-                    onError={(e) => {
-                      console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                      e.target.style.display = 'none';
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFullscreenImage(m.imageUrl);
-                    }}
-                  />
+                  <div className="msg-image-only-wrap">
+                    <img
+                      src={m.imageUrl}
+                      alt="photo"
+                      className="msg-image-only-img"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                        e.target.style.display = 'none';
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFullscreenImage(m.imageUrl);
+                      }}
+                    />
 
-                  <div className="msg-image-overlay">
-                    <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
+                    <div className="msg-image-overlay">
+                      <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
 
-                    <div className="msg-actions msg-actions--overlay">
-                      {isOwn && (
-                        <button
-                          className="msg-action-btn msg-action-btn--overlay"
-                          onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                          title="Редактировать"
-                        >
-                          ✏️
-                        </button>
-                      )}
-                      {(isAdmin || isOwn) && (
-                        <button
-                          className="msg-action-btn msg-action-btn--overlay"
-                          onClick={(e) => handleDeleteClick(m.id, e)}
-                          title="Удалить"
-                        >
-                          🗑️
-                        </button>
-                      )}
+                      <div className="msg-actions msg-actions--overlay">
+                        {isOwn && (
+                          <button
+                            className="msg-action-btn msg-action-btn--overlay"
+                            onClick={(e) => { e.stopPropagation(); startEdit(m); }}
+                            title="Редактировать"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {(isAdmin || isOwn) && (
+                          <button
+                            className="msg-action-btn msg-action-btn--overlay"
+                            onClick={(e) => handleDeleteClick(m.id, e)}
+                            title="Удалить"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="reactions-header reactions-header--overlay">
+                        {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
+                          <span key={emoji} className="reaction-badge reaction-badge--overlay">
+                            {emoji} {users.length}
+                          </span>
+                        ))}
+                      </div>
+
+                      <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
                     </div>
-
-                    <div className="reactions-header reactions-header--overlay">
-                      {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                        <span key={emoji} className="reaction-badge reaction-badge--overlay">
-                          {emoji} {users.length}
-                        </span>
-                      ))}
-                    </div>
-
-                    <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
                   </div>
 
                   {activeMessageId === m.id && (
