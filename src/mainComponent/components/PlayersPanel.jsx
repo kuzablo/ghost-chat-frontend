@@ -108,12 +108,11 @@ const PlayersPanel = forwardRef(({
                     ⚔️
                   </button>
                   <button
-                    className="player-action-btn"
+                    className={`player-action-btn ${unreadByUser[p.userId] ? 'player-action-btn--unread' : ''}`}
                     onClick={() => onOpenPrivateChat(p.userId, p.nickname)}
                     title="Написать"
                   >
                     ✉️
-                    {unreadByUser[p.userId] && <span className="unread-excl">!</span>}
                   </button>
                   <button
                     className="player-action-btn"
@@ -146,12 +145,11 @@ const PlayersPanel = forwardRef(({
             </span>
             <div className="player-actions">
               <button
-                className="player-action-btn"
+                className={`player-action-btn ${unreadByUser[f.userId] ? 'player-action-btn--unread' : ''}`}
                 onClick={() => onOpenPrivateChat(f.userId, f.nickname)}
                 title="Написать"
               >
                 ✉️
-                {unreadByUser[f.userId] && <span className="unread-excl">!</span>}
               </button>
               <button
                 className="player-action-btn"

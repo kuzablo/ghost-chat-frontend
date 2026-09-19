@@ -1573,3 +1573,33 @@ body.dark .player-item {
 .player-item .online-status {
   margin-left: 6px;
 }
+
+/* ===== Непрочитанное личное — пульсация кнопки ✉️ ===== */
+.player-action-btn--unread {
+  background: var(--btn-bg);
+  border-color: var(--btn-border);
+  animation: unreadPulse 1.4s ease-in-out infinite;
+}
+
+.player-action-btn--unread:active {
+  animation: none;
+}
+
+@keyframes unreadPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 181, 232, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 181, 232, 0);
+    transform: scale(1.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 181, 232, 0);
+    transform: scale(1);
+  }
+}
+
+body.dark .player-action-btn--unread {
+  box-shadow: 0 0 0 1.5px #3BB5E8;
+}
