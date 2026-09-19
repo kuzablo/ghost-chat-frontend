@@ -56,6 +56,24 @@ export const playNotificationSound = () => {
   osc2.stop(now + 0.3);
 };
 
+// ===== Звук отправки сообщения =====
+export const playSendSound = () => {
+  const ctx = window.__chatAudioCtx;
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const gain = ctx.createGain();
+  gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.08, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(400, now);
+  osc.frequency.exponentialRampToValueAtTime(700, now + 0.1);
+  osc.connect(gain);
+  osc.start(now);
+  osc.stop(now + 0.15);
+};
+
 export const formatMessageDate = (timestamp) => {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -78,4 +96,32 @@ export const formatMessageDate = (timestamp) => {
   } else {
     return `${timeStr} ${monthYear}`;
   }
+};
+
+// ===== Дата-разделитель для списка сообщений =====
+export const formatDateDivider = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date >= today) return 'Сегодня';
+  if (date >= yesterday) return 'Вчера';
+
+  const isSameYear = date.getFullYear() === now.getFullYear();
+  if (isSameYear) {
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  }
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+// Проверка — нужно ли показать разделитель между двумя сообщениями
+export const isNewDay = (prevTimestamp, currentTimestamp) => {
+  if (!currentTimestamp) return false;
+  if (!prevTimestamp) return true;
+  const a = new Date(prevTimestamp);
+  const b = new Date(currentTimestamp);
+  return a.toDateString() !== b.toDateString();
 };

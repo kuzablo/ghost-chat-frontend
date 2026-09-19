@@ -14,14 +14,14 @@ import {
   formatTime,
   ensureAudioContext,
   playNotificationSound,
+  playSendSound,
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.8';
+const VERSION = '2.12.9';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
-// ===== Cubic-bezier эмулятор (как в CSS) =====
 const cubicBezier = (p1x, p1y, p2x, p2y) => {
   const cx = 3 * p1x;
   const bx = 3 * (p2x - p1x) - cx;
@@ -117,6 +117,7 @@ const Chat = () => {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
+  const [showScrollDown, setShowScrollDown] = useState(false);
 
   const wsRef = useRef(null);
   const nicknameRef = useRef(storedNickname);
@@ -377,6 +378,22 @@ const Chat = () => {
     }
   }, [messages]);
 
+  // ===== Отслеживание скролла → показ кнопки «вниз» =====
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollDown(distanceFromBottom > 200);
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [isAuth]);
+
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
     localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
@@ -465,6 +482,7 @@ const Chat = () => {
       type: 'message',
       data: { text: input.trim() }
     });
+    playSendSound();
     setInput('');
     sendMessage({ type: 'typing', data: { isTyping: false } });
     setTimeout(() => setSending(false), 800);
@@ -505,6 +523,7 @@ const Chat = () => {
           imageUrl: data.imageUrl
         }
       });
+      playSendSound();
 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -645,6 +664,10 @@ const Chat = () => {
     setShowFullscreenReactions(false);
   };
 
+  const scrollToBottom = () => {
+    animateScrollToBottom(messagesContainerRef.current, 800);
+  };
+
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
@@ -716,25 +739,44 @@ const Chat = () => {
 
       <div className="chat-container">
         <div className="chat-main">
+          {/* ===== Шапка чата ===== */}
+          <div className="chat-header">
+            <img src="/mascot.png" alt="banjoboy" className="chat-header-logo" />
+            <div className="chat-header-text">
+              <div className="chat-header-title">banjoboy's crew</div>
+              <div className="chat-header-subtitle">
+                {isConnected ? 'онлайн' : 'оффлайн'}
+              </div>
+            </div>
+          </div>
+
           <div className="qr-wrap">
             <QRCodeSVG value={window.location.href} size={100} />
             <span className="qr-label">QR для входа</span>
           </div>
 
-          <MessageList
-            messages={messages}
-            isAdmin={isAdmin}
-            deleteMessage={deleteMessage}
-            toggleReactions={toggleReactions}
-            activeMessageId={activeMessageId}
-            nickname={nickname}
-            sendReaction={sendReaction}
-            setFullscreenImage={setFullscreenImage}
-            messagesEndRef={messagesEndRef}
-            myId={myId}
-            onEditMessage={handleEditMessage}
-            containerRef={messagesContainerRef}
-          />
+          <div className="messages-wrapper">
+            <MessageList
+              messages={messages}
+              isAdmin={isAdmin}
+              deleteMessage={deleteMessage}
+              toggleReactions={toggleReactions}
+              activeMessageId={activeMessageId}
+              nickname={nickname}
+              sendReaction={sendReaction}
+              setFullscreenImage={setFullscreenImage}
+              messagesEndRef={messagesEndRef}
+              myId={myId}
+              onEditMessage={handleEditMessage}
+              containerRef={messagesContainerRef}
+            />
+
+            {showScrollDown && (
+              <button className="scroll-down-btn" onClick={scrollToBottom} title="Вниз">
+                ↓
+              </button>
+            )}
+          </div>
 
           <div className="typing-indicator">
             {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
@@ -790,7 +832,6 @@ const Chat = () => {
           </div>
 
           <div className="status">
-            {isConnected ? 'Онлайн' : 'Оффлайн'}
             {bannedUntil && ` — бан до ${new Date(bannedUntil).toLocaleTimeString()}`}
             {errorMessage && <div style={{ color: 'var(--danger)', marginTop: 4 }}>{errorMessage}</div>}
             {isUploading && <div style={{ color: 'var(--btn-bg)', marginTop: 4 }}>Загрузка фото...</div>}
@@ -829,7 +870,6 @@ const Chat = () => {
 
       {fullscreenImage && (
         <div className="fullscreen-overlay" onClick={closeFullscreen}>
-          {/* Кнопка открытия пикера реакций */}
           <div className="fullscreen-reactions">
             <button
               className="fullscreen-reactions-toggle"
@@ -857,7 +897,6 @@ const Chat = () => {
             )}
           </div>
 
-          {/* Отображение существующих реакций под кнопкой */}
           {fullscreenReactionEntries.length > 0 && (
             <div className="fullscreen-existing-reactions" onClick={(e) => e.stopPropagation()}>
               {fullscreenReactionEntries.map(([emoji, users]) => (

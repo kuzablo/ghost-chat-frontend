@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
+import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNewDay } from '../utils';
 import ConfirmModal from './ConfirmModal';
 
 const MessageList = ({
@@ -111,72 +111,200 @@ const MessageList = ({
           const isOwn = m.userId === myId;
           const isEditingThis = editingMessageId === m.id;
           const isImageOnly = !m.text?.trim() && !!m.imageUrl && !isEditingThis;
+          const prevMessage = messages[i - 1];
+          const showDateDivider = isNewDay(prevMessage?.time, m.time);
+
+          // ==== Дата-разделитель ====
+          const dateDivider = showDateDivider ? (
+            <div className="date-divider" key={`date-${m.id}`}>
+              <span>{formatDateDivider(m.time)}</span>
+            </div>
+          ) : null;
 
           // ==== Image-only ====
           if (isImageOnly) {
             return (
-              <div className="msg msg--image-only" key={i}>
+              <React.Fragment key={i}>
+                {dateDivider}
+                <div className="msg msg--image-only">
+                  <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
+                    {getInitial(m.nickname)}
+                  </div>
+                  <div
+                    className="msg-content msg-content--image-only"
+                    onClick={() => toggleReactions(m.id)}
+                  >
+                    <div className="msg-image-only-wrap">
+                      <img
+                        src={m.imageUrl}
+                        alt="photo"
+                        className="msg-image-only-img"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                          e.target.style.display = 'none';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFullscreenImage({ url: m.imageUrl, messageId: m.id });
+                        }}
+                      />
+
+                      <div className="msg-image-overlay">
+                        <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
+
+                        <div className="msg-actions msg-actions--overlay">
+                          {isOwn && (
+                            <button
+                              className="msg-action-btn msg-action-btn--overlay"
+                              onClick={(e) => { e.stopPropagation(); startEdit(m); }}
+                              title="Редактировать"
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {(isAdmin || isOwn) && (
+                            <button
+                              className="msg-action-btn msg-action-btn--overlay"
+                              onClick={(e) => handleDeleteClick(m.id, e)}
+                              title="Удалить"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="reactions-header reactions-header--overlay">
+                          {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
+                            <span key={emoji} className="reaction-badge reaction-badge--overlay">
+                              {emoji} {users.length}
+                            </span>
+                          ))}
+                        </div>
+
+                        <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
+                      </div>
+                    </div>
+
+                    {activeMessageId === m.id && (
+                      <div className="reactions-panel reactions-panel--below">
+                        {['👍', '🔥', '😂'].map(emoji => (
+                          <button
+                            key={emoji}
+                            className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
+                          >
+                            {emoji} {m.reactions?.[emoji]?.length || 0}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          }
+
+          // ==== Обычное сообщение ====
+          return (
+            <React.Fragment key={i}>
+              {dateDivider}
+              <div className="msg">
                 <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                   {getInitial(m.nickname)}
                 </div>
                 <div
-                  className="msg-content msg-content--image-only"
+                  className="msg-content"
                   onClick={() => toggleReactions(m.id)}
                 >
-                  <div className="msg-image-only-wrap">
-                    <img
-                      src={m.imageUrl}
-                      alt="photo"
-                      className="msg-image-only-img"
-                      loading="lazy"
-                      onError={(e) => {
-                        console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                        e.target.style.display = 'none';
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFullscreenImage({ url: m.imageUrl, messageId: m.id });
-                      }}
-                    />
+                  <div className="msg-header">
+                    <span className="msg-nick">{m.nickname}</span>
 
-                    <div className="msg-image-overlay">
-                      <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
-
-                      <div className="msg-actions msg-actions--overlay">
-                        {isOwn && (
-                          <button
-                            className="msg-action-btn msg-action-btn--overlay"
-                            onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                            title="Редактировать"
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {(isAdmin || isOwn) && (
-                          <button
-                            className="msg-action-btn msg-action-btn--overlay"
-                            onClick={(e) => handleDeleteClick(m.id, e)}
-                            title="Удалить"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="reactions-header reactions-header--overlay">
-                        {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                          <span key={emoji} className="reaction-badge reaction-badge--overlay">
-                            {emoji} {users.length}
-                          </span>
-                        ))}
-                      </div>
-
-                      <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
+                    <div className="msg-actions">
+                      {isOwn && (
+                        <button
+                          className="msg-action-btn"
+                          onClick={(e) => { e.stopPropagation(); startEdit(m); }}
+                          title="Редактировать"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {(isAdmin || isOwn) && (
+                        <button
+                          className="msg-action-btn"
+                          onClick={(e) => handleDeleteClick(m.id, e)}
+                          title="Удалить"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
+
+                    <div className="reactions-header">
+                      {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
+                        <span key={emoji} className="reaction-badge">
+                          {emoji} {users.length}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="msg-time">{formatMessageDate(m.time)}</span>
                   </div>
 
-                  {activeMessageId === m.id && (
-                    <div className="reactions-panel reactions-panel--below">
+                  {isEditingThis ? (
+                    <div className="msg-edit-area">
+                      <input
+                        type="text"
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(m.id);
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        className="msg-edit-input"
+                        inputMode="text"
+                        enterKeyHint="done"
+                        style={{
+                          touchAction: 'manipulation',
+                          fontSize: '16px',
+                        }}
+                        onFocus={() => {
+                          setTimeout(() => window.scrollTo(0, 0), 10);
+                        }}
+                      />
+                      <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
+                        Сохранить
+                      </button>
+                      <button className="btn" onClick={(e) => { e.stopPropagation(); cancelEdit(); }}>
+                        Отмена
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="msg-text">{m.text}</div>
+                  )}
+
+                  {m.imageUrl && (
+                    <div className="msg-image-wrapper">
+                      <img
+                        src={m.imageUrl}
+                        alt="photo"
+                        className="msg-image"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                          e.target.style.display = 'none';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFullscreenImage({ url: m.imageUrl, messageId: m.id });
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {activeMessageId === m.id && !isEditingThis && (
+                    <div className="reactions-panel">
                       {['👍', '🔥', '😂'].map(emoji => (
                         <button
                           key={emoji}
@@ -190,120 +318,7 @@ const MessageList = ({
                   )}
                 </div>
               </div>
-            );
-          }
-
-          // ==== Обычное сообщение ====
-          return (
-            <div className="msg" key={i}>
-              <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
-                {getInitial(m.nickname)}
-              </div>
-              <div
-                className="msg-content"
-                onClick={() => toggleReactions(m.id)}
-              >
-                <div className="msg-header">
-                  <span className="msg-nick">{m.nickname}</span>
-
-                  <div className="msg-actions">
-                    {isOwn && (
-                      <button
-                        className="msg-action-btn"
-                        onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                        title="Редактировать"
-                      >
-                        ✏️
-                      </button>
-                    )}
-                    {(isAdmin || isOwn) && (
-                      <button
-                        className="msg-action-btn"
-                        onClick={(e) => handleDeleteClick(m.id, e)}
-                        title="Удалить"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="reactions-header">
-                    {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                      <span key={emoji} className="reaction-badge">
-                        {emoji} {users.length}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="msg-time">{formatMessageDate(m.time)}</span>
-                </div>
-
-                {isEditingThis ? (
-                  <div className="msg-edit-area">
-                    <input
-                      type="text"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(m.id);
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                      className="msg-edit-input"
-                      inputMode="text"
-                      enterKeyHint="done"
-                      style={{
-                        touchAction: 'manipulation',
-                        fontSize: '16px',
-                      }}
-                      onFocus={() => {
-                        setTimeout(() => window.scrollTo(0, 0), 10);
-                      }}
-                    />
-                    <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
-                      Сохранить
-                    </button>
-                    <button className="btn" onClick={(e) => { e.stopPropagation(); cancelEdit(); }}>
-                      Отмена
-                    </button>
-                  </div>
-                ) : (
-                  <div className="msg-text">{m.text}</div>
-                )}
-
-                {m.imageUrl && (
-                  <div className="msg-image-wrapper">
-                    <img
-                      src={m.imageUrl}
-                      alt="photo"
-                      className="msg-image"
-                      loading="lazy"
-                      onError={(e) => {
-                        console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                        e.target.style.display = 'none';
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFullscreenImage({ url: m.imageUrl, messageId: m.id });
-                      }}
-                    />
-                  </div>
-                )}
-
-                {activeMessageId === m.id && !isEditingThis && (
-                  <div className="reactions-panel">
-                    {['👍', '🔥', '😂'].map(emoji => (
-                      <button
-                        key={emoji}
-                        className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
-                      >
-                        {emoji} {m.reactions?.[emoji]?.length || 0}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            </React.Fragment>
           );
         })}
         <div ref={messagesEndRef} />
