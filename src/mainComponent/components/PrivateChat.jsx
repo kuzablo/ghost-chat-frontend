@@ -85,20 +85,26 @@ const PrivateChat = ({
           {localTypingUser ? `${localTypingUser} печатает...` : ''}
         </div>
         <div className="private-messages">
-          {initialMessages.map((m, i) => (
-            <div key={i} className="private-msg">
-              <span className="private-msg-nick">
-                {m.senderId === myId ? 'Я' : nickname}
-              </span>
-              <span className="private-msg-text">{m.text}</span>
-              <div className="private-msg-footer">
-                <span className="private-msg-time">{formatTime(m.created_at)}</span>
-                <span className="private-msg-status">
-                  {m.is_read ? 'прочитано' : 'не прочитано'}
+          {initialMessages.map((m, i) => {
+            const isOwn = m.senderId === myId;
+            return (
+              <div
+                key={i}
+                className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
+              >
+                <span className="private-msg-nick">
+                  {isOwn ? 'Я' : nickname}
                 </span>
+                <span className="private-msg-text">{m.text}</span>
+                <div className="private-msg-footer">
+                  <span className="private-msg-time">{formatTime(m.created_at)}</span>
+                  <span className="private-msg-status">
+                    {m.is_read ? 'прочитано' : 'не прочитано'}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
         <div className="private-input-row">

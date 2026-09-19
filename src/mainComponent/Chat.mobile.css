@@ -296,6 +296,7 @@
   .private-chat-header h4 { font-size: 14px; }
   .private-input-row input { font-size: 16px; padding: 8px 10px; }
   .private-input-row .btn { padding: 8px 12px; font-size: 12px; }
+  .private-msg { max-width: 88%; }
 
   /* Дуэль */
   .duel-box {

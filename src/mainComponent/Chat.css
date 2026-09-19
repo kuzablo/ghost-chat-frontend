@@ -746,8 +746,32 @@ body.dark .unread-badge {
 .private-msg {
   display: flex;
   flex-direction: column;
+  margin-bottom: 10px;
+  max-width: 80%;
+}
+
+.private-msg--other {
   align-items: flex-start;
-  margin-bottom: 8px;
+  align-self: flex-start;
+}
+
+.private-msg--own {
+  align-items: flex-end;
+  align-self: flex-end;
+}
+
+.private-msg--own .private-msg-nick {
+  color: var(--nick-color);
+}
+
+.private-msg--own .private-msg-text {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+}
+
+.private-msg--own .private-msg-footer {
+  flex-direction: row-reverse;
 }
 
 .private-msg-footer {
