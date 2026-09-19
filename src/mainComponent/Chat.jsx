@@ -17,7 +17,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.10.21';
+const VERSION = '2.10.22';
 const API_URL = 'https://backend-service-banjoboy420.amvera.io';
 const WS_URL = 'wss://backend-service-banjoboy420.amvera.io';
 
@@ -431,9 +431,20 @@ const Chat = () => {
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        setErrorMessage('Status: ' + res.status + ' (нет JSON)');
+        setIsUploading(false);
+        return;
+      }
+
       if (!res.ok) {
-        throw new Error(data.error || 'Upload failed');
+        setErrorMessage('Status: ' + res.status + ' | ' + (data.error || 'unknown'));
+        setIsUploading(false);
+        return;
       }
 
       sendMessage({
@@ -449,7 +460,7 @@ const Chat = () => {
       }
     } catch (err) {
       console.error('Ошибка загрузки фото:', err);
-      setErrorMessage('Не удалось загрузить фото');
+      setErrorMessage('Upload error: ' + (err?.message || 'unknown') + ' | name: ' + (err?.name || ''));
     } finally {
       setIsUploading(false);
     }
