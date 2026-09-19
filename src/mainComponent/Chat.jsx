@@ -22,7 +22,7 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.7';
+const VERSION = '2.14.8';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -401,20 +401,53 @@ const Chat = () => {
     }
   }, [messages]);
 
+  // ===== Скролл-индикатор + подгонка картинок =====
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
 
-    const handleScroll = () => {
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setShowScrollDown(distanceFromBottom > 200);
+    const adjustImageSizes = () => {
+      const containerHeight = el.clientHeight;
+      const maxH = Math.max(120, containerHeight - 90);
+      el.querySelectorAll('.msg-image-only-img').forEach(img => {
+        img.style.maxHeight = `${maxH}px`;
+      });
     };
 
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    let rafId = null;
+    const schedule = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setShowScrollDown(distanceFromBottom > 200);
+        adjustImageSizes();
+      });
+    };
 
-    return () => el.removeEventListener('scroll', handleScroll);
+    el.addEventListener('scroll', schedule, { passive: true });
+    schedule();
+
+    const ro = new ResizeObserver(schedule);
+    ro.observe(el);
+    window.addEventListener('resize', schedule);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      el.removeEventListener('scroll', schedule);
+      ro.disconnect();
+      window.removeEventListener('resize', schedule);
+    };
   }, [isAuth]);
+
+  // Подгонка при появлении новых сообщений
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const maxH = Math.max(120, el.clientHeight - 90);
+    el.querySelectorAll('.msg-image-only-img').forEach(img => {
+      img.style.maxHeight = `${maxH}px`;
+    });
+  }, [messages]);
 
   // ===== Уведомления «ник зашёл/вышел» =====
   useEffect(() => {
@@ -474,7 +507,6 @@ const Chat = () => {
   // ===== Клик снаружи панели игроков =====
   useEffect(() => {
     const handleClickOutside = (e) => {
-      // Клик по кнопке игроков (верхней или нижней) — игнорируем
       if (playersBtnRef.current?.contains(e.target)) return;
       if (mobilePlayersBtnRef.current?.contains(e.target)) return;
 
