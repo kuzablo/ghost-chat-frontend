@@ -17,9 +17,66 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.6';
+const VERSION = '2.12.7';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
+
+// ===== Cubic-bezier эвалиатор (как в CSS) =====
+const cubicBezier = (p1x, p1y, p2x, p2y) => {
+  const cx = 3 * p1x;
+  const bx = 3 * (p2x - p1x) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * p1y;
+  const by = 3 * (p2y - p1y) - cy;
+  const ay = 1 - cy - by;
+
+  const sampleX = (t) => ((ax * t + bx) * t + cx) * t;
+  const sampleY = (t) => ((ay * t + by) * t + cy) * t;
+  const sampleDX = (t) => (3 * ax * t + 2 * bx) * t + cx;
+
+  const solveT = (x) => {
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const x2 = sampleX(t) - x;
+      if (Math.abs(x2) < 1e-6) return t;
+      const d = sampleDX(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= x2 / d;
+    }
+    let lo = 0, hi = 1;
+    t = x;
+    while (lo < hi) {
+      const x2 = sampleX(t);
+      if (Math.abs(x2 - x) < 1e-6) return t;
+      if (x2 < x) lo = t;
+      else hi = t;
+      t = (lo + hi) / 2;
+    }
+    return t;
+  };
+
+  return (x) => sampleY(solveT(x));
+};
+
+// Анимация скролла контейнера вниз с ease-out
+const animateScrollToBottom = (el, duration = 1400) => {
+  if (!el) return;
+  const startTop = el.scrollTop;
+  const targetTop = el.scrollHeight - el.clientHeight;
+  const distance = targetTop - startTop;
+  if (distance <= 0) return;
+
+  const ease = cubicBezier(0.16, 0.84, 0.44, 1);
+  const startTime = performance.now();
+
+  const tick = (now) => {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    el.scrollTop = startTop + distance * ease(t);
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -58,7 +115,7 @@ const Chat = () => {
   const [banConfirm, setBanConfirm] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState(null); // { url, messageId } | null
+  const [fullscreenImage, setFullscreenImage] = useState(null);
   const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
 
@@ -68,6 +125,8 @@ const Chat = () => {
   const unmountedRef = useRef(false);
   const reconnectTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const hasAutoScrolledRef = useRef(false);
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -302,7 +361,20 @@ const Chat = () => {
     }
   }, [wsError]);
 
+  // ===== Скролл при появлении сообщений =====
   useEffect(() => {
+    if (messages.length === 0) return;
+
+    // Первая загрузка — анимированный скролл с cubic-bezier
+    if (!hasAutoScrolledRef.current) {
+      setTimeout(() => {
+        animateScrollToBottom(messagesContainerRef.current, 1400);
+        hasAutoScrolledRef.current = true;
+      }, 60);
+      return;
+    }
+
+    // Последующие — стандартный smooth
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -657,6 +729,7 @@ const Chat = () => {
             messagesEndRef={messagesEndRef}
             myId={myId}
             onEditMessage={handleEditMessage}
+            containerRef={messagesContainerRef}
           />
 
           <div className="typing-indicator">

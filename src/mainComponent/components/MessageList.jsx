@@ -14,6 +14,7 @@ const MessageList = ({
   messagesEndRef,
   myId,
   onEditMessage,
+  containerRef,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -105,7 +106,7 @@ const MessageList = ({
 
   return (
     <>
-      <div className="messages">
+      <div className="messages" ref={containerRef}>
         {messages.map((m, i) => {
           const isOwn = m.userId === myId;
           const isEditingThis = editingMessageId === m.id;
