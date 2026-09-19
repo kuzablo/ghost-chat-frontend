@@ -18,7 +18,7 @@ import {
 } from './utils';
 import './Chat.css';
 
-const VERSION = '2.12.10';
+const VERSION = '2.12.11';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -361,7 +361,6 @@ const Chat = () => {
     }
   }, [wsError]);
 
-  // ===== Скролл при появлении сообщений =====
   useEffect(() => {
     if (messages.length === 0) return;
 
@@ -378,7 +377,6 @@ const Chat = () => {
     }
   }, [messages]);
 
-  // ===== Отслеживание скролла → показ кнопки «вниз» =====
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -671,7 +669,6 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  // ===== Реакции на текущем открытом изображении =====
   const fullscreenMessage = fullscreenImage
     ? messages.find(m => m.id === fullscreenImage.messageId)
     : null;
@@ -739,7 +736,6 @@ const Chat = () => {
 
       <div className="chat-container">
         <div className="chat-main">
-          {/* ===== Шапка чата ===== */}
           <div className="chat-header">
             <img src="/mascot.png" alt="banjoboy" className="chat-header-logo" />
             <div className="chat-header-text">
@@ -880,19 +876,22 @@ const Chat = () => {
             </button>
             {showFullscreenReactions && (
               <div className="fullscreen-reactions-picker" onClick={(e) => e.stopPropagation()}>
-                {['👍', '🔥', '😂'].map(emoji => (
-                  <button
-                    key={emoji}
-                    className="fullscreen-reaction-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      sendReaction(fullscreenImage.messageId, emoji);
-                      setShowFullscreenReactions(false);
-                    }}
-                  >
-                    {emoji}
-                  </button>
-                ))}
+                {['👍', '🔥', '😂'].map(emoji => {
+                  const isActive = fullscreenMessage?.reactions?.[emoji]?.includes(nickname);
+                  return (
+                    <button
+                      key={emoji}
+                      className={`fullscreen-reaction-btn ${isActive ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sendReaction(fullscreenImage.messageId, emoji);
+                        setShowFullscreenReactions(false);
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -900,7 +899,10 @@ const Chat = () => {
           {fullscreenReactionEntries.length > 0 && (
             <div className="fullscreen-existing-reactions" onClick={(e) => e.stopPropagation()}>
               {fullscreenReactionEntries.map(([emoji, users]) => (
-                <span key={emoji} className="fullscreen-reaction-badge">
+                <span
+                  key={emoji}
+                  className={`fullscreen-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
+                >
                   {emoji} {users.length}
                 </span>
               ))}

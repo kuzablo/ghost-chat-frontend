@@ -1623,3 +1623,27 @@ button:active {
     border-width: 1.5px;
   }
 }
+
+/* ===== Мои реакции — выделение ===== */
+.reaction-badge.own {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+}
+
+.reaction-badge--overlay.own {
+  background: #3BB5E8 !important;
+  color: #FFFFFF !important;
+  border-color: #111 !important;
+}
+
+.fullscreen-reaction-badge.own {
+  background: #3BB5E8;
+  color: #FFFFFF;
+  border-color: #111;
+}
+
+.fullscreen-reaction-btn.active {
+  background: rgba(59, 181, 232, 0.35);
+  box-shadow: 0 0 0 2px #3BB5E8;
+}

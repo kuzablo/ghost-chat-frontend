@@ -21,12 +21,10 @@ const MessageList = ({
   const [isEditing, setIsEditing] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
 
-  // Блокировка скролла и зума на время редактирования
   useEffect(() => {
     if (isEditing) {
       const html = document.documentElement;
       const body = document.body;
-
       const scrollY = window.scrollY;
       html.style.overflow = 'hidden';
       body.style.overflow = 'hidden';
@@ -72,9 +70,7 @@ const MessageList = ({
     setEditingMessageId(message.id);
     setEditText(message.text);
     setIsEditing(true);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 50);
+    setTimeout(() => window.scrollTo(0, 0), 50);
   };
 
   const cancelEdit = () => {
@@ -104,6 +100,10 @@ const MessageList = ({
 
   const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
 
+  // Проверка — поставил ли текущий пользователь эту реакцию
+  const didIReact = (message, emoji) =>
+    !!message?.reactions?.[emoji]?.includes(nickname);
+
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -114,7 +114,6 @@ const MessageList = ({
           const prevMessage = messages[i - 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
 
-          // ==== Дата-разделитель ====
           const dateDivider = showDateDivider ? (
             <div className="date-divider" key={`date-${m.id}`}>
               <span>{formatDateDivider(m.time)}</span>
@@ -176,7 +175,10 @@ const MessageList = ({
 
                         <div className="reactions-header reactions-header--overlay">
                           {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                            <span key={emoji} className="reaction-badge reaction-badge--overlay">
+                            <span
+                              key={emoji}
+                              className={`reaction-badge reaction-badge--overlay ${didIReact(m, emoji) ? 'own' : ''}`}
+                            >
                               {emoji} {users.length}
                             </span>
                           ))}
@@ -191,7 +193,7 @@ const MessageList = ({
                         {['👍', '🔥', '😂'].map(emoji => (
                           <button
                             key={emoji}
-                            className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
+                            className={`reaction-btn ${didIReact(m, emoji) ? 'active' : ''}`}
                             onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
                           >
                             {emoji} {m.reactions?.[emoji]?.length || 0}
@@ -243,7 +245,10 @@ const MessageList = ({
 
                     <div className="reactions-header">
                       {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                        <span key={emoji} className="reaction-badge">
+                        <span
+                          key={emoji}
+                          className={`reaction-badge ${didIReact(m, emoji) ? 'own' : ''}`}
+                        >
                           {emoji} {users.length}
                         </span>
                       ))}
@@ -265,13 +270,8 @@ const MessageList = ({
                         className="msg-edit-input"
                         inputMode="text"
                         enterKeyHint="done"
-                        style={{
-                          touchAction: 'manipulation',
-                          fontSize: '16px',
-                        }}
-                        onFocus={() => {
-                          setTimeout(() => window.scrollTo(0, 0), 10);
-                        }}
+                        style={{ touchAction: 'manipulation', fontSize: '16px' }}
+                        onFocus={() => setTimeout(() => window.scrollTo(0, 0), 10)}
                       />
                       <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
                         Сохранить
@@ -308,7 +308,7 @@ const MessageList = ({
                       {['👍', '🔥', '😂'].map(emoji => (
                         <button
                           key={emoji}
-                          className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
+                          className={`reaction-btn ${didIReact(m, emoji) ? 'active' : ''}`}
                           onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
                         >
                           {emoji} {m.reactions?.[emoji]?.length || 0}
