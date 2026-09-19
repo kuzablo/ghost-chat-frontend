@@ -109,7 +109,85 @@ const MessageList = ({
         {messages.map((m, i) => {
           const isOwn = m.userId === myId;
           const isEditingThis = editingMessageId === m.id;
+          const isImageOnly = !m.text?.trim() && !!m.imageUrl && !isEditingThis;
 
+          // ==== Image-only: изображение вместо бабла, оверлей поверх ====
+          if (isImageOnly) {
+            return (
+              <div className="msg msg--image-only" key={i} onClick={() => toggleReactions(m.id)}>
+                <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
+                  {getInitial(m.nickname)}
+                </div>
+                <div className="msg-content msg-content--image-only">
+                  <img
+                    src={m.imageUrl}
+                    alt="photo"
+                    className="msg-image-only-img"
+                    loading="lazy"
+                    onError={(e) => {
+                      console.error('❌ Ошибка загрузки фото:', m.imageUrl);
+                      e.target.style.display = 'none';
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFullscreenImage(m.imageUrl);
+                    }}
+                  />
+
+                  <div className="msg-image-overlay">
+                    <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
+
+                    <div className="msg-actions msg-actions--overlay">
+                      {isOwn && (
+                        <button
+                          className="msg-action-btn msg-action-btn--overlay"
+                          onClick={(e) => { e.stopPropagation(); startEdit(m); }}
+                          title="Редактировать"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {(isAdmin || isOwn) && (
+                        <button
+                          className="msg-action-btn msg-action-btn--overlay"
+                          onClick={(e) => handleDeleteClick(m.id, e)}
+                          title="Удалить"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="reactions-header reactions-header--overlay">
+                      {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
+                        <span key={emoji} className="reaction-badge reaction-badge--overlay">
+                          {emoji} {users.length}
+                        </span>
+                      ))}
+                    </div>
+
+                    <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
+                  </div>
+
+                  {activeMessageId === m.id && (
+                    <div className="reactions-panel reactions-panel--below">
+                      {['👍', '🔥', '😂'].map(emoji => (
+                        <button
+                          key={emoji}
+                          className={`reaction-btn ${m.reactions?.[emoji]?.includes(nickname) ? 'active' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
+                        >
+                          {emoji} {m.reactions?.[emoji]?.length || 0}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // ==== Обычное сообщение ====
           return (
             <div className="msg" key={i} onClick={() => toggleReactions(m.id)}>
               <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
