@@ -19,7 +19,7 @@ import {
 import './Chat.css';
 import './Chat.mobile.css';
 
-const VERSION = '2.13.1';
+const VERSION = '2.13.2';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -132,6 +132,8 @@ const Chat = () => {
   const hasAutoScrolledRef = useRef(false);
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
+  const playersBtnRef = useRef(null);
+  const mobilePlayersBtnRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const prevPlayerNicksRef = useRef(new Set());
@@ -453,8 +455,13 @@ const Chat = () => {
     }
   }, [isAuth]);
 
+  // ===== Клик снаружи панели игроков =====
   useEffect(() => {
     const handleClickOutside = (e) => {
+      // Клик по кнопке игроков (верхней или нижней) — игнорируем
+      if (playersBtnRef.current?.contains(e.target)) return;
+      if (mobilePlayersBtnRef.current?.contains(e.target)) return;
+
       if (playersOverlayRef.current && !playersOverlayRef.current.contains(e.target)) {
         setShowPlayers(false);
       }
@@ -482,7 +489,6 @@ const Chat = () => {
     });
   }, [players]);
 
-  // Фокус на инпут при открытии на мобилке
   useEffect(() => {
     if (showMobileInput && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -735,7 +741,11 @@ const Chat = () => {
       </button>
 
       {isAuth && (
-        <button className="players-toggle" onClick={togglePlayers}>
+        <button
+          className="players-toggle"
+          ref={playersBtnRef}
+          onClick={togglePlayers}
+        >
           👥
           {totalNotifications > 0 && <span className="unread-badge">!</span>}
         </button>
@@ -900,10 +910,10 @@ const Chat = () => {
             </button>
           </div>
 
-          {/* ===== Мобильная панель 4 кнопок ===== */}
           <div className="mobile-bottom-bar">
             <button
               className="mobile-bar-btn"
+              ref={mobilePlayersBtnRef}
               onClick={togglePlayers}
               title="Игроки"
             >
