@@ -1587,14 +1587,21 @@ button:active {
     max-width: 100%;
   }
   .chat-header {
-    padding: 2px 0 8px;
+    padding: 4px 0 10px;
     margin-bottom: 8px;
     gap: 8px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
   }
   .chat-header-logo {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-width: 1.5px;
+  }
+  .chat-header-text {
+    align-items: center;
   }
   .chat-header-title { font-size: 13px; }
   .chat-header-subtitle { font-size: 10px; }
