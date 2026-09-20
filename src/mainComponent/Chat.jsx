@@ -23,7 +23,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.15';
+// [правка] версия поднята 2.14.15 → 2.14.16 (правки Chat.image.css)
+const VERSION = '2.14.16';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
