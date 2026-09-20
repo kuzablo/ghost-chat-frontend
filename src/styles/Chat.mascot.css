@@ -1,10 +1,7 @@
 /*
   [2.15.7] Стили маскота-радио.
-  [правка 2.15.9]
-    - анимации нажатия/активации маскота;
-    - кольцо-прогресс долгого тапа;
-    - вспышка при срабатывании;
-    - анимация появления названия трека.
+  [правка 2.15.9] анимации нажатия, кольцо, вспышка.
+  [правка 2.15.14] вместо зелёной точки — «дребезжание» маскота + мини-эквалайзер.
 */
 
 .yt-hidden-host {
@@ -33,8 +30,24 @@
   transition: transform 0.15s ease-out;
 }
 
-/* Нажатие — маскот слегка сжимается */
+/* [правка 2.15.14] пока играет — маскот «дребезжит» */
+.chat-header-logo.mascot-playing {
+  animation: mascotVibrate 1.4s ease-in-out infinite;
+}
+
+@keyframes mascotVibrate {
+  0%   { transform: translate(0, 0)    rotate(0deg); }
+  15%  { transform: translate(-1px, -1px) rotate(-1.2deg); }
+  30%  { transform: translate(1px, 0)   rotate(1.2deg); }
+  45%  { transform: translate(-1px, 1px) rotate(-0.8deg); }
+  60%  { transform: translate(1px, -1px) rotate(0.8deg); }
+  75%  { transform: translate(0, 1px)   rotate(-0.5deg); }
+  100% { transform: translate(0, 0)    rotate(0deg); }
+}
+
+/* Нажатие — маскот слегка сжимается (перекрывает vibrate) */
 .chat-header-logo.mascot-pressing {
+  animation: none;
   transform: scale(0.92);
 }
 
@@ -47,6 +60,40 @@
   0%   { transform: scale(0.92); }
   40%  { transform: scale(1.15); }
   100% { transform: scale(1); }
+}
+
+/* [правка 2.15.14] мини-эквалайзер под маскотом */
+.mascot-equalizer {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.mascot-equalizer span {
+  display: block;
+  width: 3px;
+  background: #3BB5E8;
+  border-radius: 2px;
+  box-shadow: 0 0 3px rgba(59, 181, 232, 0.6);
+  animation: mascotEqBar 0.9s ease-in-out infinite;
+}
+
+.mascot-equalizer span:nth-child(1) { animation-delay: 0s; }
+.mascot-equalizer span:nth-child(2) { animation-delay: 0.15s; }
+.mascot-equalizer span:nth-child(3) { animation-delay: 0.3s; }
+.mascot-equalizer span:nth-child(4) { animation-delay: 0.45s; }
+
+@keyframes mascotEqBar {
+  0%   { height: 3px; }
+  50%  { height: 10px; }
+  100% { height: 3px; }
 }
 
 /* Кольцо-прогресс долгого тапа */
@@ -106,26 +153,7 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Зелёная точка «играет» */
-.mascot-playing-dot {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #22C55E;
-  border: 2px solid var(--card-bg);
-  pointer-events: none;
-  animation: mascotPulse 1.6s ease-in-out infinite;
-}
-
-@keyframes mascotPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50%      { transform: scale(1.15); opacity: 0.7; }
-}
-
-/* Название трека в шапке вместо "banjoboy's crew" */
+/* Название трека в шапке */
 .chat-header-track-title {
   font-weight: 800;
   font-size: 13px;

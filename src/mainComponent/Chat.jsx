@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.12 → 2.15.13] игнор эмулированных mouse после touch
-const VERSION = '2.15.13';
+// [правка 2.15.13 → 2.15.14] вместо зелёной точки — дребезжание + эквалайзер
+const VERSION = '2.15.14';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -627,7 +627,8 @@ const Chat = () => {
                 className={
                   `chat-header-logo` +
                   (mascotPressing ? ' mascot-pressing' : '') +
-                  (mascotActivating ? ' mascot-activating' : '')
+                  (mascotActivating ? ' mascot-activating' : '') +
+                  (yt.isPlaying && !mascotPressing && !mascotActivating ? ' mascot-playing' : '')
                 }
                 draggable={false}
                 onTouchStart={handleMascotTouchStart}
@@ -644,7 +645,12 @@ const Chat = () => {
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
-              {yt.isPlaying && <span className="mascot-playing-dot" />}
+              {/* [правка 2.15.14] вместо зелёной точки — мини-эквалайзер */}
+              {yt.isPlaying && (
+                <div className="mascot-equalizer">
+                  <span /><span /><span /><span />
+                </div>
+              )}
             </div>
 
             <div className="chat-header-text">
