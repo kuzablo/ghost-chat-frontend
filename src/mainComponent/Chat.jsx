@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.32 → 2.15.0] выравнивание версии с сервером (временно)
-const VERSION = '2.15.0';
+// [правка 2.15.0 → 2.15.1] тап по картинке в fullscreen теперь закрывает
+const VERSION = '2.15.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -62,7 +62,7 @@ const Chat = () => {
     showMobileInput, setShowMobileInput,
   } = useChatUI();
 
-  // ===== 3. Локальное состояние Chat.jsx (не входит ни в один хук) =====
+  // ===== 3. Локальное состояние Chat.jsx =====
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
 
@@ -74,8 +74,6 @@ const Chat = () => {
   const inputRef = useRef(null);
 
   // ===== 5. WebSocket =====
-  // Принимаем стрелку — handleWebSocketMessage определён ниже, но вызовется
-  // только после рендера, когда переменная уже присвоена.
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
     tokenRef.current,
@@ -96,7 +94,6 @@ const Chat = () => {
   });
 
   // ===== 8. Основной чат =====
-  // Создаётся ДО usePrivateChat, потому что usePrivateChat нужен players.
   const chat = useChat({
     sendMessage,
     isAuth,
@@ -158,13 +155,11 @@ const Chat = () => {
     scrollToBottom,
   } = useAutoScroll({ messages, resetKey: isAuth });
 
-  // ===== Счётчики уведомлений =====
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
   // ===== WS-роутер =====
-  // Порядок важен: дуэли → лички → чат → auth-специфика.
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
@@ -172,7 +167,6 @@ const Chat = () => {
     if (handlePrivateWs(msg)) return;
     if (handleChatWs(msg)) return;
 
-    // Остались только auth-специфичные и version
     switch (msg.type) {
       case 'version':
         console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
@@ -192,7 +186,6 @@ const Chat = () => {
     }
   }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
 
-  // ===== Эффекты =====
   useEffect(() => {
     setIsConnected(wsConnected);
   }, [wsConnected]);
@@ -205,7 +198,6 @@ const Chat = () => {
     }
   }, [wsError, setErrorMessage]);
 
-  // Клик снаружи панели игроков
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (playersBtnRef.current?.contains(e.target)) return;
@@ -231,7 +223,6 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // ===== Обёртки =====
   const togglePlayers = () => {
     chatTogglePlayers();
     setShowPlayers(prev => !prev);
@@ -554,10 +545,14 @@ const Chat = () => {
             </div>
           )}
 
+          {/*
+            [правка 2.15.1] Убран onClick со stopPropagation на <img>.
+            Теперь тап по самой картинке всплывает до overlay → closeFullscreen.
+            Кнопки реакций остались защищены своими stopPropagation.
+          */}
           <img
             src={fullscreenImage.url}
             alt="fullscreen"
-            onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}
