@@ -22,7 +22,7 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.11';
+const VERSION = '2.14.12';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -402,26 +402,39 @@ const Chat = () => {
     });
   }, [messages]);
 
-  // ===== Скролл-индикатор «вниз» =====
+  // ===== Скролл-индикатор «вниз» + подгонка картинок через 1с бездействия =====
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
 
     let rafId = null;
-    const schedule = () => {
+    let idleTimer = null;
+
+    const fitImages = () => {
+      const maxH = Math.max(120, el.clientHeight - 90);
+      el.querySelectorAll('.msg-image-only-img').forEach(img => {
+        img.style.maxHeight = `${maxH}px`;
+      });
+    };
+
+    const handleScroll = () => {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
         setShowScrollDown(distanceFromBottom > 200);
       });
+
+      // Каждый новый скролл — сбрасываем таймер
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(fitImages, 1000);
     };
 
-    el.addEventListener('scroll', schedule, { passive: true });
-    schedule();
+    el.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      el.removeEventListener('scroll', schedule);
+      if (idleTimer) clearTimeout(idleTimer);
+      el.removeEventListener('scroll', handleScroll);
     };
   }, [isAuth]);
 
