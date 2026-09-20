@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.15.4 → 2.15.5] свайп панели игроков через document-слушатели
-const VERSION = '2.15.5';
+// [правка 2.15.5 → 2.15.6] drag инпута вниз скрывает его
+const VERSION = '2.15.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -69,6 +69,9 @@ const Chat = () => {
   // [правка 2.15.3] состояние свайпа в fullscreen
   const [dragY, setDragY] = useState(0);
 
+  // [правка 2.15.6] состояние drag инпута
+  const [inputDragY, setInputDragY] = useState(0);
+
   // ===== 4. Refs =====
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -79,12 +82,16 @@ const Chat = () => {
   // [правка 2.15.3] refs для свайпа в fullscreen
   const touchStartYRef = useRef(null);
 
-  // [правка 2.15.5] refs для свайпа панели игроков (document-слушатели)
+  // [правка 2.15.5] refs для свайпа панели игроков
   const swipeStartXRef = useRef(null);
   const swipeStartYRef = useRef(null);
   const swipeActiveRef = useRef(false);
-  const swipeDirectionRef = useRef(null); // 'open' | 'close'
+  const swipeDirectionRef = useRef(null);
   const showPlayersRef = useRef(showPlayers);
+
+  // [правка 2.15.6] refs для drag инпута
+  const inputTouchStartYRef = useRef(null);
+  const inputTouchStartXRef = useRef(null);
 
   // ===== 5. WebSocket =====
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
@@ -172,7 +179,6 @@ const Chat = () => {
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
-  // Синхронизация showPlayersRef для document-слушателей
   useEffect(() => {
     showPlayersRef.current = showPlayers;
   }, [showPlayers]);
@@ -242,11 +248,6 @@ const Chat = () => {
   }, [showMobileInput]);
 
   // ===== [правка 2.15.5] Свайп панели игроков через document =====
-  // Слушаем на document → ловим жесты с любой точки экрана, включая padding.
-  // - открытие: touchstart в левых 40px экрана, свайп вправо > 50px
-  // - закрытие: свайп влево > 50px, если панель открыта
-  // - отсев вертикальных жестов; при активном свайпе — preventDefault,
-  //   чтобы скролл сообщений не перебивал жест
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -257,13 +258,11 @@ const Chat = () => {
       const t = e.touches[0];
 
       if (showPlayersRef.current) {
-        // панель открыта → возможное закрытие свайпом влево
         swipeStartXRef.current = t.clientX;
         swipeStartYRef.current = t.clientY;
         swipeActiveRef.current = false;
         swipeDirectionRef.current = 'close';
       } else if (t.clientX <= EDGE_ZONE) {
-        // панель закрыта, тач у левого края → возможное открытие
         swipeStartXRef.current = t.clientX;
         swipeStartYRef.current = t.clientY;
         swipeActiveRef.current = false;
@@ -286,7 +285,6 @@ const Chat = () => {
         if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
 
         if (Math.abs(dy) > Math.abs(dx)) {
-          // вертикальный жест → не наш
           swipeDirectionRef.current = null;
           return;
         }
@@ -301,7 +299,6 @@ const Chat = () => {
         swipeActiveRef.current = true;
       }
 
-      // мы в активном свайпе — блокируем скролл
       if (e.cancelable) e.preventDefault();
     };
 
@@ -392,6 +389,38 @@ const Chat = () => {
   const fsOverlayOpacity = fullscreenImage
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
+
+  // ===== [правка 2.15.6] Drag инпута вниз =====
+  const INPUT_DRAG_THRESHOLD = 60;
+
+  const handleInputTouchStart = (e) => {
+    const t = e.touches[0];
+    inputTouchStartYRef.current = t.clientY;
+    inputTouchStartXRef.current = t.clientX;
+  };
+
+  const handleInputTouchMove = (e) => {
+    if (inputTouchStartYRef.current == null) return;
+    const t = e.touches[0];
+    const dy = t.clientY - inputTouchStartYRef.current;
+    const dx = t.clientX - inputTouchStartXRef.current;
+
+    // отсев горизонтальных жестов
+    if (Math.abs(dx) > Math.abs(dy)) return;
+
+    if (dy > 0) {
+      setInputDragY(dy);
+    }
+  };
+
+  const handleInputTouchEnd = () => {
+    if (inputDragY > INPUT_DRAG_THRESHOLD) {
+      setShowMobileInput(false);
+    }
+    setInputDragY(0);
+    inputTouchStartYRef.current = null;
+    inputTouchStartXRef.current = null;
+  };
 
   return (
     <>
@@ -527,7 +556,22 @@ const Chat = () => {
             {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
           </div>
 
-          <div className="input-row">
+          {/*
+            [правка 2.15.6] Drag инпута вниз:
+              - тянем вниз > 60px → инпут скрывается;
+              - горизонтальные жесты игнорируются;
+              - во время drag — плавный сдвиг вниз.
+          */}
+          <div
+            className="input-row"
+            onTouchStart={handleInputTouchStart}
+            onTouchMove={handleInputTouchMove}
+            onTouchEnd={handleInputTouchEnd}
+            style={{
+              transform: `translateY(${inputDragY}px)`,
+              transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
+            }}
+          >
             <input
               ref={inputRef}
               type="text"
