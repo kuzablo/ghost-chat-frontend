@@ -2,21 +2,29 @@
 
 /*
   [правка]
-  Было: размер карточки зависел от картинки (width: 100% на мобилке / width: fit-content
-  на десктопе) — карточки прыгали, картинки растягивались.
+  Квадрат 300×300 убран — портретные картинки сжимались по бокам.
+  Теперь: карточка принимает пропорции картинки,
+  но ограничена по ширине и высоте, чтобы влезать в экран.
 
-  Стало: квадрат через CSS-переменную --image-card-size = min(300px, 70vw, 45vh).
-  min() берёт наименьшее значение — карточка всегда влезает в экран.
-  Картинка внутри: width/height 100% + object-fit: contain — вписана без искажений.
+  Принцип:
+  - .msg-image-only-wrap — размер определяется картинкой (inline-block, без width/height).
+  - .msg-image-only-img — max-width и max-height обрезают картинку по экрану,
+    но width/height: auto сохраняют пропорции.
+  - Если картинка широкая — упрётся в max-width, высота подстроится.
+  - Если картинка высокая — упрётся в max-height, ширина подстроится.
+  - Если картинка маленькая — останется маленькой (не тянем).
 */
 
 .msg--image-only {
-  --image-card-size: min(300px, 70vw, 45vh);
+  /* предельные размеры карточки — общие для десктопа */
+  --image-max-w: min(340px, 70vw);
+  --image-max-h: 45vh;
 
   display: flex;
   align-items: flex-start;
   gap: 8px;
   width: fit-content;
+  max-width: 100%;
   margin-bottom: 12px;
 }
 
@@ -33,19 +41,22 @@
 
 .msg-image-only-wrap {
   position: relative;
-  display: block;
-  width: var(--image-card-size);
-  height: var(--image-card-size);
+  display: inline-block;
+  /* размер диктует картинка внутри */
+  max-width: var(--image-max-w);
+  max-height: var(--image-max-h);
   border-radius: var(--radius-md);
   overflow: hidden;
-  /* лёгкий фон, чтобы узкая картинка не висела в пустоте */
+  /* лёгкий фон, если картинка с прозрачными полями */
   background: rgba(0, 0, 0, 0.06);
 }
 
 .msg-image-only-img {
   display: block;
-  width: 100%;
-  height: 100%;
+  max-width: var(--image-max-w);
+  max-height: var(--image-max-h);
+  width: auto;
+  height: auto;
   object-fit: contain;
   cursor: pointer;
   border-radius: var(--radius-md);
@@ -139,8 +150,9 @@
 /* ===== Мобильная версия ===== */
 @media (max-width: 600px) {
   .msg--image-only {
-    /* на мобилке чуть меньше — остаётся место аватару и отступам */
-    --image-card-size: min(280px, 62vw, 40vh);
+    /* на мобилке чуть меньше, чтобы влезало и осталось место под аватар */
+    --image-max-w: min(320px, 72vw);
+    --image-max-h: 40vh;
 
     max-width: 100%;
     width: fit-content;
@@ -152,16 +164,6 @@
     max-width: 100%;
     width: auto;
     gap: 4px;
-  }
-
-  .msg-image-only-wrap {
-    width: var(--image-card-size);
-    height: var(--image-card-size);
-  }
-
-  .msg-image-only-img {
-    width: 100%;
-    height: 100%;
   }
 
   .msg-image-overlay {
