@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.16 → 2.15.17] диагностика тапов
-const VERSION = '2.15.17';
+// [правка 2.15.17 → 2.15.18] iframe внутри viewport для iOS
+const VERSION = '2.15.18';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

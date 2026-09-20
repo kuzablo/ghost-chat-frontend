@@ -2,17 +2,26 @@
   [2.15.7] Стили маскота-радио.
   [правка 2.15.9] анимации нажатия, кольцо, вспышка.
   [правка 2.15.14] вместо зелёной точки — «дребезжание» маскота + мини-эквалайзер.
+  [правка 2.15.18] iframe держим ВНУТРИ viewport (1×1 в углу) —
+  iOS Safari не даёт play для iframe за экраном.
 */
 
 .yt-hidden-host {
   position: fixed;
-  top: -9999px;
-  left: -9999px;
-  width: 200px;
-  height: 200px;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
   opacity: 0.01;
   pointer-events: none;
-  z-index: -1;
+  z-index: 1;
+}
+
+.yt-hidden-host iframe {
+  width: 1px;
+  height: 1px;
+  border: 0;
 }
 
 .chat-header-mascot-wrap {
@@ -30,7 +39,6 @@
   transition: transform 0.15s ease-out;
 }
 
-/* [правка 2.15.14] пока играет — маскот «дребезжит» */
 .chat-header-logo.mascot-playing {
   animation: mascotVibrate 1.4s ease-in-out infinite;
 }
@@ -45,13 +53,11 @@
   100% { transform: translate(0, 0)    rotate(0deg); }
 }
 
-/* Нажатие — маскот слегка сжимается (перекрывает vibrate) */
 .chat-header-logo.mascot-pressing {
   animation: none;
   transform: scale(0.92);
 }
 
-/* Сработал долгий тап — вспышка */
 .chat-header-logo.mascot-activating {
   animation: mascotActivate 0.4s ease-out;
 }
@@ -62,7 +68,6 @@
   100% { transform: scale(1); }
 }
 
-/* [правка 2.15.14] мини-эквалайзер под маскотом */
 .mascot-equalizer {
   position: absolute;
   bottom: -2px;
@@ -96,7 +101,6 @@
   100% { height: 3px; }
 }
 
-/* Кольцо-прогресс долгого тапа */
 .mascot-ring {
   position: absolute;
   inset: -5px;
@@ -130,7 +134,6 @@
   to   { stroke-dashoffset: 0; }
 }
 
-/* Подсказка громкости над маскотом */
 .mascot-volume-tip {
   position: absolute;
   top: -32px;
@@ -153,7 +156,6 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Название трека в шапке */
 .chat-header-track-title {
   font-weight: 800;
   font-size: 13px;
