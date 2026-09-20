@@ -35,7 +35,7 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
 // [2.20.0] панель диалогов + long-press стикеры
-const VERSION = '2.20.0';
+const VERSION = '2.20.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -263,6 +263,8 @@ const Chat = () => {
     const handleClickOutside = (e) => {
       if (playersBtnRef.current?.contains(e.target)) return;
       if (mobilePlayersBtnRef.current?.contains(e.target)) return;
+      // [2.20.1] не закрываем панель при тапе в стикер-меню
+      if (e.target.closest && e.target.closest('.sticker-menu-overlay')) return;
 
       if (playersOverlayRef.current && !playersOverlayRef.current.contains(e.target)) {
         setShowPlayers(false);

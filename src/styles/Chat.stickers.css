@@ -1,4 +1,4 @@
-/* ===== [2.20.0] Меню стикеров (long-press) ===== */
+/* ===== [2.20.1] Меню стикеров (long-press) ===== */
 
 .sticker-menu-overlay {
   position: fixed;
@@ -25,34 +25,22 @@ body.dark .sticker-menu-overlay {
   background: var(--card-bg);
   border: 3px solid var(--card-border);
   border-radius: var(--radius-lg);
-  padding: 18px 20px 20px;
-  min-width: 260px;
+  padding: 20px 22px;
   max-width: 92vw;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
   animation: stickerMenuIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 @keyframes stickerMenuIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.4) rotate(-6deg);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.06) rotate(2deg);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
+  0%   { opacity: 0; transform: scale(0.4) rotate(-6deg); }
+  60%  { opacity: 1; transform: scale(1.06) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
-.sticker-menu-header {
-  text-align: center;
-}
+.sticker-menu-header { text-align: center; }
 
 .sticker-menu-title {
   font-size: 15px;
@@ -72,30 +60,30 @@ body.dark .sticker-menu-overlay {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
+  gap: 20px;
 }
 
-/* стикер */
+/* [2.20.1] стикер 1-в-1 как в капсуле */
 .sticker-menu-item {
   position: relative;
-  width: 72px;
-  min-height: 72px;
-  padding: 8px 6px;
+  width: 56px;
+  height: 56px;
   border-radius: 18px;
   background: #FFFFFF;
   border: 2px solid #111;
   color: #111;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  padding: 0;
+  flex-shrink: 0;
   box-shadow:
     0 3px 0 rgba(0, 0, 0, 0.10),
     0 6px 14px rgba(0, 0, 0, 0.12),
     0 0 0 4px rgba(255, 255, 255, 0.55);
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   opacity: 0;
   transform: scale(0.4) translateY(14px);
   animation: stickerItemIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -109,16 +97,20 @@ body.dark .sticker-menu-overlay {
   }
   55% {
     opacity: 1;
-    transform: scale(1.12) translateY(-4px) rotate(-3deg);
+    transform: scale(1.12) translateY(-4px) rotate(var(--sticker-rotate, 0deg));
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0) rotate(0deg);
+    transform: scale(1) translateY(0) rotate(var(--sticker-rotate, 0deg));
   }
 }
 
 .sticker-menu-item:active {
-  transform: scale(0.92) !important;
+  transform: scale(0.92) rotate(var(--sticker-rotate, 0deg)) !important;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.10),
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 0 0 4px rgba(255, 255, 255, 0.55);
 }
 
 .sticker-menu-item--danger {
@@ -144,16 +136,8 @@ body.dark .sticker-menu-item--danger {
 }
 
 .sticker-menu-item-icon {
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
-}
-
-.sticker-menu-item-label {
-  font-size: 10px;
-  font-weight: 800;
-  text-align: center;
-  line-height: 1.1;
-  letter-spacing: 0.2px;
 }
 
 /* ===== Кольцо long-press на элементе ===== */
@@ -200,9 +184,4 @@ body.dark .sticker-menu-item--danger {
 @keyframes playerRingFill {
   from { --ring-progress: 0deg; }
   to   { --ring-progress: 360deg; }
-}
-
-.player-item--menu-source {
-  background: rgba(59, 181, 232, 0.12);
-  border-radius: var(--radius-sm);
 }

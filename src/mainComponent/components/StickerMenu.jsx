@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 
 /*
-  [2.20.0] Универсальное меню стикеров.
-  Открывается long-press на элементе. По центру экрана.
-  items: [{ icon, label, onClick, danger? }]
+  [2.20.1] Меню стикеров. Стиль 1-в-1 с капсульными кнопками:
+  квадраты 56x56, скругление 18px, белый фон, чёрная обводка, наклон ±3°.
 */
 const StickerMenu = ({ open, title, subtitle, items, onClose }) => {
   useEffect(() => {
@@ -30,14 +29,17 @@ const StickerMenu = ({ open, title, subtitle, items, onClose }) => {
               key={i}
               type="button"
               className={`sticker-menu-item ${item.danger ? 'sticker-menu-item--danger' : ''}`}
-              style={{ '--sticker-delay': `${i * 0.05}s` }}
+              style={{
+                '--sticker-delay': `${i * 0.05}s`,
+                '--sticker-rotate': `${i % 2 === 0 ? -3 : 3}deg`,
+              }}
               onClick={() => {
                 onClose();
                 if (item.onClick) item.onClick();
               }}
+              title={item.label}
             >
               <span className="sticker-menu-item-icon">{item.icon}</span>
-              <span className="sticker-menu-item-label">{item.label}</span>
             </button>
           ))}
         </div>
