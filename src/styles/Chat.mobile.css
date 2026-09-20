@@ -4,8 +4,6 @@
   .qr-wrap { display: none; }
   .theme-toggle, .players-toggle { display: none !important; }
 
-  /* [2.18.8] капсула по умолчанию скрыта в Chat.css (для десктопа).
-     На мобилке — включаем обратно. */
   .mobile-capsule {
     display: block;
   }
@@ -17,6 +15,8 @@
     height: 100%;
     width: 100%;
     max-width: 100%;
+    /* [2.22.2] safe-area снизу — чтобы приложение не упиралось в home-indicator */
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
   }
 
   .chat-main {
@@ -48,7 +48,6 @@
   .chat-header-subtitle { font-size: 11px; }
   .chat-header-version { font-size: 10px; margin-top: 2px; }
 
-  /* [2.21.0] кнопка темы в шапке — иконка теперь SVG */
   .chat-header-theme {
     display: flex;
     position: absolute;
@@ -72,7 +71,6 @@
     transform: scale(0.9);
   }
 
-  /* иконка внутри мобильной кнопки — чуть меньше */
   .chat-header-theme .theme-icon {
     width: 20px;
     height: 20px;
@@ -133,7 +131,7 @@
     border-width: 1.5px;
   }
 
-  /* Инпут-строка */
+  /* ===== [2.22.2] Инпут-строка на мобилке ===== */
   .input-row {
     display: none;
     gap: 6px;
@@ -151,6 +149,28 @@
     font-size: 16px;
     border-width: 2px;
     border-radius: 14px;
+    /* [2.22.2] чтобы браузер не «прыгал» при фокусе */
+    scroll-margin-bottom: 200px;
+  }
+
+  /* [2.22.2] на мобилке фокус-подсветка мягче, чем на десктопе */
+  .input-row input[type="text"]:focus,
+  .input-row input[type="text"]:focus-visible {
+    box-shadow: 0 0 0 3px rgba(245, 169, 192, 0.5);
+  }
+  body.dark .input-row input[type="text"]:focus,
+  body.dark .input-row input[type="text"]:focus-visible {
+    box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.32);
+  }
+
+  /* [2.22.2] когда клавиатура открыта — капсула не нужна, она мешает */
+  .chat-main.mobile-input-open .mobile-capsule {
+    display: none;
+  }
+
+  /* [2.22.2] при открытой клавиатуре убираем лишние отступы внизу */
+  .chat-main.mobile-input-open {
+    padding-bottom: 8px;
   }
 
   .send-btn {
@@ -393,7 +413,6 @@
     padding: 3px 5px;
   }
 
-  /* реакции над пикером */
   .msg-reactions--above-picker {
     transform: translateY(65%) scale(1.1);
   }
@@ -448,7 +467,7 @@
   .msg-reply-quote-nick { font-size: 10px; }
   .msg-reply-quote-text { font-size: 10.5px; max-width: 180px; }
 
-  /* ===== [2.18.7] Мобильная капсула-тюбик: увеличена в 2 раза ===== */
+  /* ===== [2.18.7] Мобильная капсула-тюбик ===== */
 
   .mobile-capsule {
     position: relative;
@@ -468,7 +487,6 @@
                 box-shadow 0.25s;
   }
 
-  /* дыхание — только когда свёрнута */
   .mobile-capsule:not(.mobile-capsule--open) {
     animation: capsuleBreath 2.6s ease-in-out infinite;
   }
@@ -484,7 +502,6 @@
     }
   }
 
-  /* стрелка вверх */
   .mobile-capsule:not(.mobile-capsule--open)::before {
     content: '';
     position: absolute;
@@ -513,7 +530,6 @@
     }
   }
 
-  /* пробегающий блик */
   .mobile-capsule:not(.mobile-capsule--open)::after {
     content: '';
     position: absolute;
@@ -545,7 +561,6 @@
     animation: none;
   }
 
-  /* пульсирующая точка непрочитанного */
   .capsule-pulse {
     position: absolute;
     top: 10px;
@@ -572,13 +587,11 @@
     }
   }
 
-  /* если есть непрочитанные — стрелку гасим */
   .mobile-capsule:not(.mobile-capsule--open):has(.capsule-pulse)::before {
     opacity: 0;
     animation: none;
   }
 
-  /* контейнер кнопок-стикеров */
   .capsule-content {
     position: absolute;
     bottom: 4px;
@@ -596,7 +609,6 @@
     pointer-events: auto;
   }
 
-  /* кнопка-стикер */
   .capsule-btn {
     position: relative;
     width: 56px;
@@ -732,7 +744,6 @@
     border-color: #172236;
   }
 
-  /* [2.20.0] на мобилке кнопки действий скрыты — они в long-press меню */
   .player-actions {
     display: none !important;
   }

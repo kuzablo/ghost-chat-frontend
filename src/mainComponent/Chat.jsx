@@ -34,11 +34,12 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус, нативная панель off
 // [2.22.1] свайп по капсуле: лок направления, чёткие пороги, поэтапное закрытие
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.22.1';
+const VERSION = '2.22.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -133,7 +134,6 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [2.22.1] состояние жеста по капсуле: старт, лок направления, флаг «был свайп»
   const capsuleSwipeRef = useRef({
     startX: 0,
     startY: 0,
@@ -321,11 +321,56 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
+  /* ===== [2.22.2] Клавиатура: следим за visualViewport ===== */
   useEffect(() => {
-    if (showMobileInput && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [showMobileInput]);
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = window.visualViewport;
+
+    let rafId = 0;
+    const apply = () => {
+      const gap = window.innerHeight - vv.height;
+      const isKeyboardOpen = gap > 120; // ниже этого — считаем, что клавиатура
+      document.documentElement.classList.toggle('keyboard-open', isKeyboardOpen);
+      document.documentElement.style.setProperty(
+        '--kb-height',
+        `${Math.max(0, gap)}px`
+      );
+    };
+    const onResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(apply);
+    };
+
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', onResize);
+    apply();
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', onResize);
+      document.documentElement.classList.remove('keyboard-open');
+      document.documentElement.style.removeProperty('--kb-height');
+    };
+  }, []);
+
+  /* ===== [2.22.2] Фокус инпута: сначала скролл, потом фокус ===== */
+  useEffect(() => {
+    if (!showMobileInput) return;
+
+    const t1 = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ block: 'end' });
+    }, 80);
+
+    const t2 = setTimeout(() => {
+      inputRef.current?.focus({ preventScroll: true });
+    }, 220);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [showMobileInput, messagesEndRef]);
 
   useEffect(() => {
     const EDGE_ZONE = 40;
@@ -651,9 +696,9 @@ const Chat = () => {
 
   /* ===== [2.22.1] Жесты по капсуле ===== */
 
-  const CAPSULE_SWIPE_UP = 30;      // порог открытия (вверх)
-  const CAPSULE_SWIPE_DOWN = 40;    // порог закрытия (вниз)
-  const CAPSULE_DIRECTION_LOCK = 8; // мёртвая зона + лок направления
+  const CAPSULE_SWIPE_UP = 30;
+  const CAPSULE_SWIPE_DOWN = 40;
+  const CAPSULE_DIRECTION_LOCK = 8;
 
   const handleCapsuleTap = () => {
     if (capsuleSwipeRef.current.didSwipe) return;
@@ -693,7 +738,6 @@ const Chat = () => {
     const dx = t.clientX - s.startX;
     const dy = t.clientY - s.startY;
 
-    // Лок направления: пока не прошли мёртвую зону — ничего не делаем
     if (!s.direction) {
       if (
         Math.abs(dx) < CAPSULE_DIRECTION_LOCK &&
@@ -705,11 +749,9 @@ const Chat = () => {
     }
     if (s.direction === 'horizontal') return;
 
-    // Вертикаль — блокируем скролл/выделение
     if (e.cancelable) e.preventDefault();
 
     if (dy <= -CAPSULE_SWIPE_UP) {
-      // Свайп вверх: раскрываем поэтапно
       s.didSwipe = true;
       s.active = false;
 
@@ -723,7 +765,6 @@ const Chat = () => {
     }
 
     if (dy >= CAPSULE_SWIPE_DOWN) {
-      // Свайп вниз: закрываем сначала поле, потом капсулу
       s.didSwipe = true;
       s.active = false;
 
@@ -739,8 +780,6 @@ const Chat = () => {
     const s = capsuleSwipeRef.current;
     s.active = false;
     if (s.didSwipe) {
-      // Гасим возможный синтетический click после touchend.
-      // Сброс отложен, чтобы не съесть следующий тап.
       setTimeout(() => {
         if (capsuleSwipeRef.current) {
           capsuleSwipeRef.current.didSwipe = false;
@@ -998,6 +1037,12 @@ const Chat = () => {
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               disabled={!isAuth || isUploading}
               placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="sentences"
+              spellCheck={false}
+              enterKeyHint="send"
+              inputMode="text"
             />
             <button
               className="attach-btn"
