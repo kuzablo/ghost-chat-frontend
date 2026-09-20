@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.15.0 → 2.15.1] тап по картинке в fullscreen теперь закрывает
-const VERSION = '2.15.1';
+// [правка 2.15.1 → 2.15.2] бар из 2 кнопок + тема в шапку
+const VERSION = '2.15.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -325,6 +325,15 @@ const Chat = () => {
               </div>
               <div className="chat-header-version">v{VERSION}</div>
             </div>
+            {/* [правка 2.15.2] кнопка темы в шапке — показывается только на мобилке */}
+            <button
+              className="chat-header-theme"
+              onClick={() => setIsDark(!isDark)}
+              title={isDark ? 'Светлая тема' : 'Тёмная тема'}
+              aria-label="Переключить тему"
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
           </div>
 
           <div className="qr-wrap">
@@ -430,37 +439,36 @@ const Chat = () => {
             </button>
           </div>
 
+          {/* [правка 2.15.2] бар из 2 кнопок: Игроки, Написать (SVG). Тема — в шапке. Фото — в инпут-строке. */}
           <div className="mobile-bottom-bar">
             <button
               className="mobile-bar-btn"
               ref={mobilePlayersBtnRef}
               onClick={togglePlayers}
               title="Игроки"
+              aria-label="Игроки"
             >
-              👥
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2"
+                   strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
               {totalNotifications > 0 && <span className="mobile-bar-badge">!</span>}
-            </button>
-            <button
-              className="mobile-bar-btn"
-              onClick={() => setIsDark(!isDark)}
-              title="Тема"
-            >
-              {isDark ? '☀️' : '🌙'}
-            </button>
-            <button
-              className="mobile-bar-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!isAuth || isUploading}
-              title="Фото"
-            >
-              📷
             </button>
             <button
               className="mobile-bar-btn"
               onClick={() => setShowMobileInput(v => !v)}
               title="Написать"
+              aria-label="Написать"
             >
-              💬
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" strokeWidth="2"
+                   strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
             </button>
           </div>
 
@@ -545,11 +553,6 @@ const Chat = () => {
             </div>
           )}
 
-          {/*
-            [правка 2.15.1] Убран onClick со stopPropagation на <img>.
-            Теперь тап по самой картинке всплывает до overlay → closeFullscreen.
-            Кнопки реакций остались защищены своими stopPropagation.
-          */}
           <img
             src={fullscreenImage.url}
             alt="fullscreen"

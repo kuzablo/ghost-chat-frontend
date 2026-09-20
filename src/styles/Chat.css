@@ -884,3 +884,8 @@ button:active {
   transform: scale(1.05);
   color: var(--btn-text);
 }
+
+/* [правка 2.15.2] кнопка темы в шапке — на десктопе скрыта, на мобилке видна */
+.chat-header-theme {
+  display: none;
+}
