@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 /*
   [новый хук, рефакторинг 2.14.26]
+  [правка 2.14.29] showPassword переехал в useAuth (логически часть формы логина).
   Вынесено из Chat.jsx — чисто UI-состояние, без бизнес-логики.
 
   Здесь только useState + один эффект для темы (переключение класса
@@ -9,11 +10,8 @@ import { useState, useEffect } from 'react';
 
   Что НЕ здесь и почему:
     - notices        → зависит от players (WS-события захода/выхода);
-    - showScrollDown → управляется скролл-слушателем (уедет в useAutoScroll);
+    - showScrollDown → управляется скролл-слушателем (useAutoScroll);
     - input          → тесно связано с отправкой сообщения (useChat).
-
-  Контракт: хук возвращает плоский объект со стейтами и сеттерами.
-  Никакой внутренней логики, кроме темы.
 */
 export const useChatUI = () => {
   const storedTheme = localStorage.getItem('ghost-chat-theme') || 'light';
@@ -24,24 +22,20 @@ export const useChatUI = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sending, setSending] = useState(false);
   const [banConfirm, setBanConfirm] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [showMobileInput, setShowMobileInput] = useState(false);
 
-  // Тема: класс на body + сохранение
   useEffect(() => {
     document.body.classList.toggle('dark', isDark);
     localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Тап по сообщению — открыть/закрыть пикер реакций
   const toggleReactions = (messageId) => {
     setActiveMessageId(prev => (prev === messageId ? null : messageId));
   };
 
-  // Закрытие fullscreen — сбрасывает и мини-пикер в нём
   const closeFullscreen = () => {
     setFullscreenImage(null);
     setShowFullscreenReactions(false);
@@ -55,7 +49,6 @@ export const useChatUI = () => {
     searchQuery, setSearchQuery,
     sending, setSending,
     banConfirm, setBanConfirm,
-    showPassword, setShowPassword,
     isUploading, setIsUploading,
     fullscreenImage, setFullscreenImage,
     showFullscreenReactions, setShowFullscreenReactions,

@@ -14,8 +14,9 @@ import {
 } from './utils';
 import { useAudio } from './hooks/useAudio';
 import { useChatUI } from './hooks/useChatUI';
-// [правка 2.14.27] скролл вынесен в отдельный хук
 import { useAutoScroll } from './hooks/useAutoScroll';
+// [правка 2.14.29] авторизация вынесена в отдельный хук
+import { useAuth } from './hooks/useAuth';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -23,41 +24,43 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.27 → 2.14.28] фикс: плавный авто-скролл на ПК (двойной RAF)
-const VERSION = '2.14.28';
-const API_URL = 'https://api.banjoboy420.ru';
+// [правка 2.14.28 → 2.14.29] рефакторинг шаг 4: авторизация вынесена в useAuth
+const VERSION = '2.14.29';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
-  const storedToken = localStorage.getItem('ghost-chat-token') || '';
-  const storedNickname = localStorage.getItem('ghost-chat-nickname') || '';
+  // ===== Авторизация (useAuth) =====
+  const auth = useAuth();
+  const {
+    token, nickname, isAuth, isAdmin, myId, serverVersion,
+    isRegisterMode, setIsRegisterMode,
+    authNickname, setAuthNickname,
+    authPassword, setAuthPassword,
+    authError, setAuthError,
+    showPassword, setShowPassword,
+    showIdleNotice,
+    handleAuthSubmit,
+    applyAuthOk,
+    forceLogout,
+    nicknameRef,
+    tokenRef,
+  } = auth;
 
   // ===== Состояние, оставшееся в Chat.jsx (уедет в следующие хуки) =====
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [nickname, setNickname] = useState(storedNickname);
-  const [token, setToken] = useState(storedToken);
-  const [isAuth, setIsAuth] = useState(!!storedToken);
   const [players, setPlayers] = useState([]);
   const [friends, setFriends] = useState([]);
-  const [myId, setMyId] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [duelInvite, setDuelInvite] = useState(null);
   const [duelState, setDuelState] = useState(null);
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
-  const [isRegisterMode, setIsRegisterMode] = useState(true);
-  const [authNickname, setAuthNickname] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState('');
   const [privateChat, setPrivateChat] = useState(null);
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
   const [duelNotice, setDuelNotice] = useState('');
-  const [showIdleNotice, setShowIdleNotice] = useState(false);
   const [unreadByUser, setUnreadByUser] = useState({});
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [serverVersion, setServerVersion] = useState('');
   const [friendRequests, setFriendRequests] = useState([]);
   const [notices, setNotices] = useState([]);
 
@@ -69,7 +72,6 @@ const Chat = () => {
     searchQuery, setSearchQuery,
     sending, setSending,
     banConfirm, setBanConfirm,
-    showPassword, setShowPassword,
     isUploading, setIsUploading,
     fullscreenImage, setFullscreenImage,
     showFullscreenReactions, setShowFullscreenReactions,
@@ -77,8 +79,6 @@ const Chat = () => {
     showMobileInput, setShowMobileInput,
   } = useChatUI();
 
-  const nicknameRef = useRef(storedNickname);
-  const tokenRef = useRef(storedToken);
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -88,9 +88,6 @@ const Chat = () => {
   const prevPlayerNicksRef = useRef(new Set());
   const firstPlayersLoadRef = useRef(true);
 
-  // [правка 2.14.27] скролл вынесен в useAutoScroll.
-  //   messagesContainerRef, messagesEndRef, hasAutoScrolledRef, showScrollDown,
-  //   scrollToBottom — теперь оттуда.
   const {
     messagesContainerRef,
     messagesEndRef,
@@ -140,11 +137,8 @@ const Chat = () => {
         console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
         break;
       case 'auth_ok':
-        setMyId(msg.data.userId);
-        setNickname(msg.data.nickname);
-        setIsAuth(true);
-        setIsAdmin(msg.data.role === 'admin');
-        setServerVersion(msg.data.serverVersion || '');
+        // [правка 2.14.29] через useAuth
+        applyAuthOk(msg.data);
         sendMessage({ type: 'get_friends' });
         break;
       case 'history':
@@ -197,20 +191,12 @@ const Chat = () => {
         setBannedUntil(msg.data.until);
         break;
       case 'banned_forever':
-        setAuthError('У нас тут таких не любят');
-        setIsAuth(false);
-        localStorage.removeItem('ghost-chat-token');
-        localStorage.removeItem('ghost-chat-nickname');
-        setToken('');
-        setNickname('');
+        // [правка 2.14.29] через useAuth
+        forceLogout('У нас тут таких не любят');
         break;
       case 'idle_disconnect':
-        setAuthError('Вы были отключены за неактивность. Войдите снова.');
-        setIsAuth(false);
-        localStorage.removeItem('ghost-chat-token');
-        localStorage.removeItem('ghost-chat-nickname');
-        setToken('');
-        setNickname('');
+        // [правка 2.14.29] через useAuth
+        forceLogout('Вы были отключены за неактивность. Войдите снова.');
         break;
       case 'admin_error':
         setDuelNotice(msg.data.message);
@@ -324,7 +310,7 @@ const Chat = () => {
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [myId, privateChat, sendMessage, players, audio]);
+  }, [myId, privateChat, sendMessage, players, audio, applyAuthOk, forceLogout]);
 
   useEffect(() => {
     setIsConnected(wsConnected);
@@ -337,10 +323,6 @@ const Chat = () => {
       return () => clearTimeout(timer);
     }
   }, [wsError]);
-
-  // [правка 2.14.27] эффект «скролл при появлении сообщений» переехал в useAutoScroll
-
-  // [правка 2.14.27] эффект «скролл-индикатор вниз» переехал в useAutoScroll
 
   // ===== Уведомления «ник зашёл/вышел» =====
   useEffect(() => {
@@ -380,17 +362,9 @@ const Chat = () => {
         setNotices(p => p.filter(x => x.id !== n.id));
       }, 4000);
     });
-  }, [players]);
+  }, [players, nicknameRef]);
 
-  useEffect(() => {
-    if (!isAuth) {
-      setShowIdleNotice(true);
-      const timer = setTimeout(() => setShowIdleNotice(false), 10000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowIdleNotice(false);
-    }
-  }, [isAuth]);
+  // [правка 2.14.29] эффект showIdleNotice переехал в useAuth
 
   // ===== Клик снаружи панели игроков =====
   useEffect(() => {
@@ -431,42 +405,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  const handleAuthSubmit = async () => {
-    if (!authNickname.trim() || !authPassword.trim()) {
-      setAuthError('Заполни оба поля');
-      return;
-    }
-    setAuthError('');
-    const endpoint = isRegisterMode ? '/api/register' : '/api/login';
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname: authNickname.trim(), password: authPassword }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setAuthError(data.error || 'Ошибка');
-        return;
-      }
-      try {
-        localStorage.setItem('ghost-chat-token', data.token);
-        localStorage.setItem('ghost-chat-nickname', data.nickname);
-      } catch (e) {
-        console.error('localStorage error:', e);
-      }
-      tokenRef.current = data.token;
-      nicknameRef.current = data.nickname;
-      setToken(data.token);
-      setNickname(data.nickname);
-      setIsAuth(true);
-      setAuthNickname('');
-      setAuthPassword('');
-    } catch (error) {
-      console.error('Auth error:', error);
-      setAuthError('Сеть недоступна, попробуй позже');
-    }
-  };
+  // [правка 2.14.29] handleAuthSubmit переехал в useAuth
 
   const handleSendMessage = () => {
     if (sending || !sendMessage || !input.trim() || !isAuth) return;
@@ -500,7 +439,7 @@ const Chat = () => {
     formData.append('file', file);
 
     try {
-      const res = await fetch(`${API_URL}/api/upload`, {
+      const res = await fetch('https://api.banjoboy420.ru/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -647,8 +586,6 @@ const Chat = () => {
     }
     setShowPlayers(prev => !prev);
   };
-
-  // [правка 2.14.27] scrollToBottom — из useAutoScroll
 
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
