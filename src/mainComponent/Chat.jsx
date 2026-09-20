@@ -29,7 +29,7 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
 // [откат к 2.15.8] маскот-радио: pointerup на маскоте, синхронный toggle
-const VERSION = '2.15.8';
+const VERSION = '2.15.20';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -582,7 +582,9 @@ const Chat = () => {
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
-              <div className="chat-header-version">v{VERSION}</div>
+              <div className="chat-header-version">
+                v{VERSION} R:{yt.ready ? 1 : 0} H:{yt.hasStarted ? 1 : 0} P:{yt.isPlaying ? 1 : 0}
+              </div>
             </div>
             <button
               className="chat-header-theme"
