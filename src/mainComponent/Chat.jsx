@@ -29,7 +29,7 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
 // [правка 2.15.17 → 2.15.18] iframe внутри viewport для iOS
-const VERSION = '2.15.18';
+const VERSION = '2.15.19';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [откат 2.15.15 → 2.15.16]
-  Убраны mute/unmute и setAttribute('allow') — они ломали play на iOS.
-  Возврат к логике 2.15.13, которая работала.
+  [правка 2.15.19]
+  iOS Safari требует реального user gesture ВНУТРИ iframe.
+  Скрытый iframe 1×1 не подходит. Пробуем:
+    - iframe с реальным размером 200×200 в углу экрана (невидим по opacity);
+    - mute() → playVideo() → unMute() через 80мс;
+    - allow="autoplay; encrypted-media" на iframe;
+    - origin в playerVars.
 */
 
 const PLAYLIST = [
@@ -60,8 +64,8 @@ export const useYouTubePlayer = () => {
       if (!host) return;
 
       playerRef.current = new YT.Player(containerIdRef.current, {
-        height: '1',
-        width: '1',
+        height: '200',
+        width: '200',
         videoId: PLAYLIST[0],
         playerVars: {
           autoplay: 0,
@@ -72,22 +76,32 @@ export const useYouTubePlayer = () => {
           playsinline: 1,
           iv_load_policy: 3,
           rel: 0,
+          origin: window.location.origin,
         },
         events: {
           onReady: (e) => {
             setReady(true);
             e.target.setVolume(volumeRef.current);
 
+            // ставим allow на созданный iframe
+            try {
+              const iframe = host.querySelector('iframe');
+              if (iframe) {
+                iframe.setAttribute('allow', 'autoplay; encrypted-media');
+                iframe.setAttribute('allowfullscreen', '0');
+              }
+            } catch (err) { /* noop */ }
+
             const pending = pendingActionRef.current;
             pendingActionRef.current = null;
             if (pending === 'play') {
-              try { e.target.playVideo(); } catch (err) { /* noop */ }
+              safePlay(e.target);
             } else if (pending === 'next') {
               const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
               setTrackIndex(nextIdx);
               try {
                 e.target.loadVideoById(PLAYLIST[nextIdx]);
-                e.target.playVideo();
+                safePlay(e.target);
               } catch (err) { /* noop */ }
             }
           },
@@ -120,6 +134,22 @@ export const useYouTubePlayer = () => {
     };
   }, []);
 
+  // mute → play → unmute: iOS пускает mьютный autoplay всегда
+  const safePlay = useCallback((p) => {
+    try {
+      p.mute();
+      p.playVideo();
+      setTimeout(() => {
+        try {
+          p.unMute();
+          p.setVolume(volumeRef.current);
+        } catch (err) { /* noop */ }
+      }, 80);
+    } catch (err) {
+      try { p.playVideo(); } catch (e) { /* noop */ }
+    }
+  }, []);
+
   const toggle = useCallback(() => {
     const p = playerRef.current;
     if (!p) return;
@@ -131,8 +161,8 @@ export const useYouTubePlayer = () => {
 
     const state = p.getPlayerState?.();
     if (state === 1) p.pauseVideo();
-    else p.playVideo();
-  }, [ready]);
+    else safePlay(p);
+  }, [ready, safePlay]);
 
   const next = useCallback(() => {
     const p = playerRef.current;
@@ -145,9 +175,11 @@ export const useYouTubePlayer = () => {
 
     const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
     setTrackIndex(nextIdx);
-    p.loadVideoById(PLAYLIST[nextIdx]);
-    p.playVideo();
-  }, [ready]);
+    try {
+      p.loadVideoById(PLAYLIST[nextIdx]);
+      safePlay(p);
+    } catch (err) { try { p.playVideo(); } catch (e) { /* noop */ } }
+  }, [ready, safePlay]);
 
   const setVolume = useCallback((v) => {
     const clamped = Math.max(0, Math.min(100, Math.round(v)));

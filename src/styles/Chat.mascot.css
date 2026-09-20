@@ -1,27 +1,24 @@
 /*
-  [2.15.7] Стили маскота-радио.
-  [правка 2.15.9] анимации нажатия, кольцо, вспышка.
-  [правка 2.15.14] вместо зелёной точки — «дребезжание» маскота + мини-эквалайзер.
-  [правка 2.15.18] iframe держим ВНУТРИ viewport (1×1 в углу) —
-  iOS Safari не даёт play для iframe за экраном.
+  [правка 2.15.19] iframe 200×200 в углу, почти прозрачный.
 */
 
 .yt-hidden-host {
   position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
+  bottom: 4px;
+  right: 4px;
+  width: 200px;
+  height: 200px;
   opacity: 0.01;
   pointer-events: none;
   z-index: 1;
+  overflow: hidden;
 }
 
 .yt-hidden-host iframe {
-  width: 1px;
-  height: 1px;
+  width: 200px;
+  height: 200px;
   border: 0;
+  display: block;
 }
 
 .chat-header-mascot-wrap {
@@ -116,9 +113,7 @@
   stroke-linecap: round;
 }
 
-.mascot-ring .mascot-ring-bg {
-  stroke: rgba(59, 181, 232, 0.2);
-}
+.mascot-ring .mascot-ring-bg { stroke: rgba(59, 181, 232, 0.2); }
 
 .mascot-ring .mascot-ring-fg {
   stroke: #3BB5E8;
