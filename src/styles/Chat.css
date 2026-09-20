@@ -1080,7 +1080,10 @@ button:active {
 
 /* ===== [2.17.1] Подсветка сообщения, к которому перепрыгнули по цитате ===== */
 
-.msg--highlight .msg-content,
+/* [2.17.2] в image-only .msg-content включает в себя цитату + картинку,
+   поэтому подсвечиваем ТОЛЬКО саму картинку.
+   В обычных сообщениях — .msg-content. Одна подсветка, без вложенных. */
+.msg--highlight .msg-content:not(.msg-content--image-only),
 .msg--highlight .msg-image-only-wrap {
   animation: msgHighlightPulse 1.6s ease-out;
 }

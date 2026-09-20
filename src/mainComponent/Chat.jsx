@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css'; // [2.17.0]
 
-// [правка 2.16.5 → 2.17.0] инфо-панель «Что умеет чат»
-const VERSION = '2.17.1';
+// fix(chat): в image-only подсвечивается одна рамка, а не три (2.17.2)
+const VERSION = '2.17.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
