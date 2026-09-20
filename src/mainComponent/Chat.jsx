@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// 
-const VERSION = '2.15.24';
+// [правка 2.15.24 → 2.16.0] reply на сообщение
+const VERSION = '2.16.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -68,8 +68,6 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
-
-  // [2.15.23] название трека в шапке
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
   const playersOverlayRef = useRef(null);
@@ -100,17 +98,14 @@ const Chat = () => {
     lastTapTime: 0,
   });
 
-  // [2.15.23] таймер скрытия названия трека
   const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
 
-  // [2.15.23] как только плеер запустился — прячем мини-плеер
   useEffect(() => {
     if (yt.hasStarted) setShowMiniPlayer(false);
   }, [yt.hasStarted]);
 
-  // [2.15.23] показываем название трека на 5 сек при смене
   useEffect(() => {
     if (!yt.hasStarted) return;
     setTrackTitleVisible(true);
@@ -163,6 +158,9 @@ const Chat = () => {
     setInput,
     sending,
     isUploading,
+    // [2.16.0] reply
+    replyTo,
+    setReplyTo,
     handleWs: handleChatWs,
     handleSendMessage,
     handleEditMessage,
@@ -509,7 +507,6 @@ const Chat = () => {
     }
     ref.lastTapTime = now;
 
-    // если плеер никогда не запускался — показываем мини-плеер
     if (!yt.hasStarted) {
       setShowMiniPlayer(true);
       return;
@@ -519,6 +516,17 @@ const Chat = () => {
 
   const handleMascotContextMenu = (e) => {
     e.preventDefault();
+  };
+
+  // [2.16.0] обработчик reply из MessageList
+  const handleReply = (m) => {
+    setReplyTo({
+      id: m.id,
+      nickname: m.nickname,
+      text: m.text || '',
+      imageUrl: m.imageUrl || null,
+    });
+    setShowMobileInput(true);
   };
 
   return (
@@ -654,6 +662,7 @@ const Chat = () => {
               myId={myId}
               onEditMessage={handleEditMessage}
               containerRef={messagesContainerRef}
+              onReply={handleReply}
             />
 
             {notices.length > 0 && (
@@ -684,6 +693,25 @@ const Chat = () => {
           <div className="typing-indicator">
             {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
           </div>
+
+          {/* [2.16.0] превью ответа над инпутом */}
+          {replyTo && (
+            <div className="reply-preview">
+              <div className="reply-preview-body">
+                <div className="reply-preview-nick">{replyTo.nickname}</div>
+                <div className="reply-preview-text">
+                  {replyTo.text || (replyTo.imageUrl ? '📷 фото' : '')}
+                </div>
+              </div>
+              <button
+                className="reply-preview-close"
+                onClick={() => setReplyTo(null)}
+                aria-label="Отменить ответ"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           <div
             className="input-row"

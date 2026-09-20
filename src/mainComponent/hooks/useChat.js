@@ -1,25 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [новый хук, рефакторинг 2.14.32]
-  Вынесено из Chat.jsx — основной чат:
-    - state: messages, players, friends, typingUsers, friendRequests,
-      notices, bannedUntil, errorMessage, input, sending, isUploading;
-    - методы: handleSendMessage, handleEditMessage, handleFileUpload,
-      handleInputChange, sendReaction, deleteMessage, banForever, watchChat,
-      handleFriendRequest, handleAcceptRequest, handleDeclineRequest,
-      togglePlayers;
-    - handleWs(msg) — WS-фильтр (12 типов);
-    - эффект «ник зашёл/вышел» → notices.
-
-  Что НЕ здесь и почему:
-    - auth_ok / banned_forever / idle_disconnect / version — остаются в Chat.jsx,
-      т.к. применяют applyAuthOk / forceLogout из useAuth;
-    - isConnected — про состояние WS, остаётся в Chat.jsx;
-    - openPrivateChat/closePrivateChat — в usePrivateChat.
-
-  onNotice(text) — колбэк для показа уведомления внизу
-    (admin_error, friend_request_sent, friend_request_accepted_notification).
+  [2.16.0] Добавлен replyTo — цитата для следующего сообщения.
+  handleSendMessage шлёт replyTo и сбрасывает.
 */
 export const useChat = ({
   sendMessage,
@@ -42,12 +25,16 @@ export const useChat = ({
   const [sending, setSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // [2.16.0] активная цитата для ответа
+  const [replyTo, setReplyTo] = useState(null);
+
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
   const isAdminRef = useRef(isAdmin);
   const myIdRef = useRef(myId);
   const audioRef = useRef(audio);
   const onNoticeRef = useRef(onNotice);
+  const replyToRef = useRef(replyTo);
 
   const typingTimeoutRef = useRef(null);
   const prevPlayerNicksRef = useRef(new Set());
@@ -59,6 +46,7 @@ export const useChat = ({
   useEffect(() => { myIdRef.current = myId; }, [myId]);
   useEffect(() => { audioRef.current = audio; }, [audio]);
   useEffect(() => { onNoticeRef.current = onNotice; }, [onNotice]);
+  useEffect(() => { replyToRef.current = replyTo; }, [replyTo]);
 
   // ===== Эффект «ник зашёл/вышел» =====
   useEffect(() => {
@@ -106,9 +94,13 @@ export const useChat = ({
     const text = input.trim();
     if (!text) return;
     setSending(true);
-    sendMessageRef.current({ type: 'message', data: { text } });
+    sendMessageRef.current({
+      type: 'message',
+      data: { text, replyTo: replyToRef.current || null },
+    });
     if (audioRef.current) audioRef.current.playSend();
     setInput('');
+    setReplyTo(null);
     sendMessageRef.current({ type: 'typing', data: { isTyping: false } });
     setTimeout(() => setSending(false), 800);
   }, [input, sending]);
@@ -142,9 +134,10 @@ export const useChat = ({
       }
       sendMessageRef.current({
         type: 'message',
-        data: { text: '', imageUrl: data.imageUrl },
+        data: { text: '', imageUrl: data.imageUrl, replyTo: replyToRef.current || null },
       });
       if (audioRef.current) audioRef.current.playSend();
+      setReplyTo(null);
       e.target.value = '';
     } catch (err) {
       console.error('Ошибка загрузки фото:', err);
@@ -316,6 +309,9 @@ export const useChat = ({
     setInput,
     sending,
     isUploading,
+    // [2.16.0]
+    replyTo,
+    setReplyTo,
     handleWs,
     handleSendMessage,
     handleEditMessage,

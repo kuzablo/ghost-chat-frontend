@@ -436,4 +436,20 @@
     font-size: 24px;
     padding: 3px 5px;
   }
+
+    /* [2.16.0] reply на мобилке */
+  .msg-reply-arrow {
+    left: -30px;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+  }
+
+  .reply-preview {
+    padding: 5px 8px;
+    margin-bottom: 4px;
+  }
+
+  .reply-preview-nick { font-size: 10px; }
+  .reply-preview-text { font-size: 11px; }
 }

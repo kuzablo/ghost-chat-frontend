@@ -889,3 +889,123 @@ button:active {
 .chat-header-theme {
   display: none;
 }
+
+/* ===== [2.16.0] Reply на сообщение ===== */
+
+/* стрелка свайпа — появляется позади карточки */
+.msg-reply-arrow {
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: opacity 0.1s;
+}
+
+/* блок цитаты внутри карточки */
+.msg-reply-quote {
+  border-left: 3px solid var(--btn-bg);
+  background: rgba(59, 181, 232, 0.10);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.msg-reply-quote-nick {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--btn-bg);
+  margin-bottom: 2px;
+  line-height: 1.1;
+}
+
+.msg-reply-quote-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  line-height: 1.2;
+}
+
+/* для image-only цитата — сверху картинки, отдельной плашкой */
+.msg-image-only-reply-wrap {
+  margin-bottom: 6px;
+}
+.msg-image-only-reply-wrap .msg-reply-quote {
+  background: var(--card-bg);
+  border-left-color: var(--btn-bg);
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  border-left-width: 3px;
+  padding: 5px 9px;
+}
+
+/* превью ответа над инпутом */
+.reply-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--messages-bg);
+  border: 2px solid var(--card-border);
+  border-left: 4px solid var(--btn-bg);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  animation: replyPreviewIn 0.18s ease-out;
+}
+
+.reply-preview-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-preview-nick {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--btn-bg);
+  margin-bottom: 2px;
+  line-height: 1.1;
+}
+
+.reply-preview-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reply-preview-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.reply-preview-close:active {
+  transform: scale(0.9);
+}
+
+@keyframes replyPreviewIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
