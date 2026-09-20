@@ -35,7 +35,7 @@ const MessageList = ({
     timer: null,
     completedAt: 0,
   });
-  const LONG_PRESS_EDIT_MS = 3000;
+  const LONG_PRESS_EDIT_MS = 1500;
   const LONG_PRESS_IGNORE_MS = 500;
 
   useEffect(() => {

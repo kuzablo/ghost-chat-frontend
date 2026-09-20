@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// feat(chat): редактирование долгим нажатием 3с с кольцом прогресса (2.16.4)
-const VERSION = '2.16.4';
+// tweak(chat): long press 3с → 1.5с (2.16.5)
+const VERSION = '2.16.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

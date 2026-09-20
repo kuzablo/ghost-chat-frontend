@@ -1065,7 +1065,7 @@ button:active {
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   mask-composite: exclude;
-  animation: msgEditRingFill 3s linear forwards;
+  animation: msgEditRingFill 1.5s linear forwards;
 }
 
 @keyframes msgEditRingFill {
