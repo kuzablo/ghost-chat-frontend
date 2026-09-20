@@ -42,7 +42,6 @@
   .chat-header-subtitle { font-size: 11px; }
   .chat-header-version { font-size: 10px; margin-top: 2px; }
 
-  /* кнопка темы в шапке */
   .chat-header-theme {
     display: flex;
     position: absolute;
@@ -90,15 +89,17 @@
     border-width: 1.5px;
   }
   .msg-content {
-    /* [2.18.3] верхний отступ меньше */
-    padding: 3px 9px 5px;
+    /* [2.18.5] верхний отступ ещё меньше */
+    padding: 1.5px 9px 4px;
     max-width: 82%;
     border-width: 1.5px;
     border-radius: 12px;
   }
   .msg-header { gap: 4px; }
   .msg-nick { font-size: 12px; }
-  .msg-text { font-size: 13px; line-height: 1.35; }
+
+  /* [2.18.5] текст крупнее */
+  .msg-text { font-size: 14px; line-height: 1.38; }
 
   /* [2.18.2] время прижато вправо */
   .msg-time {
@@ -383,6 +384,14 @@
   .msg-reaction-picker button {
     font-size: 24px;
     padding: 3px 5px;
+  }
+
+  /* [2.18.4] реакции над пикером — увеличение мягче */
+  .msg-reactions--above-picker {
+    transform: translateY(65%) scale(1.1);
+  }
+  .msg-image-only-reactions--above-picker {
+    transform: translateY(60%) scale(1.1);
   }
 
   /* reply на мобилке */

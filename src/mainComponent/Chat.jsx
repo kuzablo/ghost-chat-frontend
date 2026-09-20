@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// feat(chat): реакции поднимаются над пикером и увеличиваются (2.18.4)
-const VERSION = '2.18.4';
+// ui(chat): верхний отступ ещё меньше, текст сообщения крупнее (2.18.5)
+const VERSION = '2.18.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

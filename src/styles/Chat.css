@@ -232,17 +232,17 @@ body {
   background: var(--card-bg);
   border: 2px solid var(--msg-border);
   border-radius: var(--radius-md);
-  /* [2.18.3] верхний отступ меньше — ник и время ближе к краю */
-  padding: 3px 10px 6px;
+  /* [2.18.5] верхний отступ ещё меньше — ник и время ближе к краю */
+  padding: 1.5px 10px 6px;
   transition: background 0.2s, border-color 0.2s;
 }
 
-/* [2.18.3] шапка ниже — меньше места сверху */
+/* [2.18.5] шапка ещё ниже */
 .msg-header {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .msg-nick {
@@ -260,10 +260,11 @@ body {
   flex-shrink: 0;
 }
 
+/* [2.18.5] текст крупнее — контент выделяется */
 .msg-text {
   color: var(--msg-text);
-  line-height: 1.35;
-  font-size: 14px;
+  line-height: 1.38;
+  font-size: 15px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -1088,13 +1089,6 @@ button:active {
 
 /* ===== [2.18.4] Реакции поверх пикера ===== */
 
-/*
-  Когда пикер реакций открыт для сообщения — существующие реакции
-  должны быть НАД пикером и чуть увеличиться.
-  Пикер: z-index 10. Реакции обычно z-index 2.
-  Поднимаем реакции на 20 и даём scale.
-*/
-
 .msg-reactions--above-picker {
   z-index: 20;
   transform: translateY(65%) scale(1.15);
@@ -1102,20 +1096,9 @@ button:active {
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* image-only реакции тоже поднимаем */
 .msg-image-only-reactions--above-picker {
   z-index: 20;
   transform: translateY(60%) scale(1.15);
   transform-origin: bottom left;
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* на мобилке реакции крупнее — увеличение чуть меньше, чтобы не лезли за карточку */
-@media (max-width: 600px) {
-  .msg-reactions--above-picker {
-    transform: translateY(65%) scale(1.1);
-  }
-  .msg-image-only-reactions--above-picker {
-    transform: translateY(60%) scale(1.1);
-  }
 }
