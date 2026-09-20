@@ -32,9 +32,10 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
+import '../styles/Chat.stickers.css';
 
-// [2.17.0] панель диалогов
-const VERSION = '2.19.5';
+// [2.20.0] панель диалогов + long-press стикеры
+const VERSION = '2.20.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -79,7 +80,7 @@ const Chat = () => {
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
-  const [showDialogs, setShowDialogs] = useState(false); // [2.17.0]
+  const [showDialogs, setShowDialogs] = useState(false);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -404,7 +405,6 @@ const Chat = () => {
     setShowInfo(true);
   };
 
-  // [2.17.0] диалоги
   const handleOpenDialogs = () => {
     setShowPlayers(false);
     setShowDialogs(true);

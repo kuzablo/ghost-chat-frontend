@@ -726,4 +726,9 @@
   body.dark .capsule-badge {
     border-color: #172236;
   }
+
+    /* [2.20.0] на мобилке кнопки действий скрыты — они в long-press меню */
+  .player-actions {
+    display: none !important;
+  }
 }

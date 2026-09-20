@@ -1,0 +1,208 @@
+/* ===== [2.20.0] Меню стикеров (long-press) ===== */
+
+.sticker-menu-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(17, 17, 17, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: stickerOverlayIn 0.2s ease-out;
+  touch-action: none;
+}
+
+body.dark .sticker-menu-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+@keyframes stickerOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sticker-menu {
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px 20px;
+  min-width: 260px;
+  max-width: 92vw;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+  animation: stickerMenuIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@keyframes stickerMenuIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-6deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.sticker-menu-header {
+  text-align: center;
+}
+
+.sticker-menu-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+
+.sticker-menu-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.sticker-menu-items {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* стикер */
+.sticker-menu-item {
+  position: relative;
+  width: 72px;
+  min-height: 72px;
+  padding: 8px 6px;
+  border-radius: 18px;
+  background: #FFFFFF;
+  border: 2px solid #111;
+  color: #111;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.10),
+    0 6px 14px rgba(0, 0, 0, 0.12),
+    0 0 0 4px rgba(255, 255, 255, 0.55);
+  touch-action: manipulation;
+  opacity: 0;
+  transform: scale(0.4) translateY(14px);
+  animation: stickerItemIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-delay: var(--sticker-delay, 0s);
+}
+
+@keyframes stickerItemIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(14px) rotate(0deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.12) translateY(-4px) rotate(-3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+.sticker-menu-item:active {
+  transform: scale(0.92) !important;
+}
+
+.sticker-menu-item--danger {
+  background: #FEE2E2;
+  border-color: #E11D48;
+  color: #E11D48;
+}
+
+body.dark .sticker-menu-item {
+  background: #1D2A42;
+  border-color: #2C3E5A;
+  color: #EAF2FA;
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.3),
+    0 6px 14px rgba(0, 0, 0, 0.4),
+    0 0 0 4px rgba(59, 181, 232, 0.15);
+}
+
+body.dark .sticker-menu-item--danger {
+  background: rgba(225, 29, 72, 0.15);
+  border-color: #F87171;
+  color: #F87171;
+}
+
+.sticker-menu-item-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sticker-menu-item-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+/* ===== Кольцо long-press на элементе ===== */
+
+@property --ring-progress {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.player-item--pressing {
+  position: relative;
+}
+
+.player-item--pressing::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: calc(var(--radius-sm) + 3px);
+  pointer-events: none;
+  z-index: 5;
+  padding: 2.5px;
+  background: conic-gradient(
+    from -90deg,
+    #3BB5E8 0deg,
+    #3BB5E8 var(--ring-progress),
+    rgba(59, 181, 232, 0.15) var(--ring-progress),
+    rgba(59, 181, 232, 0.15) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: playerRingFill 1s linear forwards;
+}
+
+@keyframes playerRingFill {
+  from { --ring-progress: 0deg; }
+  to   { --ring-progress: 360deg; }
+}
+
+.player-item--menu-source {
+  background: rgba(59, 181, 232, 0.12);
+  border-radius: var(--radius-sm);
+}
