@@ -3,11 +3,16 @@ import { formatTime } from '../utils';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 
+/*
+  [2.19.4] PrivateChat теперь принимает sendMessage (из useWebSocket)
+  вместо сырого ws. Так отправка работает всегда — sendMessage сам
+  проверяет readyState и берёт актуальный socket из useWebSocket.
+*/
 const PrivateChat = ({
   userId,
   nickname,
   myId,
-  ws,
+  sendMessage,
   onClose,
   initialMessages = [],
   typingUser = null,
@@ -16,19 +21,11 @@ const PrivateChat = ({
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const [pickerFor, setPickerFor] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
-
-  // [правка 2.14.24] авто-позиция пикера: снизу (по умолчанию) или сверху,
-  // если не влезает в контейнер сообщений
   const [pickerAbove, setPickerAbove] = useState(false);
 
   const messagesEndRef = useRef(null);
-  const messagesContainerRef = useRef(null); // [правка 2.14.24]
+  const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const wsRef = useRef(ws);
-
-  useEffect(() => {
-    wsRef.current = ws;
-  }, [ws]);
 
   useEffect(() => {
     setLocalTypingUser(typingUser);
@@ -40,38 +37,39 @@ const PrivateChat = ({
     }
   }, [initialMessages]);
 
-  const sendMessage = () => {
-    const currentWs = wsRef.current;
-    if (!input.trim() || !currentWs || currentWs.readyState !== WebSocket.OPEN) {
+  const handleSend = () => {
+    if (!input.trim()) return;
+    if (!sendMessage) {
+      console.warn('sendMessage не передан в PrivateChat');
+      return;
+    }
+    const ok = sendMessage({
+      type: 'private_message',
+      data: { recipientId: userId, text: input.trim() },
+    });
+    if (!ok) {
       console.warn('WebSocket не готов');
       return;
     }
-    currentWs.send(JSON.stringify({
-      type: 'private_message',
-      data: { recipientId: userId, text: input.trim() }
-    }));
     setInput('');
-    currentWs.send(JSON.stringify({
+    sendMessage({
       type: 'private_typing',
-      data: { recipientId: userId, isTyping: false }
-    }));
+      data: { recipientId: userId, isTyping: false },
+    });
   };
 
   const sendReaction = (messageId, emoji) => {
-    const currentWs = wsRef.current;
-    if (!currentWs || currentWs.readyState !== WebSocket.OPEN) return;
-    currentWs.send(JSON.stringify({
+    if (!sendMessage) return;
+    sendMessage({
       type: 'private_reaction',
       data: { messageId, emoji },
-    }));
+    });
     setPickerFor(null);
   };
 
-  // [правка 2.14.24] тап по сообщению = pop + toggle пикера + расчёт позиции
   const handleMessageTap = (id, e) => {
     if (e.target.closest('.private-reaction-picker')) return;
 
-    // если закрываем — просто toggle без расчёта
     if (pickerFor === id) {
       setPickerFor(null);
       return;
@@ -80,13 +78,12 @@ const PrivateChat = ({
     setPoppingId(id);
     setTimeout(() => setPoppingId(null), 380);
 
-    // считаем свободное место снизу от карточки до нижней границы контейнера
     const cardEl = e.currentTarget;
     const containerEl = messagesContainerRef.current;
     if (cardEl && containerEl) {
       const cardRect = cardEl.getBoundingClientRect();
       const containerRect = containerEl.getBoundingClientRect();
-      const pickerHeight = 54; // примерная высота пикера с padding и отступом
+      const pickerHeight = 54;
       const spaceBelow = containerRect.bottom - cardRect.bottom;
       setPickerAbove(spaceBelow < pickerHeight);
     } else {
@@ -98,27 +95,24 @@ const PrivateChat = ({
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    const currentWs = wsRef.current;
-    if (!currentWs || currentWs.readyState !== WebSocket.OPEN) return;
+    if (!sendMessage) return;
     if (e.target.value.trim()) {
-      currentWs.send(JSON.stringify({
+      sendMessage({
         type: 'private_typing',
-        data: { recipientId: userId, isTyping: true }
-      }));
+        data: { recipientId: userId, isTyping: true },
+      });
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        if (currentWs.readyState === WebSocket.OPEN) {
-          currentWs.send(JSON.stringify({
-            type: 'private_typing',
-            data: { recipientId: userId, isTyping: false }
-          }));
-        }
+        sendMessage({
+          type: 'private_typing',
+          data: { recipientId: userId, isTyping: false },
+        });
       }, 1500);
     } else {
-      currentWs.send(JSON.stringify({
+      sendMessage({
         type: 'private_typing',
-        data: { recipientId: userId, isTyping: false }
-      }));
+        data: { recipientId: userId, isTyping: false },
+      });
     }
   };
 
@@ -204,10 +198,10 @@ const PrivateChat = ({
           <input
             value={input}
             onChange={handleInputChange}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
             placeholder="Напишите сообщение..."
           />
-          <button className="btn" onClick={sendMessage}>
+          <button className="btn" onClick={handleSend}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>

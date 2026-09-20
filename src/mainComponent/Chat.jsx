@@ -31,8 +31,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// [2.19.3] добавлен logout через PlayersPanel + confirm modal
-const VERSION = '2.19.3';
+// [2.19.4] PrivateChat получает sendMessage вместо ws
+const VERSION = '2.19.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -76,8 +76,6 @@ const Chat = () => {
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
-
-  // [2.19.3] состояние confirm modal для logout
   const [logoutConfirm, setLogoutConfirm] = useState(false);
 
   const playersOverlayRef = useRef(null);
@@ -579,7 +577,6 @@ const Chat = () => {
     openPrivateChat(adminUserId, nick);
   };
 
-  // [2.19.3] logout через confirm modal
   const handleLogoutClick = () => {
     setLogoutConfirm(true);
   };
@@ -695,7 +692,7 @@ const Chat = () => {
           userId={privateChat.userId}
           nickname={privateChat.nickname}
           myId={myId}
-          ws={ws}
+          sendMessage={sendMessage}
           initialMessages={privateChat.messages || []}
           typingUser={privateTypingUser}
           onClose={closePrivateChat}
@@ -714,7 +711,6 @@ const Chat = () => {
         onCancel={() => setBanConfirm(null)}
       />
 
-      {/* [2.19.3] confirm modal для logout */}
       <ConfirmModal
         open={logoutConfirm}
         title="Выйти из аккаунта?"
