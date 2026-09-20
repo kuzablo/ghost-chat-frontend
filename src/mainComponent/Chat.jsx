@@ -15,8 +15,9 @@ import {
 import { useAudio } from './hooks/useAudio';
 import { useChatUI } from './hooks/useChatUI';
 import { useAutoScroll } from './hooks/useAutoScroll';
-// [правка 2.14.29] авторизация вынесена в отдельный хук
 import { useAuth } from './hooks/useAuth';
+// [правка 2.14.30] дуэли вынесены в отдельный хук
+import { useDuel } from './hooks/useDuel';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -24,8 +25,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.28 → 2.14.29] рефакторинг шаг 4: авторизация вынесена в useAuth
-const VERSION = '2.14.29';
+// [правка 2.14.29 → 2.14.30] рефакторинг шаг 5: дуэли вынесены в useDuel
+const VERSION = '2.14.30';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -52,13 +53,12 @@ const Chat = () => {
   const [players, setPlayers] = useState([]);
   const [friends, setFriends] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [duelInvite, setDuelInvite] = useState(null);
-  const [duelState, setDuelState] = useState(null);
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [privateChat, setPrivateChat] = useState(null);
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
+  // [правка 2.14.30] duelNotice пока в Chat.jsx — им пользуются друзья и админ
   const [duelNotice, setDuelNotice] = useState('');
   const [unreadByUser, setUnreadByUser] = useState({});
   const [friendRequests, setFriendRequests] = useState([]);
@@ -107,8 +107,22 @@ const Chat = () => {
 
   const audio = useAudio();
 
+  // [правка 2.14.30] дуэли. onNotice — общий показ уведомления внизу на 3 сек.
+  const duel = useDuel({
+    sendMessage,
+    isAuth,
+    onNotice: (text) => {
+      setDuelNotice(text);
+      setTimeout(() => setDuelNotice(''), 3000);
+    },
+  });
+
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
+
+    // [правка 2.14.30] сначала дуэли, потом общий switch
+    if (duel.handleWs(msg)) return;
+
     switch (msg.type) {
       case 'friends_list':
         setFriends(msg.data);
@@ -137,7 +151,6 @@ const Chat = () => {
         console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
         break;
       case 'auth_ok':
-        // [правка 2.14.29] через useAuth
         applyAuthOk(msg.data);
         sendMessage({ type: 'get_friends' });
         break;
@@ -168,34 +181,14 @@ const Chat = () => {
         });
         break;
       }
-      case 'duel_invite':
-        setDuelInvite(msg.data);
-        break;
-      case 'duel_request_sent':
-        setDuelNotice(`Вызов ${msg.data.targetNick} отправлен`);
-        setTimeout(() => setDuelNotice(''), 3000);
-        break;
-      case 'duel_timeout':
-        setDuelNotice(`${msg.data.targetNick} не ответил на вызов`);
-        setTimeout(() => setDuelNotice(''), 3000);
-        break;
-      case 'duel_start':
-        setDuelState({ opponentNick: msg.data.opponentNick, myChoice: null });
-        setDuelInvite(null);
-        break;
-      case 'duel_result':
-        setDuelState(prev => prev ? { ...prev, result: msg.data.result } : null);
-        setTimeout(() => setDuelState(null), 5000);
-        break;
+      // [правка 2.14.30] duel_* кейсы переехали в useDuel.handleWs
       case 'banned':
         setBannedUntil(msg.data.until);
         break;
       case 'banned_forever':
-        // [правка 2.14.29] через useAuth
         forceLogout('У нас тут таких не любят');
         break;
       case 'idle_disconnect':
-        // [правка 2.14.29] через useAuth
         forceLogout('Вы были отключены за неактивность. Войдите снова.');
         break;
       case 'admin_error':
@@ -310,7 +303,7 @@ const Chat = () => {
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [myId, privateChat, sendMessage, players, audio, applyAuthOk, forceLogout]);
+  }, [myId, privateChat, sendMessage, players, audio, applyAuthOk, forceLogout, duel]);
 
   useEffect(() => {
     setIsConnected(wsConnected);
@@ -364,8 +357,6 @@ const Chat = () => {
     });
   }, [players, nicknameRef]);
 
-  // [правка 2.14.29] эффект showIdleNotice переехал в useAuth
-
   // ===== Клик снаружи панели игроков =====
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -404,8 +395,6 @@ const Chat = () => {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [showMobileInput]);
-
-  // [правка 2.14.29] handleAuthSubmit переехал в useAuth
 
   const handleSendMessage = () => {
     if (sending || !sendMessage || !input.trim() || !isAuth) return;
@@ -491,24 +480,7 @@ const Chat = () => {
     }
   };
 
-  const requestDuel = (targetId) => {
-    if (sendMessage && isAuth) {
-      sendMessage({ type: 'duel_request', data: { targetId } });
-    }
-  };
-
-  const acceptDuel = () => {
-    if (duelInvite && sendMessage && isAuth) {
-      sendMessage({ type: 'duel_accept', data: { fromId: duelInvite.fromId } });
-    }
-  };
-
-  const choose = (choice) => {
-    if (duelState && sendMessage && isAuth) {
-      sendMessage({ type: 'duel_choice', data: { choice } });
-      setDuelState(prev => ({ ...prev, myChoice: choice }));
-    }
-  };
+  // [правка 2.14.30] requestDuel / acceptDuel / choose — из useDuel
 
   const openPrivateChat = (userId, nickname) => {
     if (userId === myId) return;
@@ -626,7 +598,7 @@ const Chat = () => {
           isAdmin={isAdmin}
           onWatchChat={watchChat}
           onBanConfirm={(userId, nickname) => setBanConfirm({ userId, nickname })}
-          onRequestDuel={requestDuel}
+          onRequestDuel={duel.requestDuel}
           onOpenPrivateChat={openPrivateChat}
           onFriendRequest={handleFriendRequest}
           onAcceptRequest={handleAcceptRequest}
@@ -816,12 +788,12 @@ const Chat = () => {
           </div>
 
           <DuelBox
-            duelInvite={duelInvite}
-            duelState={duelState}
+            duelInvite={duel.duelInvite}
+            duelState={duel.duelState}
             duelNotice={duelNotice}
-            onAcceptDuel={acceptDuel}
-            onDeclineDuel={() => setDuelInvite(null)}
-            onChoose={choose}
+            onAcceptDuel={duel.acceptDuel}
+            onDeclineDuel={duel.clearInvite}
+            onChoose={duel.choose}
             onCloseDuelNotice={() => setDuelNotice('')}
           />
         </div>
