@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.15.2 → 2.15.3] свайп вниз в fullscreen закрывает
-const VERSION = '2.15.3';
+// [правка 2.15.3 → 2.15.4] свайп от левого края открывает/закрывает панель игроков
+const VERSION = '2.15.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -76,8 +76,14 @@ const Chat = () => {
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
 
-  // [правка 2.15.3] refs для свайпа
+  // [правка 2.15.3] refs для свайпа в fullscreen
   const touchStartYRef = useRef(null);
+
+  // [правка 2.15.4] refs для свайпа панели игроков
+  const swipeStartXRef = useRef(null);
+  const swipeStartYRef = useRef(null);
+  const swipeActiveRef = useRef(false);
+  const swipeDirectionRef = useRef(null); // 'open' | 'close'
 
   // ===== 5. WebSocket =====
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
@@ -257,8 +263,8 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
-  // ===== [правка 2.15.3] Свайп в fullscreen: обработчики =====
-  const SWIPE_CLOSE_THRESHOLD = 120; // пикселей вниз, чтобы закрыть
+  // ===== [правка 2.15.3] Свайп в fullscreen =====
+  const SWIPE_CLOSE_THRESHOLD = 120;
 
   const handleFsTouchStart = (e) => {
     const t = e.touches[0];
@@ -269,7 +275,6 @@ const Chat = () => {
     if (touchStartYRef.current == null) return;
     const t = e.touches[0];
     const dy = t.clientY - touchStartYRef.current;
-    // реагируем только на движение вниз
     if (dy > 0) {
       setDragY(dy);
     }
@@ -283,10 +288,105 @@ const Chat = () => {
     touchStartYRef.current = null;
   };
 
-  // Прозрачность фона падает по мере свайпа (0 → 0.95, на 120px → 0.45)
   const fsOverlayOpacity = fullscreenImage
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
+
+  // ===== [правка 2.15.4] Свайп панели игроков =====
+  // Открытие: свайп вправо от левого края (.chat-main, первые 30px).
+  // Закрытие: свайп влево в любом месте панели.
+  const PLAYERS_EDGE_ZONE = 30;
+  const PLAYERS_SWIPE_THRESHOLD = 60;
+
+  const handleChatTouchStart = (e) => {
+    const t = e.touches[0];
+    const chatEl = e.currentTarget;
+    const rect = chatEl.getBoundingClientRect();
+    const localX = t.clientX - rect.left;
+
+    swipeStartXRef.current = t.clientX;
+    swipeStartYRef.current = t.clientY;
+    swipeActiveRef.current = false;
+    swipeDirectionRef.current = null;
+
+    if (!showPlayers && localX <= PLAYERS_EDGE_ZONE) {
+      swipeDirectionRef.current = 'open';
+    }
+  };
+
+  const handleChatTouchMove = (e) => {
+    if (swipeDirectionRef.current !== 'open') return;
+    if (swipeStartXRef.current == null) return;
+
+    const t = e.touches[0];
+    const dx = t.clientX - swipeStartXRef.current;
+    const dy = t.clientY - swipeStartYRef.current;
+
+    if (!swipeActiveRef.current) {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+      if (dx > 10) {
+        swipeActiveRef.current = true;
+      }
+    }
+  };
+
+  const handleChatTouchEnd = (e) => {
+    if (swipeDirectionRef.current === 'open' && swipeStartXRef.current != null) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipeStartXRef.current;
+      if (dx >= PLAYERS_SWIPE_THRESHOLD) {
+        togglePlayers();
+      }
+    }
+    swipeStartXRef.current = null;
+    swipeStartYRef.current = null;
+    swipeActiveRef.current = false;
+    swipeDirectionRef.current = null;
+  };
+
+  const handlePlayersTouchStart = (e) => {
+    const t = e.touches[0];
+    swipeStartXRef.current = t.clientX;
+    swipeStartYRef.current = t.clientY;
+    swipeActiveRef.current = false;
+    swipeDirectionRef.current = 'close';
+  };
+
+  const handlePlayersTouchMove = (e) => {
+    if (swipeDirectionRef.current !== 'close') return;
+    if (swipeStartXRef.current == null) return;
+
+    const t = e.touches[0];
+    const dx = t.clientX - swipeStartXRef.current;
+    const dy = t.clientY - swipeStartYRef.current;
+
+    if (!swipeActiveRef.current) {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+      if (dx < -10) {
+        swipeActiveRef.current = true;
+      }
+    }
+  };
+
+  const handlePlayersTouchEnd = (e) => {
+    if (swipeDirectionRef.current === 'close' && swipeStartXRef.current != null) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipeStartXRef.current;
+      if (dx <= -PLAYERS_SWIPE_THRESHOLD) {
+        setShowPlayers(false);
+      }
+    }
+    swipeStartXRef.current = null;
+    swipeStartYRef.current = null;
+    swipeActiveRef.current = false;
+    swipeDirectionRef.current = null;
+  };
 
   return (
     <>
@@ -323,6 +423,9 @@ const Chat = () => {
           onFriendRequest={handleFriendRequest}
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
+          onTouchStart={handlePlayersTouchStart}
+          onTouchMove={handlePlayersTouchMove}
+          onTouchEnd={handlePlayersTouchEnd}
         />
       )}
 
@@ -352,7 +455,12 @@ const Chat = () => {
       />
 
       <div className="chat-container">
-        <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
+        <div
+          className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}
+          onTouchStart={handleChatTouchStart}
+          onTouchMove={handleChatTouchMove}
+          onTouchEnd={handleChatTouchEnd}
+        >
           <div className="chat-header">
             <img src="/mascot.png" alt="banjoboy" className="chat-header-logo" />
             <div className="chat-header-text">
@@ -543,12 +651,6 @@ const Chat = () => {
 
       {isNewVersionAvailable && <LatestVersionLink />}
 
-      {/*
-        [правка 2.15.3] Fullscreen:
-          - свайп вниз (touch) > 120px закрывает;
-          - во время свайпа картинка следует за пальцем, фон тускнеет;
-          - тап по картинке/фону — закрывает (сохранено с 2.15.1).
-      */}
       {fullscreenImage && (
         <div
           className="fullscreen-overlay"
