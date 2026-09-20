@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [правка 2.15.15]
-  iOS Safari не даёт play() для iframe без user gesture внутри iframe.
-  Трюк: mute → play → unmute через 60мс. Мьютный autoplay разрешён.
+  [откат 2.15.15 → 2.15.16]
+  Убраны mute/unmute и setAttribute('allow') — они ломали play на iOS.
+  Возврат к логике 2.15.13, которая работала.
 */
 
 const PLAYLIST = [
@@ -78,35 +78,16 @@ export const useYouTubePlayer = () => {
             setReady(true);
             e.target.setVolume(volumeRef.current);
 
-            // [правка 2.15.15] ставим allow="autoplay" на созданный iframe —
-            // без этого iOS Safari блокирует playVideo
-            try {
-              const iframe = host.querySelector('iframe');
-              if (iframe) {
-                iframe.setAttribute('allow', 'autoplay; encrypted-media');
-              }
-            } catch (err) { /* noop */ }
-
             const pending = pendingActionRef.current;
             pendingActionRef.current = null;
             if (pending === 'play') {
-              try {
-                e.target.mute();
-                e.target.playVideo();
-                setTimeout(() => {
-                  try { e.target.unMute(); } catch (err) { /* noop */ }
-                }, 60);
-              } catch (err) { /* noop */ }
+              try { e.target.playVideo(); } catch (err) { /* noop */ }
             } else if (pending === 'next') {
               const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
               setTrackIndex(nextIdx);
               try {
                 e.target.loadVideoById(PLAYLIST[nextIdx]);
-                e.target.mute();
                 e.target.playVideo();
-                setTimeout(() => {
-                  try { e.target.unMute(); } catch (err) { /* noop */ }
-                }, 60);
               } catch (err) { /* noop */ }
             }
           },
@@ -139,23 +120,6 @@ export const useYouTubePlayer = () => {
     };
   }, []);
 
-  // [правка 2.15.15] play через mute → unmute (iOS Safari)
-  const playSafely = useCallback((p) => {
-    try {
-      p.mute();
-      p.playVideo();
-      setTimeout(() => {
-        try {
-          p.unMute();
-          p.setVolume(volumeRef.current);
-        } catch (err) { /* noop */ }
-      }, 60);
-    } catch (err) {
-      // на случай ошибок — просто пробуем play
-      try { p.playVideo(); } catch (e) { /* noop */ }
-    }
-  }, []);
-
   const toggle = useCallback(() => {
     const p = playerRef.current;
     if (!p) return;
@@ -166,12 +130,9 @@ export const useYouTubePlayer = () => {
     }
 
     const state = p.getPlayerState?.();
-    if (state === 1) {
-      p.pauseVideo();
-    } else {
-      playSafely(p);
-    }
-  }, [ready, playSafely]);
+    if (state === 1) p.pauseVideo();
+    else p.playVideo();
+  }, [ready]);
 
   const next = useCallback(() => {
     const p = playerRef.current;
@@ -184,13 +145,9 @@ export const useYouTubePlayer = () => {
 
     const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
     setTrackIndex(nextIdx);
-    try {
-      p.loadVideoById(PLAYLIST[nextIdx]);
-      playSafely(p);
-    } catch (err) {
-      try { p.playVideo(); } catch (e) { /* noop */ }
-    }
-  }, [ready, playSafely]);
+    p.loadVideoById(PLAYLIST[nextIdx]);
+    p.playVideo();
+  }, [ready]);
 
   const setVolume = useCallback((v) => {
     const clamped = Math.max(0, Math.min(100, Math.round(v)));

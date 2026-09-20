@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// fix(mascot): mute→play→unmute для iOS Safari (2.15.15)
-const VERSION = '2.15.15';
+// [откат 2.15.15 → 2.15.16] вернул простой playVideo без mute/unmute
+const VERSION = '2.15.16';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
