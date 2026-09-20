@@ -664,7 +664,9 @@ const Chat = () => {
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
-              <div className="chat-header-version">v{VERSION}</div>
+              <div className="chat-header-version">
+                v{VERSION} · R:{yt.ready ? 1 : 0} H:{yt.hasStarted ? 1 : 0} P:{yt.isPlaying ? 1 : 0}
+              </div>
             </div>
             <button
               className="chat-header-theme"
