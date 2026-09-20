@@ -97,9 +97,8 @@
   .msg-image-only-img {
     max-width: 100%;
     width: 100%;
-    max-height: calc(100vh - 320px);
+    max-height: 280px;
     border-radius: var(--radius-md);
-    transition: max-height 0.2s ease;
   }
   .msg-image-overlay {
     padding: 6px 10px;

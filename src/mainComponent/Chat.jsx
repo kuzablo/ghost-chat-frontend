@@ -22,7 +22,7 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.9';
+const VERSION = '2.14.10';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -385,20 +385,13 @@ const Chat = () => {
     }
   }, [wsError]);
 
-  // ===== Скролл + подгонка картинок при появлении сообщений =====
+  // ===== Скролл при появлении сообщений =====
   useEffect(() => {
     if (messages.length === 0) return;
 
     const el = messagesContainerRef.current;
     if (!el) return;
 
-    // Сначала подгоняем все картинки под высоту контейнера
-    const maxH = Math.max(120, el.clientHeight - 90);
-    el.querySelectorAll('.msg-image-only-img').forEach(img => {
-      img.style.maxHeight = `${maxH}px`;
-    });
-
-    // Затем скроллим вниз (после того как размеры устоялись)
     requestAnimationFrame(() => {
       if (!hasAutoScrolledRef.current) {
         animateScrollToBottom(el, 1400);
@@ -409,18 +402,10 @@ const Chat = () => {
     });
   }, [messages]);
 
-  // ===== Скролл-индикатор + подгонка картинок при скролле/ресайзе =====
+  // ===== Скролл-индикатор «вниз» =====
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
-
-    const adjustImageSizes = () => {
-      const containerHeight = el.clientHeight;
-      const maxH = Math.max(120, containerHeight - 90);
-      el.querySelectorAll('.msg-image-only-img').forEach(img => {
-        img.style.maxHeight = `${maxH}px`;
-      });
-    };
 
     let rafId = null;
     const schedule = () => {
@@ -428,22 +413,15 @@ const Chat = () => {
       rafId = requestAnimationFrame(() => {
         const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
         setShowScrollDown(distanceFromBottom > 200);
-        adjustImageSizes();
       });
     };
 
     el.addEventListener('scroll', schedule, { passive: true });
     schedule();
 
-    const ro = new ResizeObserver(schedule);
-    ro.observe(el);
-    window.addEventListener('resize', schedule);
-
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
       el.removeEventListener('scroll', schedule);
-      ro.disconnect();
-      window.removeEventListener('resize', schedule);
     };
   }, [isAuth]);
 
