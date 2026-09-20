@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.15.3 → 2.15.4] свайп от левого края открывает/закрывает панель игроков
-const VERSION = '2.15.4';
+// [правка 2.15.4 → 2.15.5] свайп панели игроков через document-слушатели
+const VERSION = '2.15.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -79,11 +79,12 @@ const Chat = () => {
   // [правка 2.15.3] refs для свайпа в fullscreen
   const touchStartYRef = useRef(null);
 
-  // [правка 2.15.4] refs для свайпа панели игроков
+  // [правка 2.15.5] refs для свайпа панели игроков (document-слушатели)
   const swipeStartXRef = useRef(null);
   const swipeStartYRef = useRef(null);
   const swipeActiveRef = useRef(false);
   const swipeDirectionRef = useRef(null); // 'open' | 'close'
+  const showPlayersRef = useRef(showPlayers);
 
   // ===== 5. WebSocket =====
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
@@ -171,6 +172,11 @@ const Chat = () => {
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
+  // Синхронизация showPlayersRef для document-слушателей
+  useEffect(() => {
+    showPlayersRef.current = showPlayers;
+  }, [showPlayers]);
+
   // ===== WS-роутер =====
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
@@ -235,6 +241,101 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
+  // ===== [правка 2.15.5] Свайп панели игроков через document =====
+  // Слушаем на document → ловим жесты с любой точки экрана, включая padding.
+  // - открытие: touchstart в левых 40px экрана, свайп вправо > 50px
+  // - закрытие: свайп влево > 50px, если панель открыта
+  // - отсев вертикальных жестов; при активном свайпе — preventDefault,
+  //   чтобы скролл сообщений не перебивал жест
+  useEffect(() => {
+    const EDGE_ZONE = 40;
+    const THRESHOLD = 50;
+    const DIRECTION_LOCK = 8;
+
+    const handleStart = (e) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+
+      if (showPlayersRef.current) {
+        // панель открыта → возможное закрытие свайпом влево
+        swipeStartXRef.current = t.clientX;
+        swipeStartYRef.current = t.clientY;
+        swipeActiveRef.current = false;
+        swipeDirectionRef.current = 'close';
+      } else if (t.clientX <= EDGE_ZONE) {
+        // панель закрыта, тач у левого края → возможное открытие
+        swipeStartXRef.current = t.clientX;
+        swipeStartYRef.current = t.clientY;
+        swipeActiveRef.current = false;
+        swipeDirectionRef.current = 'open';
+      } else {
+        swipeDirectionRef.current = null;
+      }
+    };
+
+    const handleMove = (e) => {
+      if (!swipeDirectionRef.current) return;
+      if (swipeStartXRef.current == null) return;
+      if (e.touches.length !== 1) return;
+
+      const t = e.touches[0];
+      const dx = t.clientX - swipeStartXRef.current;
+      const dy = t.clientY - swipeStartYRef.current;
+
+      if (!swipeActiveRef.current) {
+        if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
+
+        if (Math.abs(dy) > Math.abs(dx)) {
+          // вертикальный жест → не наш
+          swipeDirectionRef.current = null;
+          return;
+        }
+        if (swipeDirectionRef.current === 'open' && dx < 0) {
+          swipeDirectionRef.current = null;
+          return;
+        }
+        if (swipeDirectionRef.current === 'close' && dx > 0) {
+          swipeDirectionRef.current = null;
+          return;
+        }
+        swipeActiveRef.current = true;
+      }
+
+      // мы в активном свайпе — блокируем скролл
+      if (e.cancelable) e.preventDefault();
+    };
+
+    const handleEnd = (e) => {
+      if (swipeDirectionRef.current && swipeStartXRef.current != null) {
+        const t = e.changedTouches[0];
+        const dx = t.clientX - swipeStartXRef.current;
+
+        if (swipeDirectionRef.current === 'open' && dx >= THRESHOLD) {
+          chatTogglePlayers();
+          setShowPlayers(true);
+        } else if (swipeDirectionRef.current === 'close' && dx <= -THRESHOLD) {
+          setShowPlayers(false);
+        }
+      }
+      swipeStartXRef.current = null;
+      swipeStartYRef.current = null;
+      swipeActiveRef.current = false;
+      swipeDirectionRef.current = null;
+    };
+
+    document.addEventListener('touchstart', handleStart, { passive: true });
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
+    document.addEventListener('touchcancel', handleEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', handleStart);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener('touchcancel', handleEnd);
+    };
+  }, [chatTogglePlayers, setShowPlayers]);
+
   const togglePlayers = () => {
     chatTogglePlayers();
     setShowPlayers(prev => !prev);
@@ -292,102 +393,6 @@ const Chat = () => {
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
 
-  // ===== [правка 2.15.4] Свайп панели игроков =====
-  // Открытие: свайп вправо от левого края (.chat-main, первые 30px).
-  // Закрытие: свайп влево в любом месте панели.
-  const PLAYERS_EDGE_ZONE = 30;
-  const PLAYERS_SWIPE_THRESHOLD = 60;
-
-  const handleChatTouchStart = (e) => {
-    const t = e.touches[0];
-    const chatEl = e.currentTarget;
-    const rect = chatEl.getBoundingClientRect();
-    const localX = t.clientX - rect.left;
-
-    swipeStartXRef.current = t.clientX;
-    swipeStartYRef.current = t.clientY;
-    swipeActiveRef.current = false;
-    swipeDirectionRef.current = null;
-
-    if (!showPlayers && localX <= PLAYERS_EDGE_ZONE) {
-      swipeDirectionRef.current = 'open';
-    }
-  };
-
-  const handleChatTouchMove = (e) => {
-    if (swipeDirectionRef.current !== 'open') return;
-    if (swipeStartXRef.current == null) return;
-
-    const t = e.touches[0];
-    const dx = t.clientX - swipeStartXRef.current;
-    const dy = t.clientY - swipeStartYRef.current;
-
-    if (!swipeActiveRef.current) {
-      if (Math.abs(dy) > Math.abs(dx)) {
-        swipeDirectionRef.current = null;
-        return;
-      }
-      if (dx > 10) {
-        swipeActiveRef.current = true;
-      }
-    }
-  };
-
-  const handleChatTouchEnd = (e) => {
-    if (swipeDirectionRef.current === 'open' && swipeStartXRef.current != null) {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - swipeStartXRef.current;
-      if (dx >= PLAYERS_SWIPE_THRESHOLD) {
-        togglePlayers();
-      }
-    }
-    swipeStartXRef.current = null;
-    swipeStartYRef.current = null;
-    swipeActiveRef.current = false;
-    swipeDirectionRef.current = null;
-  };
-
-  const handlePlayersTouchStart = (e) => {
-    const t = e.touches[0];
-    swipeStartXRef.current = t.clientX;
-    swipeStartYRef.current = t.clientY;
-    swipeActiveRef.current = false;
-    swipeDirectionRef.current = 'close';
-  };
-
-  const handlePlayersTouchMove = (e) => {
-    if (swipeDirectionRef.current !== 'close') return;
-    if (swipeStartXRef.current == null) return;
-
-    const t = e.touches[0];
-    const dx = t.clientX - swipeStartXRef.current;
-    const dy = t.clientY - swipeStartYRef.current;
-
-    if (!swipeActiveRef.current) {
-      if (Math.abs(dy) > Math.abs(dx)) {
-        swipeDirectionRef.current = null;
-        return;
-      }
-      if (dx < -10) {
-        swipeActiveRef.current = true;
-      }
-    }
-  };
-
-  const handlePlayersTouchEnd = (e) => {
-    if (swipeDirectionRef.current === 'close' && swipeStartXRef.current != null) {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - swipeStartXRef.current;
-      if (dx <= -PLAYERS_SWIPE_THRESHOLD) {
-        setShowPlayers(false);
-      }
-    }
-    swipeStartXRef.current = null;
-    swipeStartYRef.current = null;
-    swipeActiveRef.current = false;
-    swipeDirectionRef.current = null;
-  };
-
   return (
     <>
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
@@ -423,9 +428,6 @@ const Chat = () => {
           onFriendRequest={handleFriendRequest}
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
-          onTouchStart={handlePlayersTouchStart}
-          onTouchMove={handlePlayersTouchMove}
-          onTouchEnd={handlePlayersTouchEnd}
         />
       )}
 
@@ -455,12 +457,7 @@ const Chat = () => {
       />
 
       <div className="chat-container">
-        <div
-          className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}
-          onTouchStart={handleChatTouchStart}
-          onTouchMove={handleChatTouchMove}
-          onTouchEnd={handleChatTouchEnd}
-        >
+        <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
             <img src="/mascot.png" alt="banjoboy" className="chat-header-logo" />
             <div className="chat-header-text">
