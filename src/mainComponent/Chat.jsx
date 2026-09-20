@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.31 → 2.14.32] рефакторинг финал: основной чат вынесен в useChat
-const VERSION = '2.14.32';
+// [правка 2.14.32 → 2.15.0] выравнивание версии с сервером (временно)
+const VERSION = '2.15.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
