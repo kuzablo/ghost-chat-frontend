@@ -22,7 +22,7 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.8';
+const VERSION = '2.14.9';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -385,23 +385,31 @@ const Chat = () => {
     }
   }, [wsError]);
 
+  // ===== Скролл + подгонка картинок при появлении сообщений =====
   useEffect(() => {
     if (messages.length === 0) return;
 
-    if (!hasAutoScrolledRef.current) {
-      setTimeout(() => {
-        animateScrollToBottom(messagesContainerRef.current, 1400);
-        hasAutoScrolledRef.current = true;
-      }, 60);
-      return;
-    }
+    const el = messagesContainerRef.current;
+    if (!el) return;
 
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    // Сначала подгоняем все картинки под высоту контейнера
+    const maxH = Math.max(120, el.clientHeight - 90);
+    el.querySelectorAll('.msg-image-only-img').forEach(img => {
+      img.style.maxHeight = `${maxH}px`;
+    });
+
+    // Затем скроллим вниз (после того как размеры устоялись)
+    requestAnimationFrame(() => {
+      if (!hasAutoScrolledRef.current) {
+        animateScrollToBottom(el, 1400);
+        hasAutoScrolledRef.current = true;
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
   }, [messages]);
 
-  // ===== Скролл-индикатор + подгонка картинок =====
+  // ===== Скролл-индикатор + подгонка картинок при скролле/ресайзе =====
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -438,16 +446,6 @@ const Chat = () => {
       window.removeEventListener('resize', schedule);
     };
   }, [isAuth]);
-
-  // Подгонка при появлении новых сообщений
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (!el) return;
-    const maxH = Math.max(120, el.clientHeight - 90);
-    el.querySelectorAll('.msg-image-only-img').forEach(img => {
-      img.style.maxHeight = `${maxH}px`;
-    });
-  }, [messages]);
 
   // ===== Уведомления «ник зашёл/вышел» =====
   useEffect(() => {
