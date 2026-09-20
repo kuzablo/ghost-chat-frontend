@@ -846,6 +846,11 @@ body.dark .unread-badge {
 }
 
 /* ===== Утилиты ===== */
+/* [2.18.6] капсула — только для мобилки. На десктопе не рендерим */
+.mobile-capsule {
+  display: none;
+}
+
 @media (pointer: fine) {
   .attach-btn { display: none !important; }
 }

@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// ui(chat): верхний отступ ещё меньше, текст сообщения крупнее (2.18.5)
-const VERSION = '2.18.5';
+// fix(chat): автоскролл на ПК (2.18.6)
+const VERSION = '2.18.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

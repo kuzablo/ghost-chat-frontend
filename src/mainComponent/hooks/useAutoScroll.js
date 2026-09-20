@@ -1,21 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
-  [новый хук, рефакторинг 2.14.27]
-  Вынесено из Chat.jsx:
-    - анимация скролла вниз (cubicBezier + animateScrollToBottom);
-    - refs контейнера сообщений и «якоря» конца списка;
-    - hasAutoScrolledRef (первый скролл — анимированный, дальше мгновенный);
-    - эффект скролла при появлении новых сообщений;
-    - эффект отслеживания позиции → showScrollDown;
-    - scrollToBottom — ручной вызов анимации.
-
-  [правка 2.14.28]
-  На ПК плавная прокрутка не срабатывала: эффект бежал раньше, чем браузер
-  раскладывал .messages, и scrollHeight читался меньше реального — distance
-  получался 0, animateScrollToBottom тихо выходил.
-  Решение — двойной requestAnimationFrame: первый даёт React + CSS применить
-  layout, второй — уже после полного reflow.
+  [2.18.6] Автоскролл при загрузке.
+  Причина бага на ПК: mobile-capsule рендерилась пустым блоком и съедала
+  место, из-за чего scrollHeight в момент двойного RAF был меньше финального.
+  Теперь:
+    - capsule на десктопе скрыт через CSS (Chat.css);
+    - в хуке добавляем подстраховку: ещё один скролл через 300мс.
 */
 
 const cubicBezier = (p1x, p1y, p2x, p2y) => {
@@ -80,13 +71,13 @@ export const useAutoScroll = ({ messages, resetKey }) => {
   const messagesEndRef = useRef(null);
   const hasAutoScrolledRef = useRef(false);
 
-  // Авто-скролл: первый раз — плавной анимацией, дальше — мгновенно.
-  // [правка 2.14.28] двойной RAF — ждём полного reflow.
+  // Автоскролл: первый раз — плавной анимацией, дальше — мгновенно.
   useEffect(() => {
     if (messages.length === 0) return;
 
     let raf1 = null;
     let raf2 = null;
+    let lateTimer = null;
 
     raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
@@ -99,16 +90,26 @@ export const useAutoScroll = ({ messages, resetKey }) => {
         } else {
           el.scrollTop = el.scrollHeight;
         }
+
+        // [2.18.6] подстраховка: если картинки/лейаут догрузились —
+        // добиваем в самый низ через 300мс
+        clearTimeout(lateTimer);
+        lateTimer = setTimeout(() => {
+          const el2 = messagesContainerRef.current;
+          if (!el2) return;
+          el2.scrollTop = el2.scrollHeight;
+        }, 300);
       });
     });
 
     return () => {
       if (raf1) cancelAnimationFrame(raf1);
       if (raf2) cancelAnimationFrame(raf2);
+      clearTimeout(lateTimer);
     };
   }, [messages]);
 
-  // Индикатор «вниз»: показываем, когда далеко от низа
+  // Индикатор «вниз»
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
