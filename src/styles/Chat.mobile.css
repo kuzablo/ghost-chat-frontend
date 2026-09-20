@@ -130,7 +130,7 @@
     border-width: 1.5px;
   }
 
-  /* ===== [2.24.1] Инпут в потоке, contentEditable ===== */
+  /* ===== [2.23.4] Инпут в потоке, input type="search" ===== */
   .input-row {
     display: none;
     gap: 6px;
@@ -146,8 +146,6 @@
     padding-bottom: calc(8px + var(--kb-height, 0px));
   }
 
-  /* поле ввода — общие правила для contentEditable и для фолбэка search */
-  .input-row .chat-input-editable,
   .input-row input[type="search"] {
     padding: 10px 14px;
     font-size: 16px;
@@ -155,8 +153,6 @@
     border-radius: 14px;
   }
 
-  .input-row .chat-input-editable:focus,
-  .input-row .chat-input-editable:focus-visible,
   .input-row input[type="search"]:focus,
   .input-row input[type="search"]:focus-visible {
     outline: none;
@@ -164,8 +160,6 @@
     box-shadow: 0 0 0 4px rgba(245, 169, 192, 0.28);
   }
 
-  body.dark .input-row .chat-input-editable:focus,
-  body.dark .input-row .chat-input-editable:focus-visible,
   body.dark .input-row input[type="search"]:focus,
   body.dark .input-row input[type="search"]:focus-visible {
     outline: none;
