@@ -17,8 +17,8 @@ import { useChatUI } from './hooks/useChatUI';
 import { useAutoScroll } from './hooks/useAutoScroll';
 import { useAuth } from './hooks/useAuth';
 import { useDuel } from './hooks/useDuel';
-// [правка 2.14.31] лички вынесены в отдельный хук
 import { usePrivateChat } from './hooks/usePrivateChat';
+import { useChat } from './hooks/useChat';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -26,12 +26,12 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.30 → 2.14.31] рефакторинг шаг 6: лички вынесены в usePrivateChat
-const VERSION = '2.14.31';
+// [правка 2.14.31 → 2.14.32] рефакторинг финал: основной чат вынесен в useChat
+const VERSION = '2.14.32';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
-  // ===== Авторизация (useAuth) =====
+  // ===== 1. Авторизация =====
   const auth = useAuth();
   const {
     token, nickname, isAuth, isAdmin, myId, serverVersion,
@@ -48,58 +48,44 @@ const Chat = () => {
     tokenRef,
   } = auth;
 
-  // ===== Состояние, оставшееся в Chat.jsx (уедет в useChat) =====
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [players, setPlayers] = useState([]);
-  const [friends, setFriends] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [bannedUntil, setBannedUntil] = useState(null);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [typingUsers, setTypingUsers] = useState([]);
-  const [duelNotice, setDuelNotice] = useState('');
-  const [friendRequests, setFriendRequests] = useState([]);
-  const [notices, setNotices] = useState([]);
-
+  // ===== 2. UI-флаги =====
   const {
     isDark, setIsDark,
     activeMessageId,
     toggleReactions,
     showPlayers, setShowPlayers,
     searchQuery, setSearchQuery,
-    sending, setSending,
     banConfirm, setBanConfirm,
-    isUploading, setIsUploading,
     fullscreenImage, setFullscreenImage,
     showFullscreenReactions, setShowFullscreenReactions,
     closeFullscreen,
     showMobileInput, setShowMobileInput,
   } = useChatUI();
 
-  const typingTimeoutRef = useRef(null);
+  // ===== 3. Локальное состояние Chat.jsx (не входит ни в один хук) =====
+  const [isConnected, setIsConnected] = useState(false);
+  const [duelNotice, setDuelNotice] = useState('');
+
+  // ===== 4. Refs =====
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
-  const prevPlayerNicksRef = useRef(new Set());
-  const firstPlayersLoadRef = useRef(true);
 
-  const {
-    messagesContainerRef,
-    messagesEndRef,
-    showScrollDown,
-    scrollToBottom,
-  } = useAutoScroll({ messages, resetKey: isAuth });
-
+  // ===== 5. WebSocket =====
+  // Принимаем стрелку — handleWebSocketMessage определён ниже, но вызовется
+  // только после рендера, когда переменная уже присвоена.
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
     tokenRef.current,
     (msg) => handleWebSocketMessage(msg)
   );
 
+  // ===== 6. Звук =====
   const audio = useAudio();
 
+  // ===== 7. Дуэли =====
   const duel = useDuel({
     sendMessage,
     isAuth,
@@ -109,12 +95,52 @@ const Chat = () => {
     },
   });
 
-  // [правка 2.14.31] лички: state + open/close + WS-фильтр + фильтр unread
-  const priv = usePrivateChat({
+  // ===== 8. Основной чат =====
+  // Создаётся ДО usePrivateChat, потому что usePrivateChat нужен players.
+  const chat = useChat({
     sendMessage,
+    isAuth,
+    isAdmin,
     myId,
-    players,
+    audio,
+    nicknameRef,
+    onNotice: (text) => {
+      setDuelNotice(text);
+      setTimeout(() => setDuelNotice(''), 3000);
+    },
   });
+
+  const {
+    messages,
+    players,
+    friends,
+    typingUsers,
+    friendRequests,
+    notices,
+    bannedUntil,
+    errorMessage,
+    setErrorMessage,
+    input,
+    setInput,
+    sending,
+    isUploading,
+    handleWs: handleChatWs,
+    handleSendMessage,
+    handleEditMessage,
+    handleFileUpload,
+    handleInputChange,
+    sendReaction,
+    deleteMessage,
+    banForever,
+    watchChat,
+    handleFriendRequest,
+    handleAcceptRequest,
+    handleDeclineRequest,
+    togglePlayers: chatTogglePlayers,
+  } = chat;
+
+  // ===== 9. Личные чаты =====
+  const priv = usePrivateChat({ sendMessage, myId, players });
   const {
     privateChat,
     privateTypingUser,
@@ -124,21 +150,30 @@ const Chat = () => {
     handleWs: handlePrivateWs,
   } = priv;
 
+  // ===== 10. Скролл =====
+  const {
+    messagesContainerRef,
+    messagesEndRef,
+    showScrollDown,
+    scrollToBottom,
+  } = useAutoScroll({ messages, resetKey: isAuth });
+
+  // ===== Счётчики уведомлений =====
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
+  // ===== WS-роутер =====
+  // Порядок важен: дуэли → лички → чат → auth-специфика.
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
-    // [правка 2.14.31] сначала дуэли и лички, потом общий switch
     if (duel.handleWs(msg)) return;
     if (handlePrivateWs(msg)) return;
+    if (handleChatWs(msg)) return;
 
+    // Остались только auth-специфичные и version
     switch (msg.type) {
-      case 'friends_list':
-        setFriends(msg.data);
-        break;
       case 'version':
         console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
         break;
@@ -146,71 +181,18 @@ const Chat = () => {
         applyAuthOk(msg.data);
         sendMessage({ type: 'get_friends' });
         break;
-      case 'history':
-        setMessages(msg.data);
-        break;
-      case 'message':
-        setMessages(prev => [...prev, msg.data]);
-        audio.playNotification();
-        break;
-      case 'message_update':
-        if (msg.data.id) {
-          setMessages(prev => prev.map(m => m.id === msg.data.id ? msg.data : m));
-        }
-        break;
-      case 'message_deleted':
-        setMessages(prev => prev.filter(m => m.id !== msg.data.messageId));
-        break;
-      case 'players':
-        setPlayers(msg.data);
-        break;
-      case 'typing': {
-        const { nickname: typingNick, isTyping } = msg.data;
-        setTypingUsers(prev => {
-          if (isTyping && !prev.includes(typingNick)) return [...prev, typingNick];
-          if (!isTyping) return prev.filter(n => n !== typingNick);
-          return prev;
-        });
-        break;
-      }
-      case 'banned':
-        setBannedUntil(msg.data.until);
-        break;
       case 'banned_forever':
         forceLogout('У нас тут таких не любят');
         break;
       case 'idle_disconnect':
         forceLogout('Вы были отключены за неактивность. Войдите снова.');
         break;
-      case 'admin_error':
-        setDuelNotice(msg.data.message);
-        setTimeout(() => setDuelNotice(''), 3000);
-        break;
-      case 'friend_request_sent':
-        setDuelNotice(`Запрос дружбы отправлен пользователю ${msg.data.receiverNickname}`);
-        setTimeout(() => setDuelNotice(''), 3000);
-        break;
-      case 'new_friend_request':
-        setFriendRequests(prev => [...prev, msg.data]);
-        break;
-      case 'friend_request_accepted_notification':
-        setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
-        setTimeout(() => setDuelNotice(''), 4000);
-        sendMessage({ type: 'get_friends' });
-        break;
-      case 'friend_request_accepted':
-      case 'friend_request_declined':
-        setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
-        break;
-      case 'friend_requests_list':
-        setFriendRequests(msg.data);
-        break;
-      // [правка 2.14.31] приватные кейсы переехали в usePrivateChat.handleWs
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [myId, sendMessage, audio, applyAuthOk, forceLogout, duel, handlePrivateWs]);
+  }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
 
+  // ===== Эффекты =====
   useEffect(() => {
     setIsConnected(wsConnected);
   }, [wsConnected]);
@@ -221,49 +203,9 @@ const Chat = () => {
       const timer = setTimeout(() => setErrorMessage(''), 3000);
       return () => clearTimeout(timer);
     }
-  }, [wsError]);
+  }, [wsError, setErrorMessage]);
 
-  // ===== Уведомления «ник зашёл/вышел» =====
-  useEffect(() => {
-    const currentNicks = new Set(players.map(p => p.nickname));
-
-    if (firstPlayersLoadRef.current) {
-      prevPlayerNicksRef.current = currentNicks;
-      firstPlayersLoadRef.current = false;
-      return;
-    }
-
-    const prev = prevPlayerNicksRef.current;
-    const joined = [...currentNicks].filter(n => !prev.has(n));
-    const left = [...prev].filter(n => !currentNicks.has(n));
-
-    prevPlayerNicksRef.current = currentNicks;
-
-    const myNick = nicknameRef.current;
-    const filteredJoined = joined.filter(n => n !== myNick);
-    const filteredLeft = left.filter(n => n !== myNick);
-
-    if (filteredJoined.length === 0 && filteredLeft.length === 0) return;
-
-    const stamp = Date.now();
-    const added = [];
-    filteredJoined.forEach((nick, i) => {
-      added.push({ id: `j-${stamp}-${i}`, nickname: nick, type: 'join' });
-    });
-    filteredLeft.forEach((nick, i) => {
-      added.push({ id: `l-${stamp}-${i}`, nickname: nick, type: 'leave' });
-    });
-
-    setNotices(p => [...p, ...added].slice(-3));
-
-    added.forEach(n => {
-      setTimeout(() => {
-        setNotices(p => p.filter(x => x.id !== n.id));
-      }, 4000);
-    });
-  }, [players, nicknameRef]);
-
-  // ===== Клик снаружи панели игроков =====
+  // Клик снаружи панели игроков
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (playersBtnRef.current?.contains(e.target)) return;
@@ -283,116 +225,16 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  // [правка 2.14.31] эффект фильтрации unreadByUser при смене players — в usePrivateChat
-
   useEffect(() => {
     if (showMobileInput && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [showMobileInput]);
 
-  const handleSendMessage = () => {
-    if (sending || !sendMessage || !input.trim() || !isAuth) return;
-    setSending(true);
-    sendMessage({
-      type: 'message',
-      data: { text: input.trim() }
-    });
-    audio.playSend();
-    setInput('');
-    sendMessage({ type: 'typing', data: { isTyping: false } });
-    setTimeout(() => setSending(false), 800);
-  };
-
-  const handleEditMessage = (messageId, newText) => {
-    if (sendMessage) {
-      sendMessage({ type: 'edit_message', data: { messageId, text: newText } });
-    }
-  };
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!isAuth || !sendMessage) {
-      setErrorMessage('Не авторизован или нет соединения');
-      return;
-    }
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('https://api.banjoboy420.ru/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Upload failed');
-      }
-
-      sendMessage({
-        type: 'message',
-        data: {
-          text: '',
-          imageUrl: data.imageUrl
-        }
-      });
-      audio.playSend();
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch (err) {
-      console.error('Ошибка загрузки фото:', err);
-      setErrorMessage('Не удалось загрузить фото: ' + (err?.message || ''));
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    setInput(e.target.value);
-    if (sendMessage && isAuth) {
-      if (e.target.value.trim()) {
-        sendMessage({ type: 'typing', data: { isTyping: true } });
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => {
-          if (sendMessage) {
-            sendMessage({ type: 'typing', data: { isTyping: false } });
-          }
-        }, 1500);
-      } else {
-        sendMessage({ type: 'typing', data: { isTyping: false } });
-      }
-    }
-  };
-
-  const sendReaction = (messageId, emoji) => {
-    if (sendMessage && isAuth) {
-      sendMessage({ type: 'reaction', data: { messageId, emoji } });
-    }
-  };
-
-  // [правка 2.14.31] openPrivateChat / closePrivateChat — из usePrivateChat
-
-  const banForever = (userId) => {
-    if (sendMessage && isAdmin) {
-      sendMessage({ type: 'ban_forever', data: { userId } });
-    }
-  };
-
-  const deleteMessage = (messageId) => {
-    if (sendMessage) {
-      sendMessage({ type: 'delete_message', data: { messageId } });
-    }
-  };
-
-  const watchChat = (userId) => {
-    if (sendMessage && isAdmin) {
-      sendMessage({ type: 'watch_chat', data: { userId } });
-    }
+  // ===== Обёртки =====
+  const togglePlayers = () => {
+    chatTogglePlayers();
+    setShowPlayers(prev => !prev);
   };
 
   const compareVersions = (v1, v2) => {
@@ -408,33 +250,6 @@ const Chat = () => {
   };
 
   const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
-
-  const handleFriendRequest = (receiverId) => {
-    if (sendMessage) {
-      sendMessage({ type: 'friend_request', data: { receiverId } });
-    }
-  };
-
-  const handleAcceptRequest = (requestId) => {
-    if (sendMessage) {
-      sendMessage({ type: 'friend_request_accept', data: { requestId } });
-    }
-    setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
-  };
-
-  const handleDeclineRequest = (requestId) => {
-    if (sendMessage) {
-      sendMessage({ type: 'friend_request_decline', data: { requestId } });
-    }
-    setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
-  };
-
-  const togglePlayers = () => {
-    if (sendMessage) {
-      sendMessage({ type: 'get_friends' });
-    }
-    setShowPlayers(prev => !prev);
-  };
 
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');

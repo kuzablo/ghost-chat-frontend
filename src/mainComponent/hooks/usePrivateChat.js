@@ -5,19 +5,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
   Вынесено из Chat.jsx — всё про личные сообщения:
     - state: privateChat, privateTypingUser, unreadByUser;
     - openPrivateChat / closePrivateChat;
-    - handleWs(msg) — WS-фильтр для 7 типов:
-        unread_private_list, private_message, private_message_sent,
-        private_typing, private_history, private_reaction_update, message_read;
-    - эффект фильтрации unreadByUser при смене players
-      (если юзер вышел — убираем из непрочитанных).
+    - handleWs(msg) — WS-фильтр для 7 типов;
+    - эффект фильтрации unreadByUser при смене players.
 
-  Контракт:
-    usePrivateChat({ sendMessage, myId, players })
-      → { privateChat, privateTypingUser, unreadByUser,
-          openPrivateChat, closePrivateChat, handleWs }
-
-  sendMessage / myId / players / privateChat заворачиваются в refs —
-  handleWs остаётся стабильным и не пересоздаёт WS-подписку.
+  players передаётся аргументом (из useChat).
 */
 export const usePrivateChat = ({ sendMessage, myId, players }) => {
   const [privateChat, setPrivateChat] = useState(null);
@@ -34,7 +25,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
   useEffect(() => { playersRef.current = players; }, [players]);
   useEffect(() => { privateChatRef.current = privateChat; }, [privateChat]);
 
-  // Открыть личку с юзером
   const openPrivateChat = useCallback((userId, nickname) => {
     if (userId === myIdRef.current) return;
     setPrivateChat({ userId, nickname, messages: [] });
@@ -67,7 +57,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
     });
   }, [players]);
 
-  // WS-фильтр. Возвращает true, если сообщение относится к личкам.
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
       case 'unread_private_list': {
