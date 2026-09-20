@@ -26,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.15.1 → 2.15.2] бар из 2 кнопок + тема в шапку
-const VERSION = '2.15.2';
+// [правка 2.15.2 → 2.15.3] свайп вниз в fullscreen закрывает
+const VERSION = '2.15.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -66,12 +66,18 @@ const Chat = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
 
+  // [правка 2.15.3] состояние свайпа в fullscreen
+  const [dragY, setDragY] = useState(0);
+
   // ===== 4. Refs =====
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+
+  // [правка 2.15.3] refs для свайпа
+  const touchStartYRef = useRef(null);
 
   // ===== 5. WebSocket =====
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
@@ -251,6 +257,37 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
+  // ===== [правка 2.15.3] Свайп в fullscreen: обработчики =====
+  const SWIPE_CLOSE_THRESHOLD = 120; // пикселей вниз, чтобы закрыть
+
+  const handleFsTouchStart = (e) => {
+    const t = e.touches[0];
+    touchStartYRef.current = t.clientY;
+  };
+
+  const handleFsTouchMove = (e) => {
+    if (touchStartYRef.current == null) return;
+    const t = e.touches[0];
+    const dy = t.clientY - touchStartYRef.current;
+    // реагируем только на движение вниз
+    if (dy > 0) {
+      setDragY(dy);
+    }
+  };
+
+  const handleFsTouchEnd = () => {
+    if (dragY > SWIPE_CLOSE_THRESHOLD) {
+      closeFullscreen();
+    }
+    setDragY(0);
+    touchStartYRef.current = null;
+  };
+
+  // Прозрачность фона падает по мере свайпа (0 → 0.95, на 120px → 0.45)
+  const fsOverlayOpacity = fullscreenImage
+    ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
+    : 0.95;
+
   return (
     <>
       <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
@@ -325,7 +362,6 @@ const Chat = () => {
               </div>
               <div className="chat-header-version">v{VERSION}</div>
             </div>
-            {/* [правка 2.15.2] кнопка темы в шапке — показывается только на мобилке */}
             <button
               className="chat-header-theme"
               onClick={() => setIsDark(!isDark)}
@@ -439,7 +475,6 @@ const Chat = () => {
             </button>
           </div>
 
-          {/* [правка 2.15.2] бар из 2 кнопок: Игроки, Написать (SVG). Тема — в шапке. Фото — в инпут-строке. */}
           <div className="mobile-bottom-bar">
             <button
               className="mobile-bar-btn"
@@ -508,8 +543,21 @@ const Chat = () => {
 
       {isNewVersionAvailable && <LatestVersionLink />}
 
+      {/*
+        [правка 2.15.3] Fullscreen:
+          - свайп вниз (touch) > 120px закрывает;
+          - во время свайпа картинка следует за пальцем, фон тускнеет;
+          - тап по картинке/фону — закрывает (сохранено с 2.15.1).
+      */}
       {fullscreenImage && (
-        <div className="fullscreen-overlay" onClick={closeFullscreen}>
+        <div
+          className="fullscreen-overlay"
+          onClick={closeFullscreen}
+          onTouchStart={handleFsTouchStart}
+          onTouchMove={handleFsTouchMove}
+          onTouchEnd={handleFsTouchEnd}
+          style={{ background: `rgba(0, 0, 0, ${fsOverlayOpacity})` }}
+        >
           <div className="fullscreen-reactions">
             <button
               className="fullscreen-reactions-toggle"
@@ -556,6 +604,10 @@ const Chat = () => {
           <img
             src={fullscreenImage.url}
             alt="fullscreen"
+            style={{
+              transform: `translateY(${dragY}px) scale(${Math.max(0.85, 1 - dragY / 800)})`,
+              transition: dragY === 0 ? 'transform 0.2s ease-out' : 'none',
+            }}
           />
         </div>
       )}
