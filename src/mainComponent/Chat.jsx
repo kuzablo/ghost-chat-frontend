@@ -34,8 +34,8 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// ui(players): long-press 0.5с + мягкие разделители (2.20.2)
-const VERSION = '2.20.2';
+// ui(players): sticky-заголовки, long-press 0.5с, убрана кнопка «Мои диалоги» (2.20.4)
+const VERSION = '2.20.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

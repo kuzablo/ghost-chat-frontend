@@ -3,11 +3,12 @@ import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 
 /*
-  [2.20.0] Long-press 1с на элементе → меню стикеров по центру.
-  - своё сообщение (себя) → «Мои диалоги», «Выйти»
-  - другого игрока → написать / дуэль / в друзья (+ админ: watch/ban)
-  - друга → написать / дуэль
-  На ПК обычные кнопки остаются, на мобилке скрыты через CSS (Chat.mobile.css).
+  [2.20.4] Изменения:
+    - long-press 0.5с на элементе → меню стикеров по центру;
+    - убрана нижняя кнопка «Мои диалоги» — доступна через long-press
+      на секции «Вы»;
+    - ссылка «Что умеет чат?» осталась;
+    - на ПК обычные кнопки действий остаются (мобилка скрывает через CSS).
 */
 const PlayersPanel = forwardRef(({
   players,
@@ -42,12 +43,11 @@ const PlayersPanel = forwardRef(({
   );
   const myself = players.find(p => p.userId === myId);
 
-  // [2.20.0] long-press состояние
   const [pressingId, setPressingId] = useState(null);
   const [menuTarget, setMenuTarget] = useState(null);
   const pressRef = useRef({ timer: null, startX: 0, startY: 0, fired: false, id: null });
 
-  const LONG_PRESS_MS = 500; // [2.20.2] ускорено с 1с до 0.5с
+  const LONG_PRESS_MS = 500;
   const MOVE_CANCEL_PX = 8;
 
   const cancelPress = () => {
@@ -94,8 +94,8 @@ const PlayersPanel = forwardRef(({
   };
 
   const startPress = (id, e, onFire) => {
-    // Не запускаем long-press по кнопкам действий
     if (e.target.closest('.player-action-btn')) return;
+    if (e.target.closest('.players-info-link')) return;
     const t = e.touches ? e.touches[0] : e;
     pressRef.current.startX = t.clientX;
     pressRef.current.startY = t.clientY;
@@ -121,7 +121,6 @@ const PlayersPanel = forwardRef(({
   };
 
   const endPress = () => {
-    // если long-press не сработал — просто очищаем
     cancelPress();
   };
 
@@ -322,16 +321,8 @@ const PlayersPanel = forwardRef(({
             </>
           )}
 
-          {/* Ссылки внизу панели */}
-          {onOpenDialogs && (
-            <button
-              type="button"
-              className="players-info-link"
-              onClick={onOpenDialogs}
-            >
-              💬 Мои диалоги
-            </button>
-          )}
+          {/* [2.20.4] Нижняя ссылка — только «Что умеет чат?».
+              «Мои диалоги» — в long-press меню по секции «Вы». */}
           {onOpenInfo && (
             <button
               type="button"
@@ -344,7 +335,6 @@ const PlayersPanel = forwardRef(({
         </div>
       </div>
 
-      {/* [2.20.0] меню стикеров */}
       <StickerMenu
         open={!!menuTarget}
         title={menuTarget?.title}

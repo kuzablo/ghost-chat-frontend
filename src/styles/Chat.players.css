@@ -52,33 +52,54 @@
 
 .search-input::placeholder { color: var(--text-muted); }
 
-/* ===== Заголовки секций ===== */
+/* ===== [2.20.4] Sticky-заголовки секций ===== */
+
 .friends-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--card-bg);
   margin-top: 12px;
   margin-bottom: 6px;
+  padding: 10px 6px 6px;
   font-weight: 800;
   font-size: 11px;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--text-muted);
-  border-top: 1px solid var(--card-border);
-  padding-top: 10px;
 }
 
-.players-list > .friends-header:first-child {
+.friends-header:first-child {
   margin-top: 0;
-  border-top: none;
-  padding-top: 0;
 }
 
-/* ===== Строка игрока ===== */
+.friends-header:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--card-border) 15%,
+    var(--card-border) 85%,
+    transparent 100%
+  );
+  opacity: 0.55;
+}
+
+/* ===== [2.20.4] Строка игрока ===== */
 .player-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  padding: 8px 6px;
   font-size: 13px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
 }
 
 body.dark .player-item {
@@ -87,6 +108,14 @@ body.dark .player-item {
 
 .player-item:last-child {
   border-bottom: none;
+}
+
+.player-item:hover {
+  background: var(--messages-bg);
+}
+
+.players-list .player-item:hover .player-name {
+  color: var(--btn-bg);
 }
 
 .player-avatar {
@@ -113,6 +142,7 @@ body.dark .player-item {
   font-weight: 600;
   color: var(--text);
   line-height: 1.2;
+  transition: color 0.12s;
 }
 
 .player-stats {
@@ -240,7 +270,7 @@ body.dark .player-action-btn--unread {
   flex-shrink: 0;
 }
 
-/* [2.17.0] ссылка «Что умеет чат?» внизу панели игроков */
+/* ===== [2.20.4] Ссылка «Что умеет чат?» внизу панели ===== */
 .players-info-link {
   display: block;
   width: 100%;
@@ -273,48 +303,4 @@ body.dark .players-info-link {
     padding: 8px 10px;
     font-size: 12px;
   }
-}
-
-/* ===== [2.20.2] Мягкие разделители между секциями ===== */
-
-/* убираем жёсткий border-top у заголовков, кроме первого */
-.friends-header:not(:first-child) {
-  border-top: none;
-  position: relative;
-  padding-top: 14px;
-}
-
-/* градиентный разделитель — исчезает по краям */
-.friends-header:not(:first-child)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    var(--card-border) 15%,
-    var(--card-border) 85%,
-    transparent 100%
-  );
-  opacity: 0.55;
-}
-
-/* тонкая подсветка строки при hover — как акцент, что элемент живой */
-.player-item {
-  transition: background 0.12s;
-  border-radius: var(--radius-sm);
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
-.player-item:hover {
-  background: var(--messages-bg);
-}
-
-/* те же hover-правила для секции друга — иногда отличается */
-.players-list .player-item:hover .player-name {
-  color: var(--btn-bg);
 }

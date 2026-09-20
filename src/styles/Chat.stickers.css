@@ -1,4 +1,4 @@
-/* ===== [2.20.1] Меню стикеров (long-press) ===== */
+/* ===== [2.20.4] Меню стикеров (long-press) ===== */
 
 .sticker-menu-overlay {
   position: fixed;
@@ -63,7 +63,7 @@ body.dark .sticker-menu-overlay {
   gap: 20px;
 }
 
-/* [2.20.1] стикер 1-в-1 как в капсуле */
+/* стикер 1-в-1 как в капсуле */
 .sticker-menu-item {
   position: relative;
   width: 56px;
@@ -140,7 +140,7 @@ body.dark .sticker-menu-item--danger {
   line-height: 1;
 }
 
-/* ===== Кольцо long-press на элементе ===== */
+/* ===== Кольцо long-press (0.5с) ===== */
 
 @property --ring-progress {
   syntax: '<angle>';
