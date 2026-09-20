@@ -29,7 +29,7 @@ const MessageList = ({
   const swipeStartRef = useRef(null);
   const swipeActiveRef = useRef(false);
 
-  // [2.16.4] долгое нажатие 3с на своё сообщение = редактирование
+  // [2.16.4] долгое нажатие на своё сообщение = редактирование
   const [editRingId, setEditRingId] = useState(null);
   const longPressRef = useRef({
     timer: null,
@@ -141,6 +141,22 @@ const MessageList = ({
     toggleReactions(messageId);
   };
 
+  // [2.17.1] тап по цитате — проскроллить к исходному сообщению
+  const handleQuoteClick = (replyId, e) => {
+    if (e) e.stopPropagation();
+    if (!replyId) return;
+    const container = containerRef?.current;
+    if (!container) return;
+    const el = container.querySelector(`[data-msg-id="${replyId}"]`);
+    if (!el) return;
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('msg--highlight');
+    setTimeout(() => {
+      el.classList.remove('msg--highlight');
+    }, 1600);
+  };
+
   // ===== Свайпы + long press =====
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 80;
@@ -164,7 +180,6 @@ const MessageList = ({
     };
     swipeActiveRef.current = false;
 
-    // [2.16.4] старт long press только для своих
     if (m.userId === myId) {
       setEditRingId(m.id);
       longPressRef.current.timer = setTimeout(() => {
@@ -188,7 +203,6 @@ const MessageList = ({
     if (!swipeActiveRef.current) {
       if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
 
-      // движение стартовало — отменяем long press
       cancelLongPress();
 
       if (Math.abs(dy) > Math.abs(dx)) {
@@ -236,7 +250,6 @@ const MessageList = ({
 
   const handleMsgClick = (e, m) => {
     if (swipeActiveRef.current) return;
-    // [2.16.4] не открывать пикер, если только что сработал long press
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
     handleMessageTap(m.id, e);
   };
@@ -272,8 +285,15 @@ const MessageList = ({
             </div>
           ) : null;
 
+          // [2.17.1] блок цитаты, тап — к исходному
           const replyBlock = m.replyTo ? (
-            <div className="msg-reply-quote">
+            <div
+              className="msg-reply-quote"
+              onClick={(e) => handleQuoteClick(m.replyTo.id, e)}
+              onTouchStart={(e) => e.stopPropagation()}
+              role="button"
+              tabIndex={0}
+            >
               <div className="msg-reply-quote-nick">{m.replyTo.nickname}</div>
               <div className="msg-reply-quote-text">
                 {m.replyTo.text || (m.replyTo.imageUrl ? '📷 фото' : '')}
@@ -286,7 +306,7 @@ const MessageList = ({
             return (
               <React.Fragment key={i}>
                 {dateDivider}
-                <div className="msg msg--image-only">
+                <div className="msg msg--image-only" data-msg-id={m.id}>
                   <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                     {getInitial(m.nickname)}
                   </div>
@@ -307,7 +327,6 @@ const MessageList = ({
                         🗑
                       </div>
                     )}
-                    {/* [2.16.4] кольцо long press */}
                     {editRingId === m.id && <div className="msg-edit-ring" />}
                     <div
                       className="msg-image-only-wrap"
@@ -393,7 +412,7 @@ const MessageList = ({
           return (
             <React.Fragment key={i}>
               {dateDivider}
-              <div className="msg">
+              <div className="msg" data-msg-id={m.id}>
                 <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                   {getInitial(m.nickname)}
                 </div>
@@ -422,7 +441,6 @@ const MessageList = ({
                     </div>
                   )}
 
-                  {/* [2.16.4] кольцо long press */}
                   {editRingId === m.id && <div className="msg-edit-ring" />}
 
                   <div className="msg-header">

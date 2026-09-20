@@ -31,7 +31,7 @@ import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css'; // [2.17.0]
 
 // [правка 2.16.5 → 2.17.0] инфо-панель «Что умеет чат»
-const VERSION = '2.17.0';
+const VERSION = '2.17.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

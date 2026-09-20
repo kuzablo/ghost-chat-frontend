@@ -1078,3 +1078,38 @@ button:active {
   position: relative;
 }
 
+/* ===== [2.17.1] Подсветка сообщения, к которому перепрыгнули по цитате ===== */
+
+.msg--highlight .msg-content,
+.msg--highlight .msg-image-only-wrap {
+  animation: msgHighlightPulse 1.6s ease-out;
+}
+
+@keyframes msgHighlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 181, 232, 0.85), 0 0 0 0 rgba(59, 181, 232, 0.5);
+  }
+  25% {
+    box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.85), 0 0 22px 6px rgba(59, 181, 232, 0.45);
+  }
+  60% {
+    box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.55), 0 0 16px 4px rgba(59, 181, 232, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 181, 232, 0), 0 0 0 0 rgba(59, 181, 232, 0);
+  }
+}
+
+/* [2.17.1] цитата кликабельна — лёгкий отклик при наведении/тапе */
+.msg-reply-quote {
+  transition: background 0.15s, transform 0.1s;
+}
+
+.msg-reply-quote:hover {
+  background: rgba(59, 181, 232, 0.18);
+}
+
+.msg-reply-quote:active {
+  transform: scale(0.985);
+}
+
