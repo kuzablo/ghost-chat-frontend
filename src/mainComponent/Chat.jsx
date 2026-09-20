@@ -28,12 +28,11 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.8 → 2.15.9] маскот-радио: новая логика тапов, кольцо, название трека
-const VERSION = '2.15.9';
+// [правка 2.15.9 → 2.15.10] маскот: убран setPointerCapture, поднят порог drag
+const VERSION = '2.15.10';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
-  // ===== 1. Авторизация =====
   const auth = useAuth();
   const {
     token, nickname, isAuth, isAdmin, myId, serverVersion,
@@ -50,7 +49,6 @@ const Chat = () => {
     tokenRef,
   } = auth;
 
-  // ===== 2. UI-флаги =====
   const {
     isDark, setIsDark,
     activeMessageId,
@@ -64,17 +62,13 @@ const Chat = () => {
     showMobileInput, setShowMobileInput,
   } = useChatUI();
 
-  // ===== 3. Локальное состояние Chat.jsx =====
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
   const [dragY, setDragY] = useState(0);
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
-
-  // [правка 2.15.9] название трека в шапке
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
-  // ===== 4. Refs =====
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
@@ -92,7 +86,7 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [правка 2.15.9] жесты маскота: состояние нажатия, кольцо, активация
+  // [правка 2.15.10] жесты маскота без pointer capture
   const mascotGestureRef = useRef({
     startY: 0,
     startTime: 0,
@@ -110,17 +104,14 @@ const Chat = () => {
 
   const yt = useYouTubePlayer();
 
-  // ===== 5. WebSocket =====
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
     tokenRef.current,
     (msg) => handleWebSocketMessage(msg)
   );
 
-  // ===== 6. Звук =====
   const audio = useAudio();
 
-  // ===== 7. Дуэли =====
   const duel = useDuel({
     sendMessage,
     isAuth,
@@ -130,7 +121,6 @@ const Chat = () => {
     },
   });
 
-  // ===== 8. Основной чат =====
   const chat = useChat({
     sendMessage,
     isAuth,
@@ -173,7 +163,6 @@ const Chat = () => {
     togglePlayers: chatTogglePlayers,
   } = chat;
 
-  // ===== 9. Личные чаты =====
   const priv = usePrivateChat({ sendMessage, myId, players });
   const {
     privateChat,
@@ -184,7 +173,6 @@ const Chat = () => {
     handleWs: handlePrivateWs,
   } = priv;
 
-  // ===== 10. Скролл =====
   const {
     messagesContainerRef,
     messagesEndRef,
@@ -200,7 +188,6 @@ const Chat = () => {
     showPlayersRef.current = showPlayers;
   }, [showPlayers]);
 
-  // ===== WS-роутер =====
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
@@ -264,7 +251,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // ===== Свайп панели игроков =====
+  // Свайп панели игроков
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -385,7 +372,6 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
-  // ===== Свайп в fullscreen =====
   const SWIPE_CLOSE_THRESHOLD = 120;
 
   const handleFsTouchStart = (e) => {
@@ -410,7 +396,6 @@ const Chat = () => {
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
 
-  // ===== Drag инпута вниз =====
   const INPUT_DRAG_THRESHOLD = 60;
 
   const handleInputTouchStart = (e) => {
@@ -436,51 +421,30 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [правка 2.15.9] жесты маскота =====
+  // ===== [правка 2.15.10] Жесты маскота: document-слушатели вместо pointer capture =====
   const LONG_PRESS_MS = 600;
   const VOLUME_PIXELS_PER_PERCENT = 2;
+  const VOLUME_DRAG_THRESHOLD = 15; // было 8 — мало, палец дрейфует на долгом тапе
 
-  // Показать название трека на 5 сек
   const showTrackTitle = () => {
     setTrackTitleVisible(true);
     clearTimeout(titleTimeoutRef.current);
     titleTimeoutRef.current = setTimeout(() => setTrackTitleVisible(false), 5000);
   };
 
-  // Автоматический next (конец трека) — показываем название
   useEffect(() => {
     if (!yt.hasStarted) return;
     showTrackTitle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yt.trackIndex]);
 
-  const handleMascotPointerDown = (e) => {
-    const ref = mascotGestureRef.current;
-    ref.startY = e.clientY;
-    ref.startTime = Date.now();
-    ref.volumeBase = yt.volume;
-    ref.inVolumeDrag = false;
-    ref.longPressFired = false;
-    ref.pointerId = e.pointerId;
-
-    setMascotPressing(true);
-
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
-
-    // [правка 2.15.9] долгий тап — только если НЕ started или started
-    // (логика сработает в pointerup, но таймер нужен для анимации и отмены drag'ом)
-    ref.longPressTimer = setTimeout(() => {
-      ref.longPressFired = true;
-      // Действие выполнится в pointerup
-    }, LONG_PRESS_MS);
-  };
-
-  const handleMascotPointerMove = (e) => {
+  const onMascotGlobalMove = useCallback((e) => {
     const ref = mascotGestureRef.current;
     if (ref.pointerId !== e.pointerId) return;
+
     const dy = e.clientY - ref.startY;
 
-    if (Math.abs(dy) > 8) {
+    if (Math.abs(dy) > VOLUME_DRAG_THRESHOLD) {
       if (!ref.inVolumeDrag) {
         ref.inVolumeDrag = true;
         if (ref.longPressTimer) {
@@ -493,13 +457,16 @@ const Chat = () => {
       const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
       yt.setVolume(ref.volumeBase + delta);
     }
-  };
+  }, [yt]);
 
-  const handleMascotPointerUp = (e) => {
+  const onMascotGlobalUp = useCallback((e) => {
     const ref = mascotGestureRef.current;
     if (ref.pointerId !== e.pointerId) return;
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) { /* noop */ }
     ref.pointerId = null;
+
+    document.removeEventListener('pointermove', onMascotGlobalMove);
+    document.removeEventListener('pointerup', onMascotGlobalUp);
+    document.removeEventListener('pointercancel', onMascotGlobalUp);
 
     setMascotPressing(false);
 
@@ -516,31 +483,44 @@ const Chat = () => {
 
     const duration = Date.now() - ref.startTime;
 
-    // ===== Долгий тап =====
     if (duration >= LONG_PRESS_MS || ref.longPressFired) {
       ref.longPressFired = false;
-
-      // вспышка
       setMascotActivating(true);
       setTimeout(() => setMascotActivating(false), 400);
 
       if (yt.hasStarted) {
-        // уже запускалось → следующий трек
         yt.next();
       } else {
-        // ни разу не запускалось → включаем
         yt.toggle();
       }
       showTrackTitle();
       return;
     }
 
-    // ===== Короткий тап =====
-    if (!yt.hasStarted) {
-      // ничего не делаем, пусть первый запуск будет долгим тапом
-      return;
-    }
+    // короткий тап
+    if (!yt.hasStarted) return;
     yt.toggle();
+  }, [yt, onMascotGlobalMove]);
+
+  const handleMascotPointerDown = (e) => {
+    const ref = mascotGestureRef.current;
+    ref.startY = e.clientY;
+    ref.startTime = Date.now();
+    ref.volumeBase = yt.volume;
+    ref.inVolumeDrag = false;
+    ref.longPressFired = false;
+    ref.pointerId = e.pointerId;
+
+    setMascotPressing(true);
+
+    ref.longPressTimer = setTimeout(() => {
+      ref.longPressFired = true;
+    }, LONG_PRESS_MS);
+
+    // [правка 2.15.10] глобальные слушатели вместо setPointerCapture
+    document.addEventListener('pointermove', onMascotGlobalMove);
+    document.addEventListener('pointerup', onMascotGlobalUp);
+    document.addEventListener('pointercancel', onMascotGlobalUp);
   };
 
   const handleMascotContextMenu = (e) => {
@@ -624,12 +604,8 @@ const Chat = () => {
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
-                onPointerMove={handleMascotPointerMove}
-                onPointerUp={handleMascotPointerUp}
-                onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
-              {/* [правка 2.15.9] кольцо-прогресс долгого тапа */}
               {mascotPressing && (
                 <svg className="mascot-ring" viewBox="0 0 100 100">
                   <circle className="mascot-ring-bg" cx="50" cy="50" r="46" />
@@ -643,7 +619,6 @@ const Chat = () => {
             </div>
 
             <div className="chat-header-text">
-              {/* [правка 2.15.9] название трека вместо заголовка на 5 сек */}
               {trackTitleVisible && yt.trackTitle ? (
                 <div className="chat-header-track-title" title={yt.trackTitle}>
                   ♫ {yt.trackTitle}
