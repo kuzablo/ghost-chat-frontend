@@ -1,22 +1,22 @@
 /* ===== Image-only сообщения (только изображение) ===== */
 
 /*
-  [правка]
-  Квадрат 300×300 убран — портретные картинки сжимались по бокам.
-  Теперь: карточка принимает пропорции картинки,
-  но ограничена по ширине и высоте, чтобы влезать в экран.
+  [правка 2.14.18]
+  Что было:
+    - время в верхнем оверлее — обрезалось на узких карточках;
+    - реакции — в верхнем оверлее, обрезались вместе с временем;
+    - overflow: hidden на wrap мешал реакциям вылезать.
 
-  Принцип:
-  - .msg-image-only-wrap — размер определяется картинкой (inline-block, без width/height).
-  - .msg-image-only-img — max-width и max-height обрезают картинку по экрану,
-    но width/height: auto сохраняют пропорции.
-  - Если картинка широкая — упрётся в max-width, высота подстроится.
-  - Если картинка высокая — упрётся в max-height, ширина подстроится.
-  - Если картинка маленькая — останется маленькой (не тянем).
+  Что стало:
+    - карточка пропорциональна картинке, ограничена max-width/max-height;
+    - верхний оверлей: ник + действия (без времени и реакций);
+    - нижний оверлей: время справа с градиентом;
+    - реакции — под карточкой, вылезают за нижнюю границу,
+      визуал 1-в-1 с private-reaction-badge (круглые 15×15, счётчик при >1);
+    - overflow: visible на wrap, чтобы реакции не обрезались.
 */
 
 .msg--image-only {
-  /* предельные размеры карточки — общие для десктопа */
   --image-max-w: min(340px, 70vw);
   --image-max-h: 45vh;
 
@@ -25,7 +25,8 @@
   gap: 8px;
   width: fit-content;
   max-width: 100%;
-  margin-bottom: 12px;
+  /* запас снизу: под карточкой вылезают реакции */
+  margin-bottom: 22px;
 }
 
 .msg-content--image-only {
@@ -36,19 +37,18 @@
   max-width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
 }
 
 .msg-image-only-wrap {
   position: relative;
   display: inline-block;
-  /* размер диктует картинка внутри */
   max-width: var(--image-max-w);
   max-height: var(--image-max-h);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  /* лёгкий фон, если картинка с прозрачными полями */
-  background: rgba(0, 0, 0, 0.06);
+  /* overflow: visible — нужно, чтобы реакции вылезали за нижнюю границу */
+  overflow: visible;
+  background: transparent;
 }
 
 .msg-image-only-img {
@@ -66,7 +66,7 @@
   transform: scale(0.99);
 }
 
-/* ===== Оверлей поверх картинки ===== */
+/* ===== Верхний оверлей: ник + действия ===== */
 
 .msg-image-overlay {
   position: absolute;
@@ -87,6 +87,7 @@
   );
   pointer-events: none;
   z-index: 2;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .msg-nick--overlay {
@@ -113,51 +114,119 @@
   line-height: 1 !important;
 }
 
-.reactions-header--overlay {
+/* ===== Нижний оверлей: время справа ===== */
+
+.msg-image-bottom-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
   display: flex;
-  gap: 4px;
-  margin-left: auto;
-  pointer-events: auto;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 10px 6px;
+  box-sizing: border-box;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0.25) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
-.reaction-badge--overlay {
-  background: rgba(255, 255, 255, 0.95) !important;
-  color: #111 !important;
-  border: 1.5px solid #111 !important;
-  font-size: 10px;
-}
-
-.reaction-badge--overlay.own {
-  background: #3BB5E8 !important;
-  color: #FFFFFF !important;
-  border-color: #111 !important;
-}
-
-.msg-time--overlay {
+.msg-time--bottom {
   color: #FFFFFF !important;
   font-size: 10px;
+  font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
 }
 
-.reactions-panel--below {
-  margin-top: 0 !important;
-  padding: 6px 8px;
-  background: var(--messages-bg);
-  border-radius: var(--radius-sm);
+/* ===== Реакции под карточкой (стиль из приватного чата) ===== */
+
+/*
+  Бейджи вылезают за нижнюю границу карточки.
+  Размер, форма, счётчик — 1-в-1 с .private-reaction-badge / .private-reaction-count.
+  Появление — та же анимация reactionPop.
+*/
+
+.msg-image-only-reactions {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  transform: translateY(65%);
+  display: flex;
+  gap: 3px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.image-only-reaction-badge {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  position: relative;
+  padding: 0;
+  animation: imageOnlyReactionPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+}
+
+.image-only-reaction-badge.own {
+  background: var(--btn-bg);
+  border-color: var(--btn-border);
+}
+
+.image-only-reaction-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 10px;
+  height: 10px;
+  padding: 0 2px;
+  border-radius: 5px;
+  background: var(--nick-color);
+  color: #FFF;
+  border: 1px solid var(--card-bg);
+  font-size: 7px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+body.dark .image-only-reaction-count {
+  background: #3BB5E8;
+  color: #0E1726;
+}
+
+@keyframes imageOnlyReactionPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  55%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ===== Мобильная версия ===== */
 @media (max-width: 600px) {
   .msg--image-only {
-    /* на мобилке чуть меньше, чтобы влезало и осталось место под аватар */
     --image-max-w: min(320px, 72vw);
     --image-max-h: 40vh;
 
     max-width: 100%;
     width: fit-content;
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
   }
 
   .msg-content--image-only {
@@ -172,9 +241,26 @@
   }
 
   .msg-nick--overlay { font-size: 12px; }
-  .msg-time--overlay { font-size: 9px; }
+  .msg-time--bottom { font-size: 9px; }
   .msg-action-btn--overlay {
     padding: 2px 5px !important;
     font-size: 10px !important;
+  }
+
+  /* реакции на мобилке — как private-reaction-badge */
+  .image-only-reaction-badge {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .image-only-reaction-count {
+    min-width: 11px;
+    height: 11px;
+    font-size: 7px;
+  }
+
+  .msg-image-only-reactions {
+    left: 8px;
   }
 }

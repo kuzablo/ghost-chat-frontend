@@ -120,6 +120,11 @@ const MessageList = ({
           ) : null;
 
           // ==== Image-only ====
+          // [правка 2.14.18]
+          //  - время вынесено вниз-справа с градиентом (Telegram-style);
+          //  - реакции переехали под карточку и вылезают за нижнюю границу —
+          //    визуал скопирован с private-reaction-badge (круглые бейджи 15×15);
+          //  - верхний оверлей: только ник + действия.
           if (isImageOnly) {
             return (
               <React.Fragment key={i}>
@@ -145,6 +150,7 @@ const MessageList = ({
                         }}
                       />
 
+                      {/* верхний оверлей: ник + действия */}
                       <div className="msg-image-overlay">
                         <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
 
@@ -168,20 +174,31 @@ const MessageList = ({
                             </button>
                           )}
                         </div>
+                      </div>
 
-                        <div className="reactions-header reactions-header--overlay">
-                          {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
+                      {/* нижний оверлей: время справа снизу */}
+                      <div className="msg-image-bottom-overlay">
+                        <span className="msg-time msg-time--bottom">
+                          {formatMessageDate(m.time)}
+                        </span>
+                      </div>
+
+                      {/* реакции — под карточкой, вылезают за нижнюю границу */}
+                      {hasReactions(m) && (
+                        <div className="msg-image-only-reactions">
+                          {Object.entries(m.reactions).map(([emoji, users]) => (
                             <span
                               key={emoji}
-                              className={`reaction-badge reaction-badge--overlay ${didIReact(m, emoji) ? 'own' : ''}`}
+                              className={`image-only-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
                             >
-                              {emoji} {users.length}
+                              {emoji}
+                              {users.length > 1 && (
+                                <span className="image-only-reaction-count">{users.length}</span>
+                              )}
                             </span>
                           ))}
                         </div>
-
-                        <span className="msg-time msg-time--overlay">{formatMessageDate(m.time)}</span>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>

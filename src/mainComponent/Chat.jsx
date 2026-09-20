@@ -23,8 +23,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка] 2.14.16 → 2.14.17 (image-only: квадрат → пропорциональная карточка)
-const VERSION = '2.14.17';
+// [правка 2.14.17 → 2.14.18] пикер реакций в fullscreen: 3 эмодзи → 5 (как в личке)
+const VERSION = '2.14.18';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -1020,7 +1020,7 @@ const Chat = () => {
             </button>
             {showFullscreenReactions && (
               <div className="fullscreen-reactions-picker" onClick={(e) => e.stopPropagation()}>
-                {['👍', '🔥', '😂'].map(emoji => {
+                {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
                   const isActive = fullscreenMessage?.reactions?.[emoji]?.includes(nickname);
                   return (
                     <button
