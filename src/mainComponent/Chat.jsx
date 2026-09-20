@@ -34,8 +34,8 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.20.5] переключение темы не закрывает панели
-const VERSION = '2.20.5';
+// [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
+const VERSION = '2.20.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -267,6 +267,8 @@ const Chat = () => {
       if (e.target.closest && e.target.closest('.sticker-menu-overlay')) return;
       // [2.20.5] клик по кнопкам темы и диалогов не закрывает панель игроков
       if (e.target.closest && e.target.closest('.theme-toggle')) return;
+      // [2.20.6] вторая кнопка темы — в шапке чата
+      if (e.target.closest && e.target.closest('.chat-header-theme')) return;
       if (e.target.closest && e.target.closest('.dialogs-toggle')) return;
 
       if (playersOverlayRef.current && !playersOverlayRef.current.contains(e.target)) {
