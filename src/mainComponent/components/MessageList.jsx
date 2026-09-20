@@ -164,7 +164,6 @@ const MessageList = ({
         swipeStartRef.current = null;
         return;
       }
-      // вправо можно только если юзер может удалять
       if (dx > 0 && !canDelete(m)) {
         swipeStartRef.current = null;
         return;
@@ -307,6 +306,16 @@ const MessageList = ({
                               ✏️
                             </button>
                           )}
+                          {/* [2.16.3] корзина — на мобилке скрыта через CSS */}
+                          {canDelete(m) && (
+                            <button
+                              className="msg-action-btn msg-action-btn--overlay msg-action-btn--delete"
+                              onClick={(e) => { e.stopPropagation(); setConfirmData({ messageId: m.id }); }}
+                              title="Удалить"
+                            >
+                              🗑️
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -385,6 +394,16 @@ const MessageList = ({
                           title="Редактировать"
                         >
                           ✏️
+                        </button>
+                      )}
+                      {/* [2.16.3] корзина — на мобилке скрыта через CSS */}
+                      {canDelete(m) && (
+                        <button
+                          className="msg-action-btn msg-action-btn--delete"
+                          onClick={(e) => { e.stopPropagation(); setConfirmData({ messageId: m.id }); }}
+                          title="Удалить"
+                        >
+                          🗑️
                         </button>
                       )}
                     </div>

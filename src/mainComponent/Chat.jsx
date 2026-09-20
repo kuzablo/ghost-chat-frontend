@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// const VERSION = '2.16.2';
-const VERSION = '2.16.2';
+// [правка 2.16.2 → 2.16.3] кнопка удаления на ПК, скрыта на мобилке
+const VERSION = '2.16.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -158,7 +158,6 @@ const Chat = () => {
     setInput,
     sending,
     isUploading,
-    // [2.16.0] reply
     replyTo,
     setReplyTo,
     handleWs: handleChatWs,
@@ -694,7 +693,6 @@ const Chat = () => {
             {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
           </div>
 
-          {/* [2.16.0] превью ответа над инпутом */}
           {replyTo && (
             <div className="reply-preview">
               <div className="reply-preview-body">
