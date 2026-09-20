@@ -130,25 +130,23 @@
     border-width: 1.5px;
   }
 
-  /* ===== [2.23.2] Инпут в потоке, панель поднимается через padding контейнера ===== */
+  /* ===== [2.23.3] Инпут в потоке, без анимаций и без transition ===== */
   .input-row {
     display: none;
     gap: 6px;
     align-items: center;
     margin-top: 0;
     margin-bottom: 0;
-    animation: inputSlideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .chat-main.mobile-input-open .input-row {
     display: flex;
   }
 
-  /* Клавиатура открыта — контейнер сам сжимается снизу на высоту клавиатуры.
-     На Chrome resizes-content --kb-height == 0 (layout уже сжат).
-     На Safari/Firefox --kb-height > 0, поэтому поджимаем контейнер вручную. */
+  /* [2.23.3] убраны transition и animation — устранили «подлёт» на iOS.
+     Подъём теперь делается просто через padding-bottom, а высота
+     клавиатуры приходит уже сглаженной из Chat.jsx. */
   .chat-main.mobile-input-open {
     padding-bottom: calc(8px + var(--kb-height, 0px));
-    transition: padding-bottom 0.25s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
   .input-row input[type="search"] {
@@ -180,17 +178,6 @@
   .send-btn .rotating-text span { font-size: 7px; }
   .send-btn .send-icon { font-size: 24px; }
   .send-btn .send-spinner { width: 22px; height: 22px; }
-
-  @keyframes inputSlideUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 
   .status { font-size: 11px; margin-top: 4px; }
   .typing-indicator { font-size: 11px; min-height: 14px; }

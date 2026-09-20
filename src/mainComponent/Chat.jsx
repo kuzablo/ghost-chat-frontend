@@ -34,15 +34,16 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.23.3] iOS-фикс: сглажен visualViewport, убран «подлёт» панели
 // [2.23.2] инпут в потоке — плавный подъём через padding-bottom контейнера
 // [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
-// [2.23.0] панель ввода прилипает к клавиатуре (как в Telegram)
-// [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус, нативная панель off
-// [2.22.1] свайп по капсуле: лок направления, чёткие пороги, поэтапное закрытие
+// [2.23.0] панель ввода прилипает к клавиатуре
+// [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус
+// [2.22.1] свайп по капсуле: лок направления, чёткие пороги
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.23.2';
+const VERSION = '2.23.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -324,41 +325,62 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  /* ===== [2.23.2] visualViewport: считаем высоту клавиатуры ===== */
+  /* ===== [2.23.3] visualViewport с двойным rAF и порогом =====
+     iOS Safari в первые ~200мс после фокуса даёт скачущие значения
+     vv.height / vv.offsetTop. Сглаживаем через два rAF и не трогаем
+     DOM, если изменение меньше 8px. Считаем высоту только пока
+     фокус на инпуте — иначе 0. */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
 
-    let rafId = 0;
+    let raf1 = 0;
+    let raf2 = 0;
+    let lastKb = -1;
+
+    const isInputFocused = () => {
+      const el = document.activeElement;
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+    };
+
     const apply = () => {
-      const kbHeight = Math.max(
-        0,
-        window.innerHeight - (vv.height + vv.offsetTop)
-      );
-      document.documentElement.style.setProperty(
-        '--kb-height',
-        `${kbHeight}px`
-      );
+      let kb = 0;
+      if (isInputFocused()) {
+        kb = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+      }
+      if (Math.abs(kb - lastKb) < 8) return;
+      lastKb = kb;
+      document.documentElement.style.setProperty('--kb-height', `${kb}px`);
     };
 
-    const onResize = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(apply);
+    const schedule = () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(apply);
+      });
     };
 
-    vv.addEventListener('resize', onResize);
-    vv.addEventListener('scroll', onResize);
-    apply();
+    const onFocusChange = () => schedule();
+
+    vv.addEventListener('resize', schedule);
+    vv.addEventListener('scroll', schedule);
+    document.addEventListener('focusin', onFocusChange);
+    document.addEventListener('focusout', onFocusChange);
+    schedule();
 
     return () => {
-      cancelAnimationFrame(rafId);
-      vv.removeEventListener('resize', onResize);
-      vv.removeEventListener('scroll', onResize);
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      vv.removeEventListener('resize', schedule);
+      vv.removeEventListener('scroll', schedule);
+      document.removeEventListener('focusin', onFocusChange);
+      document.removeEventListener('focusout', onFocusChange);
       document.documentElement.style.removeProperty('--kb-height');
     };
   }, []);
 
-  /* ===== [2.23.2] Фокус инпута без рывков ===== */
+  /* ===== [2.23.3] Фокус инпута: одна попытка, без скроллов ===== */
   useEffect(() => {
     if (!showMobileInput) return;
     const t = setTimeout(() => {
