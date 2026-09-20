@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [новый хук, 2.15.7]
-  Скрытый YouTube-плеер. Играет только звук.
-  ВНИМАНИЕ: скрытие плеера — против ToS YouTube. Может сломаться.
+  [правка 2.15.9]
+  Добавлено:
+    - trackTitle — название текущего видео;
+    - hasStarted — запускался ли плеер хоть раз (для логики короткий/долгий тап).
 
-  API:
-    toggle()  — play/pause
-    next()    — следующий трек по кругу
-    setVolume(v) — 0..100
-    isPlaying, volume, trackIndex, ready, containerId
+  ВНИМАНИЕ: скрытие плеера — против ToS YouTube. Может сломаться.
 */
 
 const PLAYLIST = [
@@ -42,7 +39,9 @@ export const useYouTubePlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(50);
   const [trackIndex, setTrackIndex] = useState(0);
+  const [trackTitle, setTrackTitle] = useState('');
   const [ready, setReady] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const playerRef = useRef(null);
   const containerIdRef = useRef(
@@ -82,9 +81,18 @@ export const useYouTubePlayer = () => {
             e.target.setVolume(volumeRef.current);
           },
           onStateChange: (e) => {
-            if (e.data === 1) setIsPlaying(true);
-            else if (e.data === 2) setIsPlaying(false);
-            else if (e.data === 0) {
+            // [правка 2.15.9] подтягиваем название трека
+            try {
+              const data = e.target.getVideoData?.();
+              if (data?.title) setTrackTitle(data.title);
+            } catch (err) { /* noop */ }
+
+            if (e.data === 1) {
+              setIsPlaying(true);
+              setHasStarted(true);
+            } else if (e.data === 2) {
+              setIsPlaying(false);
+            } else if (e.data === 0) {
               const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
               setTrackIndex(nextIdx);
               playerRef.current?.loadVideoById(PLAYLIST[nextIdx]);
@@ -129,7 +137,9 @@ export const useYouTubePlayer = () => {
     isPlaying,
     volume,
     trackIndex,
+    trackTitle,
     ready,
+    hasStarted,
     containerId: containerIdRef.current,
     toggle,
     next,

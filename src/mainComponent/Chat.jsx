@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.7 → 2.15.8] фикс маскота на iOS Safari
-const VERSION = '2.15.8';
+// [правка 2.15.8 → 2.15.9] маскот-радио: новая логика тапов, кольцо, название трека
+const VERSION = '2.15.9';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -71,6 +71,9 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
 
+  // [правка 2.15.9] название трека в шапке
+  const [trackTitleVisible, setTrackTitleVisible] = useState(false);
+
   // ===== 4. Refs =====
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -89,7 +92,7 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [правка 2.15.8] жесты маскота: без setTimeout для toggle
+  // [правка 2.15.9] жесты маскота: состояние нажатия, кольцо, активация
   const mascotGestureRef = useRef({
     startY: 0,
     startTime: 0,
@@ -97,9 +100,13 @@ const Chat = () => {
     inVolumeDrag: false,
     longPressTimer: null,
     longPressFired: false,
-    lastTapTime: 0,
     pointerId: null,
   });
+
+  const [mascotPressing, setMascotPressing] = useState(false);
+  const [mascotActivating, setMascotActivating] = useState(false);
+
+  const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
 
@@ -257,7 +264,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // ===== Свайп панели игроков (2.15.5) + [правка 2.15.8] исключение маскота =====
+  // ===== Свайп панели игроков =====
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -266,7 +273,6 @@ const Chat = () => {
     const handleStart = (e) => {
       if (e.touches.length !== 1) return;
 
-      // [правка 2.15.8] если тач начался на маскоте — не трогаем, это его жест
       const target = e.target;
       if (target && target.closest && target.closest('.chat-header-mascot-wrap')) {
         swipeDirectionRef.current = null;
@@ -379,7 +385,7 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
-  // ===== Свайп в fullscreen (2.15.3) =====
+  // ===== Свайп в fullscreen =====
   const SWIPE_CLOSE_THRESHOLD = 120;
 
   const handleFsTouchStart = (e) => {
@@ -404,7 +410,7 @@ const Chat = () => {
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
 
-  // ===== Drag инпута вниз (2.15.6) =====
+  // ===== Drag инпута вниз =====
   const INPUT_DRAG_THRESHOLD = 60;
 
   const handleInputTouchStart = (e) => {
@@ -430,10 +436,23 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [правка 2.15.8] Жесты маскота, синхронный play для iOS =====
+  // ===== [правка 2.15.9] жесты маскота =====
   const LONG_PRESS_MS = 600;
-  const DOUBLE_TAP_MS = 250;
   const VOLUME_PIXELS_PER_PERCENT = 2;
+
+  // Показать название трека на 5 сек
+  const showTrackTitle = () => {
+    setTrackTitleVisible(true);
+    clearTimeout(titleTimeoutRef.current);
+    titleTimeoutRef.current = setTimeout(() => setTrackTitleVisible(false), 5000);
+  };
+
+  // Автоматический next (конец трека) — показываем название
+  useEffect(() => {
+    if (!yt.hasStarted) return;
+    showTrackTitle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yt.trackIndex]);
 
   const handleMascotPointerDown = (e) => {
     const ref = mascotGestureRef.current;
@@ -443,11 +462,16 @@ const Chat = () => {
     ref.inVolumeDrag = false;
     ref.longPressFired = false;
     ref.pointerId = e.pointerId;
+
+    setMascotPressing(true);
+
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
 
+    // [правка 2.15.9] долгий тап — только если НЕ started или started
+    // (логика сработает в pointerup, но таймер нужен для анимации и отмены drag'ом)
     ref.longPressTimer = setTimeout(() => {
       ref.longPressFired = true;
-      yt.next();
+      // Действие выполнится в pointerup
     }, LONG_PRESS_MS);
   };
 
@@ -463,6 +487,7 @@ const Chat = () => {
           clearTimeout(ref.longPressTimer);
           ref.longPressTimer = null;
         }
+        setMascotPressing(false);
         setVolumeTipVisible(true);
       }
       const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
@@ -476,6 +501,8 @@ const Chat = () => {
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) { /* noop */ }
     ref.pointerId = null;
 
+    setMascotPressing(false);
+
     if (ref.longPressTimer) {
       clearTimeout(ref.longPressTimer);
       ref.longPressTimer = null;
@@ -487,24 +514,32 @@ const Chat = () => {
       return;
     }
 
-    if (ref.longPressFired) {
-      ref.longPressFired = false;
-      return;
-    }
-
     const duration = Date.now() - ref.startTime;
-    if (duration > LONG_PRESS_MS) return;
 
-    // [правка 2.15.8] СИНХРОННЫЙ toggle/next для iOS Safari.
-    // Раньше toggle был в setTimeout — Safari не считал это user gesture.
-    const now = Date.now();
-    if (now - ref.lastTapTime < DOUBLE_TAP_MS) {
-      ref.lastTapTime = 0;
-      yt.next();
+    // ===== Долгий тап =====
+    if (duration >= LONG_PRESS_MS || ref.longPressFired) {
+      ref.longPressFired = false;
+
+      // вспышка
+      setMascotActivating(true);
+      setTimeout(() => setMascotActivating(false), 400);
+
+      if (yt.hasStarted) {
+        // уже запускалось → следующий трек
+        yt.next();
+      } else {
+        // ни разу не запускалось → включаем
+        yt.toggle();
+      }
+      showTrackTitle();
       return;
     }
-    ref.lastTapTime = now;
-    // Сразу играем/пауза. Если через 250мс придёт второй тап — сделает next.
+
+    // ===== Короткий тап =====
+    if (!yt.hasStarted) {
+      // ничего не делаем, пусть первый запуск будет долгим тапом
+      return;
+    }
     yt.toggle();
   };
 
@@ -582,7 +617,11 @@ const Chat = () => {
               <img
                 src="/mascot.png"
                 alt="banjoboy"
-                className="chat-header-logo"
+                className={
+                  `chat-header-logo` +
+                  (mascotPressing ? ' mascot-pressing' : '') +
+                  (mascotActivating ? ' mascot-activating' : '')
+                }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
                 onPointerMove={handleMascotPointerMove}
@@ -590,6 +629,13 @@ const Chat = () => {
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
+              {/* [правка 2.15.9] кольцо-прогресс долгого тапа */}
+              {mascotPressing && (
+                <svg className="mascot-ring" viewBox="0 0 100 100">
+                  <circle className="mascot-ring-bg" cx="50" cy="50" r="46" />
+                  <circle className="mascot-ring-fg" cx="50" cy="50" r="46" />
+                </svg>
+              )}
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
@@ -597,7 +643,14 @@ const Chat = () => {
             </div>
 
             <div className="chat-header-text">
-              <div className="chat-header-title">banjoboy's crew</div>
+              {/* [правка 2.15.9] название трека вместо заголовка на 5 сек */}
+              {trackTitleVisible && yt.trackTitle ? (
+                <div className="chat-header-track-title" title={yt.trackTitle}>
+                  ♫ {yt.trackTitle}
+                </div>
+              ) : (
+                <div className="chat-header-title">banjoboy's crew</div>
+              )}
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>

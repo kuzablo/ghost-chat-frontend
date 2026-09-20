@@ -1,6 +1,10 @@
 /*
-  [2.15.7 → 2.15.8] Стили маскота-радио.
-  [правка 2.15.8] touch-action: none на маскоте — чтобы скролл не перебивал drag-громкость.
+  [2.15.7] Стили маскота-радио.
+  [правка 2.15.9]
+    - анимации нажатия/активации маскота;
+    - кольцо-прогресс долгого тапа;
+    - вспышка при срабатывании;
+    - анимация появления названия трека.
 */
 
 .yt-hidden-host {
@@ -26,12 +30,60 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
+  transition: transform 0.15s ease-out;
 }
 
-.chat-header-logo:active {
-  cursor: grabbing;
+/* Нажатие — маскот слегка сжимается */
+.chat-header-logo.mascot-pressing {
+  transform: scale(0.92);
 }
 
+/* Сработал долгий тап — вспышка */
+.chat-header-logo.mascot-activating {
+  animation: mascotActivate 0.4s ease-out;
+}
+
+@keyframes mascotActivate {
+  0%   { transform: scale(0.92); }
+  40%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* Кольцо-прогресс долгого тапа */
+.mascot-ring {
+  position: absolute;
+  inset: -5px;
+  width: calc(100% + 10px);
+  height: calc(100% + 10px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mascot-ring circle {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.mascot-ring .mascot-ring-bg {
+  stroke: rgba(59, 181, 232, 0.2);
+}
+
+.mascot-ring .mascot-ring-fg {
+  stroke: #3BB5E8;
+  stroke-dasharray: 289;
+  stroke-dashoffset: 289;
+  transform-origin: center;
+  transform: rotate(-90deg);
+  animation: mascotRingFill 0.6s linear forwards;
+}
+
+@keyframes mascotRingFill {
+  from { stroke-dashoffset: 289; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Подсказка громкости над маскотом */
 .mascot-volume-tip {
   position: absolute;
   top: -32px;
@@ -54,6 +106,7 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* Зелёная точка «играет» */
 .mascot-playing-dot {
   position: absolute;
   bottom: 0;
@@ -70,4 +123,21 @@
 @keyframes mascotPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50%      { transform: scale(1.15); opacity: 0.7; }
+}
+
+/* Название трека в шапке вместо "banjoboy's crew" */
+.chat-header-track-title {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--nick-color);
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: trackTitleFade 0.25s ease-out;
+}
+
+@keyframes trackTitleFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
