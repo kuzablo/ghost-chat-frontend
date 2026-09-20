@@ -17,6 +17,8 @@ const PlayersPanel = forwardRef(({
   onFriendRequest,
   onAcceptRequest,
   onDeclineRequest,
+  // [2.17.0] открыть инфо-панель «Что умеет чат»
+  onOpenInfo,
 }, ref) => {
   const isFriendOnline = (friendId) => players.some(p => p.userId === friendId);
 
@@ -176,6 +178,17 @@ const PlayersPanel = forwardRef(({
               </div>
             ))}
           </>
+        )}
+
+        {/* [2.17.0] ссылка внизу панели */}
+        {onOpenInfo && (
+          <button
+            type="button"
+            className="players-info-link"
+            onClick={onOpenInfo}
+          >
+            Что умеет чат?
+          </button>
         )}
       </div>
     </div>

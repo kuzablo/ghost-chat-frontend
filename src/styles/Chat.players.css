@@ -239,3 +239,38 @@ body.dark .player-action-btn--unread {
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* [2.17.0] ссылка «Что умеет чат?» внизу панели игроков */
+.players-info-link {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 2px dashed var(--card-border);
+  border-radius: var(--radius-md);
+  color: var(--nick-color);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, transform 0.12s;
+  text-align: center;
+}
+
+.players-info-link:active {
+  transform: scale(0.97);
+  background: var(--messages-bg);
+}
+
+body.dark .players-info-link {
+  color: #3BB5E8;
+}
+
+@media (max-width: 600px) {
+  .players-info-link {
+    margin-top: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

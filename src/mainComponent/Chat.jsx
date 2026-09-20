@@ -6,6 +6,7 @@ import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
 import MessageList from './components/MessageList';
 import DuelBox from './components/DuelBox';
+import InfoPanel from './components/InfoPanel'; // [2.17.0]
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -27,9 +28,10 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
+import '../styles/Chat.info.css'; // [2.17.0]
 
-// tweak(chat): long press 3с → 1.5с (2.16.5)
-const VERSION = '2.16.5';
+// [правка 2.16.5 → 2.17.0] инфо-панель «Что умеет чат»
+const VERSION = '2.17.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -54,6 +56,7 @@ const Chat = () => {
     activeMessageId,
     toggleReactions,
     showPlayers, setShowPlayers,
+    showInfo, setShowInfo,
     searchQuery, setSearchQuery,
     banConfirm, setBanConfirm,
     fullscreenImage, setFullscreenImage,
@@ -75,6 +78,7 @@ const Chat = () => {
   const mobilePlayersBtnRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
+  const infoPanelRef = useRef(null); // [2.17.0]
 
   const touchStartYRef = useRef(null);
 
@@ -83,6 +87,7 @@ const Chat = () => {
   const swipeActiveRef = useRef(false);
   const swipeDirectionRef = useRef(null);
   const showPlayersRef = useRef(showPlayers);
+  const showInfoRef = useRef(showInfo); // [2.17.0]
 
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
@@ -200,6 +205,10 @@ const Chat = () => {
     showPlayersRef.current = showPlayers;
   }, [showPlayers]);
 
+  useEffect(() => {
+    showInfoRef.current = showInfo;
+  }, [showInfo]);
+
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
@@ -263,7 +272,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // Свайп панели игроков
+  // Свайпы: панель игроков + инфо-панель
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -279,6 +288,15 @@ const Chat = () => {
       }
 
       const t = e.touches[0];
+
+      // [2.17.0] инфо-панель открыта → закрывается свайпом вправо
+      if (showInfoRef.current) {
+        swipeStartXRef.current = t.clientX;
+        swipeStartYRef.current = t.clientY;
+        swipeActiveRef.current = false;
+        swipeDirectionRef.current = 'closeInfo';
+        return;
+      }
 
       if (showPlayersRef.current) {
         swipeStartXRef.current = t.clientX;
@@ -319,6 +337,11 @@ const Chat = () => {
           swipeDirectionRef.current = null;
           return;
         }
+        // [2.17.0] closeInfo закрывается свайпом ВПРАВО
+        if (swipeDirectionRef.current === 'closeInfo' && dx < 0) {
+          swipeDirectionRef.current = null;
+          return;
+        }
         swipeActiveRef.current = true;
       }
 
@@ -335,6 +358,9 @@ const Chat = () => {
           setShowPlayers(true);
         } else if (swipeDirectionRef.current === 'close' && dx <= -THRESHOLD) {
           setShowPlayers(false);
+        } else if (swipeDirectionRef.current === 'closeInfo' && dx >= THRESHOLD) {
+          // [2.17.0] свайп вправо закрывает инфо-панель
+          setShowInfo(false);
         }
       }
       swipeStartXRef.current = null;
@@ -354,11 +380,17 @@ const Chat = () => {
       document.removeEventListener('touchend', handleEnd);
       document.removeEventListener('touchcancel', handleEnd);
     };
-  }, [chatTogglePlayers, setShowPlayers]);
+  }, [chatTogglePlayers, setShowPlayers, setShowInfo]);
 
   const togglePlayers = () => {
     chatTogglePlayers();
     setShowPlayers(prev => !prev);
+  };
+
+  // [2.17.0] открыть инфо-панель (закрывая игроков, если открыты)
+  const handleOpenInfo = () => {
+    setShowPlayers(false);
+    setShowInfo(true);
   };
 
   const compareVersions = (v1, v2) => {
@@ -517,7 +549,6 @@ const Chat = () => {
     e.preventDefault();
   };
 
-  // [2.16.0] обработчик reply из MessageList
   const handleReply = (m) => {
     setReplyTo({
       id: m.id,
@@ -563,7 +594,12 @@ const Chat = () => {
           onFriendRequest={handleFriendRequest}
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
+          onOpenInfo={handleOpenInfo}
         />
+      )}
+
+      {showInfo && (
+        <InfoPanel ref={infoPanelRef} onClose={() => setShowInfo(false)} />
       )}
 
       {privateChat && (

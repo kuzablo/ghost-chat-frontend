@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 
 /*
-  [новый хук, рефакторинг 2.14.26]
-  [правка 2.14.29] showPassword переехал в useAuth.
-  [правка 2.14.32] sending и isUploading переехали в useChat.
-
-  Здесь только чистые UI-флаги.
+  [2.17.0] добавлено showInfo — состояние инфо-панели «Что умеет чат»
 */
 export const useChatUI = () => {
   const storedTheme = localStorage.getItem('ghost-chat-theme') || 'light';
@@ -13,6 +9,7 @@ export const useChatUI = () => {
   const [isDark, setIsDark] = useState(storedTheme === 'dark');
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [showPlayers, setShowPlayers] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [banConfirm, setBanConfirm] = useState(null);
   const [fullscreenImage, setFullscreenImage] = useState(null);
@@ -38,6 +35,7 @@ export const useChatUI = () => {
     activeMessageId, setActiveMessageId,
     toggleReactions,
     showPlayers, setShowPlayers,
+    showInfo, setShowInfo,
     searchQuery, setSearchQuery,
     banConfirm, setBanConfirm,
     fullscreenImage, setFullscreenImage,
