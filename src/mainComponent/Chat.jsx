@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [откат 2.15.15 → 2.15.16] вернул простой playVideo без mute/unmute
-const VERSION = '2.15.16';
+// [правка 2.15.16 → 2.15.17] диагностика тапов
+const VERSION = '2.15.17';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -69,6 +69,10 @@ const Chat = () => {
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
+  // [правка 2.15.17] диагностика
+  const [dbgTouch, setDbgTouch] = useState(0);
+  const [dbgMouse, setDbgMouse] = useState(0);
+
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
@@ -94,7 +98,6 @@ const Chat = () => {
     inVolumeDrag: false,
   });
 
-  // [правка 2.15.13] защита от эмулированных mouse после touch
   const lastTouchTimeRef = useRef(0);
 
   const [mascotPressing, setMascotPressing] = useState(false);
@@ -501,7 +504,6 @@ const Chat = () => {
   const handleMascotTouchStart = (e) => {
     if (e.touches.length !== 1) return;
 
-    // [правка 2.15.13] отмечаем — на этом элементе был touch
     lastTouchTimeRef.current = Date.now();
 
     const ref = mascotGestureRef.current;
@@ -521,12 +523,12 @@ const Chat = () => {
   };
 
   const handleMascotTouchEnd = () => {
+    setDbgTouch(c => c + 1); // [правка 2.15.17]
     finishGesture();
   };
 
   const handleMascotMouseDown = (e) => {
-    // [правка 2.15.13] на мобилке после touchend браузер эмулирует mousedown —
-    // игнорируем, если за последние 800мс был touch
+    setDbgMouse(c => c + 1); // [правка 2.15.17]
     if (Date.now() - lastTouchTimeRef.current < 800) return;
 
     const ref = mascotGestureRef.current;
@@ -645,7 +647,6 @@ const Chat = () => {
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
-              {/* [правка 2.15.14] вместо зелёной точки — мини-эквалайзер */}
               {yt.isPlaying && (
                 <div className="mascot-equalizer">
                   <span /><span /><span /><span />
@@ -664,8 +665,9 @@ const Chat = () => {
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
+              {/* [правка 2.15.17] диагностика */}
               <div className="chat-header-version">
-                v{VERSION} · R:{yt.ready ? 1 : 0} H:{yt.hasStarted ? 1 : 0} P:{yt.isPlaying ? 1 : 0}
+                v{VERSION} R:{yt.ready ? 1 : 0} H:{yt.hasStarted ? 1 : 0} P:{yt.isPlaying ? 1 : 0} T:{dbgTouch} M:{dbgMouse}
               </div>
             </div>
             <button
