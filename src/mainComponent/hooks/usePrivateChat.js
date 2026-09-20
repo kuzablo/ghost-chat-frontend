@@ -1,19 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [новый хук, рефакторинг 2.14.31]
-  Вынесено из Chat.jsx — всё про личные сообщения:
-    - state: privateChat, privateTypingUser, unreadByUser;
-    - openPrivateChat / closePrivateChat;
-    - handleWs(msg) — WS-фильтр для 7 типов;
-    - эффект фильтрации unreadByUser при смене players.
-
-  players передаётся аргументом (из useChat).
+  [2.17.0] Добавлено:
+    - state dialogs (список диалогов);
+    - handleWs обрабатывает dialogs_list, dialog_update, dialog_unread_reset;
+    - openPrivateChat обнуляет unread в dialogs.
 */
 export const usePrivateChat = ({ sendMessage, myId, players }) => {
   const [privateChat, setPrivateChat] = useState(null);
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
   const [unreadByUser, setUnreadByUser] = useState({});
+  const [dialogs, setDialogs] = useState([]);
 
   const sendMessageRef = useRef(sendMessage);
   const myIdRef = useRef(myId);
@@ -32,6 +29,10 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
       const { [userId]: _, ...rest } = prev;
       return rest;
     });
+    // [2.17.0] при открытии диалога обнуляем unread в списке
+    setDialogs(prev => prev.map(d =>
+      d.userId === userId ? { ...d, unread: 0 } : d
+    ));
     if (sendMessageRef.current) {
       sendMessageRef.current({ type: 'private_history', data: { userId } });
       sendMessageRef.current({ type: 'mark_read', data: { senderId: userId } });
@@ -59,6 +60,52 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
 
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
+      case 'dialogs_list':
+        setDialogs(msg.data || []);
+        return true;
+
+      case 'dialog_update': {
+        const { userId, nickname, lastText, lastAt, unread } = msg.data;
+        setDialogs(prev => {
+          const existing = prev.find(d => d.userId === userId);
+          let updated;
+          if (existing) {
+            updated = prev.map(d => {
+              if (d.userId !== userId) return d;
+              const nextUnread =
+                unread === 'increment' ? (d.unread || 0) + 1 :
+                (typeof unread === 'number' ? unread : d.unread || 0);
+              return {
+                ...d,
+                nickname: nickname || d.nickname,
+                lastText,
+                lastAt,
+                unread: nextUnread,
+              };
+            });
+          } else {
+            updated = [
+              ...prev,
+              {
+                userId,
+                nickname,
+                lastText,
+                lastAt,
+                unread: unread === 'increment' ? 1 : (typeof unread === 'number' ? unread : 0),
+              },
+            ];
+          }
+          return [...updated].sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+        });
+        return true;
+      }
+
+      case 'dialog_unread_reset':
+        setDialogs(prev => prev.map(d =>
+          d.userId === msg.data.userId ? { ...d, unread: 0 } : d
+        ));
+        return true;
+
       case 'unread_private_list': {
         const onlineUserIds = new Set(playersRef.current.map(p => p.userId));
         const newUnread = {};
@@ -176,6 +223,7 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
     privateChat,
     privateTypingUser,
     unreadByUser,
+    dialogs,
     openPrivateChat,
     closePrivateChat,
     handleWs,

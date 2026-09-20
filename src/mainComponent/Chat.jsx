@@ -7,6 +7,7 @@ import AuthModal from './components/AuthModal';
 import MessageList from './components/MessageList';
 import DuelBox from './components/DuelBox';
 import InfoPanel from './components/InfoPanel';
+import DialogsPanel from './components/DialogsPanel';
 import ConfirmModal from './components/ConfirmModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
@@ -30,9 +31,10 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
+import '../styles/Chat.dialogs.css';
 
-// [2.19.4] PrivateChat получает sendMessage вместо ws
-const VERSION = '2.19.4';
+// [2.17.0] панель диалогов
+const VERSION = '2.19.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -77,6 +79,7 @@ const Chat = () => {
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [showDialogs, setShowDialogs] = useState(false); // [2.17.0]
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -192,6 +195,7 @@ const Chat = () => {
     privateChat,
     privateTypingUser,
     unreadByUser,
+    dialogs,
     openPrivateChat,
     closePrivateChat,
     handleWs: handlePrivateWs,
@@ -398,6 +402,21 @@ const Chat = () => {
   const handleOpenInfo = () => {
     setShowPlayers(false);
     setShowInfo(true);
+  };
+
+  // [2.17.0] диалоги
+  const handleOpenDialogs = () => {
+    setShowPlayers(false);
+    setShowDialogs(true);
+  };
+
+  const handleCloseDialogs = () => {
+    setShowDialogs(false);
+  };
+
+  const handleOpenFromDialogs = (userId, nick) => {
+    setShowDialogs(false);
+    openPrivateChat(userId, nick);
   };
 
   const compareVersions = (v1, v2) => {
@@ -655,6 +674,19 @@ const Chat = () => {
         </button>
       )}
 
+      {isAuth && (
+        <button
+          className="dialogs-toggle"
+          onClick={handleOpenDialogs}
+          title="Диалоги"
+        >
+          💬
+          {Object.values(unreadByUser).filter(Boolean).length > 0 && (
+            <span className="unread-badge">!</span>
+          )}
+        </button>
+      )}
+
       {showPlayers && isAuth && (
         <PlayersPanel
           ref={playersOverlayRef}
@@ -675,6 +707,17 @@ const Chat = () => {
           onDeclineRequest={handleDeclineRequest}
           onOpenInfo={handleOpenInfo}
           onLogout={handleLogoutClick}
+          onOpenDialogs={handleOpenDialogs}
+        />
+      )}
+
+      {showDialogs && isAuth && (
+        <DialogsPanel
+          dialogs={dialogs}
+          players={players}
+          myId={myId}
+          onOpen={handleOpenFromDialogs}
+          onClose={handleCloseDialogs}
         />
       )}
 

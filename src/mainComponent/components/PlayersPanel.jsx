@@ -2,10 +2,7 @@ import { forwardRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.19.3] Добавлена кнопка logout в секцию «Вы».
-  Prop onLogout → открывает confirm modal в Chat.jsx.
-  myself берётся из players, а не из filteredPlayers — чтобы кнопка
-  не пропадала при поиске по другому нику.
+  [2.17.0] Добавлен prop onOpenDialogs — кнопка «Мои диалоги» внизу.
 */
 const PlayersPanel = forwardRef(({
   players,
@@ -25,6 +22,7 @@ const PlayersPanel = forwardRef(({
   onDeclineRequest,
   onOpenInfo,
   onLogout,
+  onOpenDialogs,
 }, ref) => {
   const isFriendOnline = (friendId) => players.some(p => p.userId === friendId);
 
@@ -37,7 +35,6 @@ const PlayersPanel = forwardRef(({
   const filteredFriends = friends.filter(f =>
     f.nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  // [2.19.3] свой профиль ищем в полном списке, чтобы кнопка logout была всегда
   const myself = players.find(p => p.userId === myId);
 
   return (
@@ -198,7 +195,16 @@ const PlayersPanel = forwardRef(({
           </>
         )}
 
-        {/* Ссылка внизу панели */}
+        {/* [2.17.0] ссылки внизу панели */}
+        {onOpenDialogs && (
+          <button
+            type="button"
+            className="players-info-link"
+            onClick={onOpenDialogs}
+          >
+            💬 Мои диалоги
+          </button>
+        )}
         {onOpenInfo && (
           <button
             type="button"
