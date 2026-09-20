@@ -4,6 +4,12 @@
   .qr-wrap { display: none; }
   .theme-toggle, .players-toggle { display: none !important; }
 
+  /* [2.18.8] капсула по умолчанию скрыта в Chat.css (для десктопа).
+     На мобилке — включаем обратно. */
+  .mobile-capsule {
+    display: block;
+  }
+
   .chat-container {
     flex-direction: column;
     padding: 6px;
@@ -437,7 +443,7 @@
   .msg-reply-quote-nick { font-size: 10px; }
   .msg-reply-quote-text { font-size: 10.5px; max-width: 180px; }
 
-  /* ===== [2.18.7] Мобильная капсула-тюбик: увеличена в 2 раза (14 → 28px) ===== */
+  /* ===== [2.18.7] Мобильная капсула-тюбик: увеличена в 2 раза ===== */
 
   .mobile-capsule {
     position: relative;
@@ -445,8 +451,8 @@
     margin-top: 4px;
     background: linear-gradient(to top, #F5A9C0 0%, #FBC5D8 100%);
     border-top: 2px solid #111;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
     overflow: hidden;
     cursor: pointer;
     flex-shrink: 0;
@@ -473,7 +479,7 @@
     }
   }
 
-  /* стрелка вверх — покрупнее и по центру увеличенной полоски */
+  /* стрелка вверх */
   .mobile-capsule:not(.mobile-capsule--open)::before {
     content: '';
     position: absolute;
@@ -534,7 +540,7 @@
     animation: none;
   }
 
-  /* пульсирующая точка непрочитанного — подросла с полоской */
+  /* пульсирующая точка непрочитанного */
   .capsule-pulse {
     position: absolute;
     top: 10px;

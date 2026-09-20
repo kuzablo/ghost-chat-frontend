@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// [2.18.7] свайп вверх открывает капсулу + капсула крупнее в 2 раза
-const VERSION = '2.18.7';
+// fix(capsule): вернул капсулу на мобилке (2.18.8)
+const VERSION = '2.18.8';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
