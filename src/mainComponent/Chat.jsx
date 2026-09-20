@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.11 → 2.15.12] iOS: touchend на самом маскоте, а не на document
-const VERSION = '2.15.12';
+// [правка 2.15.12 → 2.15.13] игнор эмулированных mouse после touch
+const VERSION = '2.15.13';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -86,7 +86,6 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [правка 2.15.12] жесты маскота: touchstart/touchend на элементе
   const mascotGestureRef = useRef({
     active: false,
     startY: 0,
@@ -94,6 +93,9 @@ const Chat = () => {
     volumeBase: 50,
     inVolumeDrag: false,
   });
+
+  // [правка 2.15.13] защита от эмулированных mouse после touch
+  const lastTouchTimeRef = useRef(0);
 
   const [mascotPressing, setMascotPressing] = useState(false);
   const [mascotActivating, setMascotActivating] = useState(false);
@@ -249,7 +251,6 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // Свайп панели игроков
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -419,7 +420,7 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [правка 2.15.12] жесты маскота =====
+  // ===== жесты маскота =====
   const LONG_PRESS_MS = 600;
   const VOLUME_PIXELS_PER_PERCENT = 2;
   const VOLUME_DRAG_THRESHOLD = 15;
@@ -436,7 +437,6 @@ const Chat = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yt.trackIndex]);
 
-  // Универсальный расчёт drag (для touchmove на document и mousemove)
   const onMove = useCallback((clientY) => {
     const ref = mascotGestureRef.current;
     if (!ref.active) return;
@@ -453,8 +453,6 @@ const Chat = () => {
     }
   }, [yt]);
 
-  // Завершение жеста — выполняется ВНУТРИ touchend/mouseup на маскоте,
-  // чтобы iOS Safari видел user gesture.
   const finishGesture = useCallback(() => {
     const ref = mascotGestureRef.current;
     if (!ref.active) return;
@@ -473,7 +471,6 @@ const Chat = () => {
 
     const duration = Date.now() - ref.startTime;
 
-    // ===== Долгий тап → next =====
     if (duration >= LONG_PRESS_MS) {
       setMascotActivating(true);
       setTimeout(() => setMascotActivating(false), 400);
@@ -482,7 +479,6 @@ const Chat = () => {
       return;
     }
 
-    // ===== Короткий тап → play/pause =====
     yt.toggle();
     if (!yt.hasStarted) showTrackTitle();
   }, [yt]);
@@ -504,6 +500,10 @@ const Chat = () => {
 
   const handleMascotTouchStart = (e) => {
     if (e.touches.length !== 1) return;
+
+    // [правка 2.15.13] отмечаем — на этом элементе был touch
+    lastTouchTimeRef.current = Date.now();
+
     const ref = mascotGestureRef.current;
     if (ref.active) return;
 
@@ -516,18 +516,19 @@ const Chat = () => {
 
     setMascotPressing(true);
 
-    // touchmove — глобально (если палец уйдёт с маскота, drag продолжится)
     document.addEventListener('touchmove', onGlobalTouchMove, { passive: false });
     document.addEventListener('touchcancel', onGlobalTouchCancel);
   };
 
   const handleMascotTouchEnd = () => {
-    // ВАЖНО: этот обработчик на самом элементе → iOS считает user gesture
     finishGesture();
   };
 
-  // ПК-версия: mousedown/mouseup на самом элементе
   const handleMascotMouseDown = (e) => {
+    // [правка 2.15.13] на мобилке после touchend браузер эмулирует mousedown —
+    // игнорируем, если за последние 800мс был touch
+    if (Date.now() - lastTouchTimeRef.current < 800) return;
+
     const ref = mascotGestureRef.current;
     if (ref.active) return;
 
