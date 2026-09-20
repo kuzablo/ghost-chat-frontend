@@ -16,8 +16,9 @@ import { useAudio } from './hooks/useAudio';
 import { useChatUI } from './hooks/useChatUI';
 import { useAutoScroll } from './hooks/useAutoScroll';
 import { useAuth } from './hooks/useAuth';
-// [правка 2.14.30] дуэли вынесены в отдельный хук
 import { useDuel } from './hooks/useDuel';
+// [правка 2.14.31] лички вынесены в отдельный хук
+import { usePrivateChat } from './hooks/usePrivateChat';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -25,8 +26,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.29 → 2.14.30] рефакторинг шаг 5: дуэли вынесены в useDuel
-const VERSION = '2.14.30';
+// [правка 2.14.30 → 2.14.31] рефакторинг шаг 6: лички вынесены в usePrivateChat
+const VERSION = '2.14.31';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -47,7 +48,7 @@ const Chat = () => {
     tokenRef,
   } = auth;
 
-  // ===== Состояние, оставшееся в Chat.jsx (уедет в следующие хуки) =====
+  // ===== Состояние, оставшееся в Chat.jsx (уедет в useChat) =====
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [players, setPlayers] = useState([]);
@@ -56,11 +57,7 @@ const Chat = () => {
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
-  const [privateChat, setPrivateChat] = useState(null);
-  const [privateTypingUser, setPrivateTypingUser] = useState(null);
-  // [правка 2.14.30] duelNotice пока в Chat.jsx — им пользуются друзья и админ
   const [duelNotice, setDuelNotice] = useState('');
-  const [unreadByUser, setUnreadByUser] = useState({});
   const [friendRequests, setFriendRequests] = useState([]);
   const [notices, setNotices] = useState([]);
 
@@ -95,10 +92,6 @@ const Chat = () => {
     scrollToBottom,
   } = useAutoScroll({ messages, resetKey: isAuth });
 
-  const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
-  const friendRequestsCount = friendRequests.length;
-  const totalNotifications = unreadCount + friendRequestsCount;
-
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
     tokenRef.current,
@@ -107,7 +100,6 @@ const Chat = () => {
 
   const audio = useAudio();
 
-  // [правка 2.14.30] дуэли. onNotice — общий показ уведомления внизу на 3 сек.
   const duel = useDuel({
     sendMessage,
     isAuth,
@@ -117,36 +109,36 @@ const Chat = () => {
     },
   });
 
+  // [правка 2.14.31] лички: state + open/close + WS-фильтр + фильтр unread
+  const priv = usePrivateChat({
+    sendMessage,
+    myId,
+    players,
+  });
+  const {
+    privateChat,
+    privateTypingUser,
+    unreadByUser,
+    openPrivateChat,
+    closePrivateChat,
+    handleWs: handlePrivateWs,
+  } = priv;
+
+  const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
+  const friendRequestsCount = friendRequests.length;
+  const totalNotifications = unreadCount + friendRequestsCount;
+
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
-    // [правка 2.14.30] сначала дуэли, потом общий switch
+    // [правка 2.14.31] сначала дуэли и лички, потом общий switch
     if (duel.handleWs(msg)) return;
+    if (handlePrivateWs(msg)) return;
 
     switch (msg.type) {
       case 'friends_list':
         setFriends(msg.data);
         break;
-      case 'unread_private_list': {
-        const onlineUserIds = new Set(players.map(p => p.userId));
-        const newUnread = {};
-        msg.data.forEach(senderId => {
-          if (onlineUserIds.has(senderId)) {
-            newUnread[senderId] = true;
-          }
-        });
-        setUnreadByUser(prev => {
-          const updated = { ...prev, ...newUnread };
-          const filtered = {};
-          for (const [userId, val] of Object.entries(updated)) {
-            if (onlineUserIds.has(userId)) {
-              filtered[userId] = val;
-            }
-          }
-          return filtered;
-        });
-        break;
-      }
       case 'version':
         console.log(`[CHAT v${VERSION}] Server version: ${msg.data}`);
         break;
@@ -181,7 +173,6 @@ const Chat = () => {
         });
         break;
       }
-      // [правка 2.14.30] duel_* кейсы переехали в useDuel.handleWs
       case 'banned':
         setBannedUntil(msg.data.until);
         break;
@@ -214,96 +205,11 @@ const Chat = () => {
       case 'friend_requests_list':
         setFriendRequests(msg.data);
         break;
-      case 'private_message': {
-        setPrivateChat(prev => {
-          if (!prev || prev.userId !== msg.data.senderId) return prev;
-          return {
-            ...prev,
-            messages: [...(prev.messages || []), {
-              ...msg.data,
-              is_read: false
-            }],
-          };
-        });
-        if (!privateChat || privateChat.userId !== msg.data.senderId) {
-          setUnreadByUser(prev => ({ ...prev, [msg.data.senderId]: true }));
-        } else {
-          if (sendMessage) {
-            sendMessage({ type: 'mark_read', data: { senderId: msg.data.senderId } });
-          }
-          setPrivateChat(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              messages: prev.messages.map(m =>
-                m.senderId === msg.data.senderId ? { ...m, is_read: true } : m
-              )
-            };
-          });
-        }
-        break;
-      }
-      case 'private_message_sent': {
-        setPrivateChat(prev => {
-          if (!prev || prev.userId !== msg.data.recipientId) return prev;
-          return {
-            ...prev,
-            messages: [...(prev.messages || []), {
-              ...msg.data,
-              is_read: false
-            }],
-          };
-        });
-        break;
-      }
-      case 'private_typing':
-        if (msg.data.senderId !== myId) {
-          setPrivateTypingUser(msg.data.isTyping ? msg.data.senderNickname : null);
-        }
-        break;
-      case 'private_history':
-        setPrivateChat(prev => {
-          if (!prev || prev.userId !== msg.data.userId) return prev;
-          return { ...prev, messages: msg.data.messages };
-        });
-        setUnreadByUser(prev => {
-          const { [msg.data.userId]: _, ...rest } = prev;
-          return rest;
-        });
-        break;
-      case 'private_reaction_update': {
-        const { messageId, reactions } = msg.data;
-        setPrivateChat(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            messages: prev.messages.map(m =>
-              m.id === messageId ? { ...m, reactions } : m
-            ),
-          };
-        });
-        break;
-      }
-      case 'message_read': {
-        const { senderId, recipientId, messageIds } = msg.data;
-        setPrivateChat(prev => {
-          if (!prev) return prev;
-          if (prev.userId === senderId || prev.userId === recipientId) {
-            return {
-              ...prev,
-              messages: prev.messages.map(m =>
-                messageIds.includes(m.id) ? { ...m, is_read: true } : m
-              )
-            };
-          }
-          return prev;
-        });
-        break;
-      }
+      // [правка 2.14.31] приватные кейсы переехали в usePrivateChat.handleWs
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [myId, privateChat, sendMessage, players, audio, applyAuthOk, forceLogout, duel]);
+  }, [myId, sendMessage, audio, applyAuthOk, forceLogout, duel, handlePrivateWs]);
 
   useEffect(() => {
     setIsConnected(wsConnected);
@@ -377,18 +283,7 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  useEffect(() => {
-    const onlineUserIds = new Set(players.map(p => p.userId));
-    setUnreadByUser(prev => {
-      const newUnread = {};
-      for (const [userId, hasUnread] of Object.entries(prev)) {
-        if (onlineUserIds.has(userId)) {
-          newUnread[userId] = hasUnread;
-        }
-      }
-      return newUnread;
-    });
-  }, [players]);
+  // [правка 2.14.31] эффект фильтрации unreadByUser при смене players — в usePrivateChat
 
   useEffect(() => {
     if (showMobileInput && inputRef.current) {
@@ -480,25 +375,7 @@ const Chat = () => {
     }
   };
 
-  // [правка 2.14.30] requestDuel / acceptDuel / choose — из useDuel
-
-  const openPrivateChat = (userId, nickname) => {
-    if (userId === myId) return;
-    setPrivateChat({ userId, nickname, messages: [] });
-    setUnreadByUser(prev => {
-      const { [userId]: _, ...rest } = prev;
-      return rest;
-    });
-    if (sendMessage) {
-      sendMessage({ type: 'private_history', data: { userId } });
-      sendMessage({ type: 'mark_read', data: { senderId: userId } });
-    }
-  };
-
-  const closePrivateChat = () => {
-    setPrivateChat(null);
-    setPrivateTypingUser(null);
-  };
+  // [правка 2.14.31] openPrivateChat / closePrivateChat — из usePrivateChat
 
   const banForever = (userId) => {
     if (sendMessage && isAdmin) {
