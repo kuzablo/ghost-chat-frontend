@@ -228,7 +228,7 @@ const MessageList = ({
                   {getInitial(m.nickname)}
                 </div>
                 <div
-                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''}`}
+                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''}`}
                   onClick={() => handleMessageTap(m.id)}
                 >
                   <div className="msg-header">
