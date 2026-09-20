@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.13 → 2.15.14] вместо зелёной точки — дребезжание + эквалайзер
-const VERSION = '2.15.14';
+// fix(mascot): mute→play→unmute для iOS Safari (2.15.15)
+const VERSION = '2.15.15';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
