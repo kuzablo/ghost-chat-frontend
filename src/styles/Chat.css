@@ -788,7 +788,21 @@ body.dark .unread-badge {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   z-index: 10;
   transition: transform 0.15s;
-  animation: fadeInUp 0.2s;
+  /* [правка 2.14.23] была анимация fadeInUp с translate(-50%, …) — она сдвигала
+     кнопку влево на -50% её ширины. Для кнопки нужен только translateY. */
+  animation: fadeInUpBtn 0.2s;
+}
+
+/* [правка 2.14.23] отдельные keyframes для кнопки «вниз» — без translateX */
+@keyframes fadeInUpBtn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .scroll-down-btn:active {

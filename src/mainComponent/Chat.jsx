@@ -11,7 +11,7 @@ import { useWebSocket } from './useWebSocket';
 import {
   getAvatarColor,
   getInitial,
-  formatTime,
+  // [правка 2.14.23] убран formatTime — не использовался
   ensureAudioContext,
   playNotificationSound,
   playSendSound,
@@ -23,8 +23,12 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.21 → 2.14.22] пикер: авто-позиция (сверху/снизу)
-const VERSION = '2.14.22';
+// [правка 2.14.22 → 2.14.23]
+//  - починен звук: ensureAudioContext вызывается при первом user gesture и перед playSendSound;
+//  - useWebSocket теперь отдаёт ws как state (убран костыль wsRef.current = ws);
+//  - удалён мёртвый код: unmountedRef, reconnectTimeoutRef, wsRef;
+//  - удалён мёртвый импорт formatTime.
+const VERSION = '2.14.23';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -127,11 +131,10 @@ const Chat = () => {
   const [notices, setNotices] = useState([]);
   const [showMobileInput, setShowMobileInput] = useState(false);
 
-  const wsRef = useRef(null);
+  // [правка 2.14.23] убраны unmountedRef, reconnectTimeoutRef, wsRef —
+  // они дублировали логику useWebSocket и не использовались.
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
-  const unmountedRef = useRef(false);
-  const reconnectTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const hasAutoScrolledRef = useRef(false);
@@ -148,7 +151,9 @@ const Chat = () => {
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
 
-  const { isConnected: wsConnected, error: wsError, sendMessage, close, ws } = useWebSocket(
+  // [правка 2.14.23] ws приходит из хука как state.
+  // close не деструктурируем — не используется в этом компоненте.
+  const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
     tokenRef.current,
     (msg) => handleWebSocketMessage(msg)
@@ -189,9 +194,8 @@ const Chat = () => {
         setIsAuth(true);
         setIsAdmin(msg.data.role === 'admin');
         setServerVersion(msg.data.serverVersion || '');
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
-        }
+        // [правка 2.14.23] вместо прямой проверки readyState — sendMessage сам её делает
+        sendMessage({ type: 'get_friends' });
         break;
       case 'history':
         setMessages(msg.data);
@@ -272,9 +276,8 @@ const Chat = () => {
       case 'friend_request_accepted_notification':
         setDuelNotice(`🎉 ${msg.data.user1Nickname} и ${msg.data.user2Nickname} теперь друзья!`);
         setTimeout(() => setDuelNotice(''), 4000);
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'get_friends' }));
-        }
+        // [правка 2.14.23] sendMessage сам проверяет readyState
+        sendMessage({ type: 'get_friends' });
         break;
       case 'friend_request_accepted':
       case 'friend_request_declined':
@@ -372,12 +375,14 @@ const Chat = () => {
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [myId, privateChat, sendMessage]);
+  }, [myId, privateChat, sendMessage, players]);
+
+  // [правка 2.14.23] убран useEffect, синхронизировавший wsRef.current = ws.
+  // Теперь ws приходит из хука как state.
 
   useEffect(() => {
-    wsRef.current = ws;
     setIsConnected(wsConnected);
-  }, [ws, wsConnected]);
+  }, [wsConnected]);
 
   useEffect(() => {
     if (wsError) {
@@ -386,6 +391,24 @@ const Chat = () => {
       return () => clearTimeout(timer);
     }
   }, [wsError]);
+
+  // [правка 2.14.23] разблокировка AudioContext.
+  // Браузеры создают AudioContext только после user gesture —
+  // ловим первый клик/тап и инициализируем. После этого звук уведомлений
+  // и звук отправки работают.
+  useEffect(() => {
+    const init = () => {
+      ensureAudioContext();
+      document.removeEventListener('click', init);
+      document.removeEventListener('touchstart', init);
+    };
+    document.addEventListener('click', init);
+    document.addEventListener('touchstart', init);
+    return () => {
+      document.removeEventListener('click', init);
+      document.removeEventListener('touchstart', init);
+    };
+  }, []);
 
   // ===== Скролл при появлении сообщений =====
   useEffect(() => {
@@ -559,6 +582,9 @@ const Chat = () => {
 
   const handleSendMessage = () => {
     if (sending || !sendMessage || !input.trim() || !isAuth) return;
+    // [правка 2.14.23] на всякий — если первый клик был не туда, где стоял listener,
+    // разблокируем AudioContext перед звуком отправки
+    ensureAudioContext();
     setSending(true);
     sendMessage({
       type: 'message',
@@ -803,7 +829,8 @@ const Chat = () => {
           userId={privateChat.userId}
           nickname={privateChat.nickname}
           myId={myId}
-          ws={wsRef.current}
+          // [правка 2.14.23] ws приходит из хука как state, а не из wsRef.current
+          ws={ws}
           initialMessages={privateChat.messages || []}
           typingUser={privateTypingUser}
           onClose={closePrivateChat}
