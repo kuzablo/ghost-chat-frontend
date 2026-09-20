@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// [2.19.1] adminUserId из auth — писать админу можно всегда
-const VERSION = '2.19.1';
+// fix(info): кнопка «Написать админу» добавлена в InfoPanel (2.19.2)
+const VERSION = '2.19.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

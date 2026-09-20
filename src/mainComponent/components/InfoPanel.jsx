@@ -1,9 +1,10 @@
 import { forwardRef } from 'react';
 
 /*
-  [2.18.9] Переработан текст инфо-панели: живее, короче, дружелюбнее.
+  [2.19.1] Добавлена кнопка «Написать админу» в outro.
+  Работает даже если админ офлайн — сообщение сохранится в БД.
 */
-const InfoPanel = forwardRef(({ onClose }, ref) => {
+const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
   return (
     <>
       <div className="info-overlay" onClick={onClose} />
@@ -177,8 +178,18 @@ const InfoPanel = forwardRef(({ onClose }, ref) => {
 
           <section className="info-section info-section--outro">
             <p>
-              Хорошего общения. Что-то сломалось — напиши админу.
+              Хорошего общения. Что-то сломалось или есть вопрос —
+              напиши админу.
             </p>
+            {onMessageAdmin && (
+              <button
+                type="button"
+                className="info-admin-btn"
+                onClick={onMessageAdmin}
+              >
+                ✉️ Написать админу
+              </button>
+            )}
           </section>
 
         </div>
