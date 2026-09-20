@@ -7,6 +7,7 @@ import AuthModal from './components/AuthModal';
 import MessageList from './components/MessageList';
 import DuelBox from './components/DuelBox';
 import InfoPanel from './components/InfoPanel';
+import ConfirmModal from './components/ConfirmModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -30,8 +31,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// fix(info): кнопка «Написать админу» добавлена в InfoPanel (2.19.2)
-const VERSION = '2.19.2';
+// [2.19.3] добавлен logout через PlayersPanel + confirm modal
+const VERSION = '2.19.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -75,6 +76,9 @@ const Chat = () => {
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
+
+  // [2.19.3] состояние confirm modal для logout
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -563,8 +567,6 @@ const Chat = () => {
     setShowMobileInput(true);
   };
 
-  // [2.19.1] писать админу можно всегда — сообщение сохранится в БД,
-  // а админ увидит его, когда зайдёт (через unread_private_list)
   const handleMessageAdmin = () => {
     setShowInfo(false);
     if (!adminUserId) {
@@ -575,6 +577,17 @@ const Chat = () => {
     const adminOnline = players.find(p => p.userId === adminUserId);
     const nick = adminOnline?.nickname || adminNickname || 'admin';
     openPrivateChat(adminUserId, nick);
+  };
+
+  // [2.19.3] logout через confirm modal
+  const handleLogoutClick = () => {
+    setLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutConfirm(false);
+    setShowPlayers(false);
+    forceLogout('');
   };
 
   const handleCapsuleTap = () => {
@@ -664,6 +677,7 @@ const Chat = () => {
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
           onOpenInfo={handleOpenInfo}
+          onLogout={handleLogoutClick}
         />
       )}
 
@@ -698,6 +712,15 @@ const Chat = () => {
           }
         }}
         onCancel={() => setBanConfirm(null)}
+      />
+
+      {/* [2.19.3] confirm modal для logout */}
+      <ConfirmModal
+        open={logoutConfirm}
+        title="Выйти из аккаунта?"
+        description="Вы выйдете из banjoboy's crew. Зайти снова можно в любой момент."
+        onConfirm={handleLogoutConfirm}
+        onCancel={() => setLogoutConfirm(false)}
       />
 
       <div className="chat-container">

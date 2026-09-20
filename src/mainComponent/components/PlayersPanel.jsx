@@ -1,6 +1,12 @@
 import { forwardRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
+/*
+  [2.19.3] Добавлена кнопка logout в секцию «Вы».
+  Prop onLogout → открывает confirm modal в Chat.jsx.
+  myself берётся из players, а не из filteredPlayers — чтобы кнопка
+  не пропадала при поиске по другому нику.
+*/
 const PlayersPanel = forwardRef(({
   players,
   friends,
@@ -17,8 +23,8 @@ const PlayersPanel = forwardRef(({
   onFriendRequest,
   onAcceptRequest,
   onDeclineRequest,
-  // [2.17.0] открыть инфо-панель «Что умеет чат»
   onOpenInfo,
+  onLogout,
 }, ref) => {
   const isFriendOnline = (friendId) => players.some(p => p.userId === friendId);
 
@@ -31,7 +37,8 @@ const PlayersPanel = forwardRef(({
   const filteredFriends = friends.filter(f =>
     f.nickname.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const myself = filteredPlayers.find(p => p.userId === myId);
+  // [2.19.3] свой профиль ищем в полном списке, чтобы кнопка logout была всегда
+  const myself = players.find(p => p.userId === myId);
 
   return (
     <div className="players-overlay" ref={ref}>
@@ -60,6 +67,17 @@ const PlayersPanel = forwardRef(({
                 {myself.nickname}
                 <small className="player-stats">W:{myself.wins} L:{myself.losses}</small>
               </span>
+              {onLogout && (
+                <div className="player-actions">
+                  <button
+                    className="player-action-btn player-action-btn--danger"
+                    onClick={onLogout}
+                    title="Выйти из аккаунта"
+                  >
+                    🚪
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -180,7 +198,7 @@ const PlayersPanel = forwardRef(({
           </>
         )}
 
-        {/* [2.17.0] ссылка внизу панели */}
+        {/* Ссылка внизу панели */}
         {onOpenInfo && (
           <button
             type="button"
