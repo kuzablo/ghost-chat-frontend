@@ -6,7 +6,7 @@ import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
 import MessageList from './components/MessageList';
 import DuelBox from './components/DuelBox';
-import InfoPanel from './components/InfoPanel'; // [2.17.0]
+import InfoPanel from './components/InfoPanel';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -28,10 +28,10 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
-import '../styles/Chat.info.css'; // [2.17.0]
+import '../styles/Chat.info.css';
 
-// ui(chat): цитата reply компактнее (2.17.3)
-const VERSION = '2.17.3';
+// [правка 2.17.3 → 2.18.0] мобильная капсула-тюбик со стикерами
+const VERSION = '2.18.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -73,12 +73,15 @@ const Chat = () => {
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
+  // [2.18.0] состояние мобильной капсулы
+  const [capsuleOpen, setCapsuleOpen] = useState(false);
+
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
-  const infoPanelRef = useRef(null); // [2.17.0]
+  const infoPanelRef = useRef(null);
 
   const touchStartYRef = useRef(null);
 
@@ -87,10 +90,13 @@ const Chat = () => {
   const swipeActiveRef = useRef(false);
   const swipeDirectionRef = useRef(null);
   const showPlayersRef = useRef(showPlayers);
-  const showInfoRef = useRef(showInfo); // [2.17.0]
+  const showInfoRef = useRef(showInfo);
 
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
+
+  // [2.18.0] жест по капсуле (свайп вниз — закрыть)
+  const capsuleSwipeRef = useRef({ startY: 0, active: false });
 
   const mascotGestureRef = useRef({
     startY: 0,
@@ -287,9 +293,14 @@ const Chat = () => {
         return;
       }
 
+      // [2.18.0] тач по капсуле не должен активировать глобальные свайпы
+      if (target && target.closest && target.closest('.mobile-capsule')) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+
       const t = e.touches[0];
 
-      // [2.17.0] инфо-панель открыта → закрывается свайпом вправо
       if (showInfoRef.current) {
         swipeStartXRef.current = t.clientX;
         swipeStartYRef.current = t.clientY;
@@ -337,7 +348,6 @@ const Chat = () => {
           swipeDirectionRef.current = null;
           return;
         }
-        // [2.17.0] closeInfo закрывается свайпом ВПРАВО
         if (swipeDirectionRef.current === 'closeInfo' && dx < 0) {
           swipeDirectionRef.current = null;
           return;
@@ -359,7 +369,6 @@ const Chat = () => {
         } else if (swipeDirectionRef.current === 'close' && dx <= -THRESHOLD) {
           setShowPlayers(false);
         } else if (swipeDirectionRef.current === 'closeInfo' && dx >= THRESHOLD) {
-          // [2.17.0] свайп вправо закрывает инфо-панель
           setShowInfo(false);
         }
       }
@@ -387,7 +396,6 @@ const Chat = () => {
     setShowPlayers(prev => !prev);
   };
 
-  // [2.17.0] открыть инфо-панель (закрывая игроков, если открыты)
   const handleOpenInfo = () => {
     setShowPlayers(false);
     setShowInfo(true);
@@ -557,6 +565,47 @@ const Chat = () => {
       imageUrl: m.imageUrl || null,
     });
     setShowMobileInput(true);
+  };
+
+  // ===== [2.18.0] мобильная капсула =====
+  const handleCapsuleTap = () => {
+    if (!capsuleOpen) {
+      setCapsuleOpen(true);
+    }
+  };
+
+  const handlePlayersCapsuleTap = (e) => {
+    e.stopPropagation();
+    togglePlayers();
+    setCapsuleOpen(false);
+  };
+
+  const handleWriteCapsuleTap = (e) => {
+    e.stopPropagation();
+    setShowMobileInput(v => !v);
+    setCapsuleOpen(false);
+  };
+
+  const handleCapsuleTouchStart = (e) => {
+    if (!capsuleOpen) return;
+    if (e.touches.length !== 1) return;
+    capsuleSwipeRef.current.startY = e.touches[0].clientY;
+    capsuleSwipeRef.current.active = true;
+  };
+
+  const handleCapsuleTouchMove = (e) => {
+    if (!capsuleSwipeRef.current.active) return;
+    if (e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - capsuleSwipeRef.current.startY;
+    // если сдвинулся больше чем на 40px вниз — считаем это жестом закрытия
+    if (dy > 40) {
+      capsuleSwipeRef.current.active = false;
+      setCapsuleOpen(false);
+    }
+  };
+
+  const handleCapsuleTouchEnd = () => {
+    capsuleSwipeRef.current.active = false;
   };
 
   return (
@@ -809,36 +858,49 @@ const Chat = () => {
             </button>
           </div>
 
-          <div className="mobile-bottom-bar">
-            <button
-              className="mobile-bar-btn"
-              ref={mobilePlayersBtnRef}
-              onClick={togglePlayers}
-              title="Игроки"
-              aria-label="Игроки"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" strokeWidth="2"
-                   strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-              {totalNotifications > 0 && <span className="mobile-bar-badge">!</span>}
-            </button>
-            <button
-              className="mobile-bar-btn"
-              onClick={() => setShowMobileInput(v => !v)}
-              title="Написать"
-              aria-label="Написать"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" strokeWidth="2"
-                   strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </button>
+          {/* [2.18.0] мобильная капсула-тюбик со стикерами */}
+          <div
+            className={`mobile-capsule ${capsuleOpen ? 'mobile-capsule--open' : ''}`}
+            onClick={handleCapsuleTap}
+            onTouchStart={handleCapsuleTouchStart}
+            onTouchMove={handleCapsuleTouchMove}
+            onTouchEnd={handleCapsuleTouchEnd}
+            onTouchCancel={handleCapsuleTouchEnd}
+          >
+            {!capsuleOpen && totalNotifications > 0 && (
+              <span className="capsule-pulse" />
+            )}
+
+            <div className="capsule-content">
+              <button
+                type="button"
+                className="capsule-btn capsule-btn--players"
+                ref={mobilePlayersBtnRef}
+                onClick={handlePlayersCapsuleTap}
+                aria-label="Игроки"
+              >
+                <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                {totalNotifications > 0 && (
+                  <span className="capsule-badge">!</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="capsule-btn capsule-btn--write"
+                onClick={handleWriteCapsuleTap}
+                aria-label="Написать"
+              >
+                <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div className="status">

@@ -839,9 +839,6 @@ body.dark .unread-badge {
 }
 
 /* ===== Утилиты ===== */
-.mobile-bottom-bar {
-  display: none;
-}
 
 @media (pointer: fine) {
   .attach-btn { display: none !important; }
