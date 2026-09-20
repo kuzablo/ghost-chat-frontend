@@ -156,14 +156,19 @@
     border-radius: 14px;
   }
 
-  .input-row input[type="search"]:focus,
-  .input-row input[type="search"]:focus-visible {
-    box-shadow: 0 0 0 3px rgba(245, 169, 192, 0.5);
-  }
-  body.dark .input-row input[type="search"]:focus,
-  body.dark .input-row input[type="search"]:focus-visible {
-    box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.32);
-  }
+.input-row input[type="search"]:focus,
+.input-row input[type="search"]:focus-visible {
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 4px rgba(245, 169, 192, 0.28);
+}
+
+body.dark .input-row input[type="search"]:focus,
+body.dark .input-row input[type="search"]:focus-visible {
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.18);
+}
 
   .chat-main.mobile-input-open .mobile-capsule {
     display: none;

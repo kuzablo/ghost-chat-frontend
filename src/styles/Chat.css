@@ -536,16 +536,20 @@ body.dark .msg-reaction-count {
   transition: border-color 0.22s ease, box-shadow 0.28s ease;
 }
 
+/* [2.23.4] фокус — мягкое свечение, не резкая обводка.
+   outline: none — гасим дефолтный iOS/Android outline. */
 .input-row input[type="search"]:focus,
 .input-row input[type="search"]:focus-visible {
-  border-color: var(--input-border);
-  box-shadow: 0 0 0 3px rgba(245, 169, 192, 0.45);
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 4px rgba(245, 169, 192, 0.28);
 }
 
 body.dark .input-row input[type="search"]:focus,
 body.dark .input-row input[type="search"]:focus-visible {
-  border-color: var(--input-border);
-  box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.28);
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.18);
 }
 
 @supports (-webkit-touch-callout: none) {

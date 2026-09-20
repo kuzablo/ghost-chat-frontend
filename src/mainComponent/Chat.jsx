@@ -34,6 +34,8 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.23.4] inputMode="search" + autoComplete="new-password" —
+//          гасим iOS InputAssistant «Автозаполнить контакт»
 // [2.23.3] iOS-фикс: сглажен visualViewport, убран «подлёт» панели
 // [2.23.2] инпут в потоке — плавный подъём через padding-bottom контейнера
 // [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
@@ -43,7 +45,7 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.23.3';
+const VERSION = '2.23.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -325,11 +327,7 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  /* ===== [2.23.3] visualViewport с двойным rAF и порогом =====
-     iOS Safari в первые ~200мс после фокуса даёт скачущие значения
-     vv.height / vv.offsetTop. Сглаживаем через два rAF и не трогаем
-     DOM, если изменение меньше 8px. Считаем высоту только пока
-     фокус на инпуте — иначе 0. */
+  /* ===== [2.23.3] visualViewport с двойным rAF и порогом ===== */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
@@ -1046,7 +1044,8 @@ const Chat = () => {
               transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
             }}
           >
-            {/* [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов */}
+            {/* [2.23.4] autoComplete="new-password" + inputMode="search" —
+                        гасим iOS InputAssistant «Автозаполнить контакт» */}
             <input
               ref={inputRef}
               type="search"
@@ -1056,12 +1055,12 @@ const Chat = () => {
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               disabled={!isAuth || isUploading}
               placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
-              autoComplete="off"
+              autoComplete="new-password"
               autoCorrect="off"
               autoCapitalize="sentences"
               spellCheck={false}
               enterKeyHint="send"
-              inputMode="text"
+              inputMode="search"
             />
             <button
               className="attach-btn"
