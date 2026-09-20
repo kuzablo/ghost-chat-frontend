@@ -153,14 +153,14 @@
   .attach-btn { display: none !important; }
 
   .send-btn {
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     border-width: 2px;
     flex-shrink: 0;
   }
-  .send-btn .rotating-text span { font-size: 9px; }
-  .send-btn .send-icon { font-size: 20px; }
-  .send-btn .send-spinner { width: 18px; height: 18px; }
+  .send-btn .rotating-text span { font-size: 7px; }
+  .send-btn .send-icon { font-size: 24px; }
+  .send-btn .send-spinner { width: 22px; height: 22px; }
 
   /* Мобильная панель 4 кнопок */
   .mobile-bottom-bar {

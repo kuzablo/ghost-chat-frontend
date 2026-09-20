@@ -22,7 +22,7 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.12';
+const VERSION = '2.14.13';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -402,38 +402,51 @@ const Chat = () => {
     });
   }, [messages]);
 
-  // ===== Скролл-индикатор «вниз» + подгонка картинок через 1с бездействия =====
+  // ===== Подгонка картинок под высоту .messages =====
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
 
-    let rafId = null;
-    let idleTimer = null;
-
     const fitImages = () => {
-      const maxH = Math.max(120, el.clientHeight - 90);
+      const h = el.clientHeight;
+      if (!h) return;
+      const maxH = Math.max(120, Math.floor(h * 0.6));
       el.querySelectorAll('.msg-image-only-img').forEach(img => {
         img.style.maxHeight = `${maxH}px`;
       });
     };
 
+    fitImages();
+
+    const t1 = setTimeout(fitImages, 200);
+    const t2 = setTimeout(fitImages, 800);
+    const t3 = setTimeout(fitImages, 2000);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [messages.length, isAuth]);
+
+  // ===== Скролл-индикатор «вниз» =====
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+
+    let rafId = null;
     const handleScroll = () => {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
         setShowScrollDown(distanceFromBottom > 200);
       });
-
-      // Каждый новый скролл — сбрасываем таймер
-      if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(fitImages, 1000);
     };
 
     el.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      if (idleTimer) clearTimeout(idleTimer);
       el.removeEventListener('scroll', handleScroll);
     };
   }, [isAuth]);
@@ -932,7 +945,10 @@ const Chat = () => {
                 {sendChars.map((char, idx) => {
                   const angle = (360 / sendChars.length) * idx;
                   return (
-                    <span key={idx} style={{ transform: `rotate(${angle}deg) translate(0, -20px)` }}>
+                    <span
+                      key={idx}
+                      style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}
+                    >
                       {char}
                     </span>
                   );
