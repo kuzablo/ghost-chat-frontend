@@ -15,7 +15,6 @@
     height: 100%;
     width: 100%;
     max-width: 100%;
-    /* [2.22.2] safe-area снизу — чтобы приложение не упиралось в home-indicator */
     padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
   }
 
@@ -131,17 +130,37 @@
     border-width: 1.5px;
   }
 
-  /* ===== [2.22.2] Инпут-строка на мобилке ===== */
+  /* ===== [2.23.0] Инпут-строка прилипает к клавиатуре =====
+     Панель вырвана из потока и висит над нижним краем окна.
+     При появлении клавиатуры transform сдвигает её вверх на --kb-height.
+     На Chrome (resizes-content) --kb-height = 0 → панель остаётся на месте,
+     а сам layout сжимается под неё. На Safari --kb-height > 0 → панель
+     поднимается вручную. В обоих случаях — плавно, без рывков. */
   .input-row {
     display: none;
     gap: 6px;
     align-items: center;
     margin-top: 0;
-    margin-bottom: 6px;
+    margin-bottom: 0;
     animation: inputSlideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .chat-main.mobile-input-open .input-row {
     display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 10px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    background: var(--card-bg);
+    border-top: 2px solid var(--card-border);
+    z-index: 60;
+    will-change: transform;
+  }
+
+  /* [2.23.0] отступ под панель — сообщения не уходят под неё */
+  .chat-main.mobile-input-open .messages-wrapper {
+    padding-bottom: calc(76px + var(--kb-height, 0px));
   }
 
   .input-row input[type="text"] {
@@ -149,11 +168,10 @@
     font-size: 16px;
     border-width: 2px;
     border-radius: 14px;
-    /* [2.22.2] чтобы браузер не «прыгал» при фокусе */
     scroll-margin-bottom: 200px;
   }
 
-  /* [2.22.2] на мобилке фокус-подсветка мягче, чем на десктопе */
+  /* фокус: мягкое свечение, не резкая синяя рамка */
   .input-row input[type="text"]:focus,
   .input-row input[type="text"]:focus-visible {
     box-shadow: 0 0 0 3px rgba(245, 169, 192, 0.5);
@@ -163,12 +181,11 @@
     box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.32);
   }
 
-  /* [2.22.2] когда клавиатура открыта — капсула не нужна, она мешает */
+  /* [2.22.2] при открытой клавиатуре капсула не нужна */
   .chat-main.mobile-input-open .mobile-capsule {
     display: none;
   }
 
-  /* [2.22.2] при открытой клавиатуре убираем лишние отступы внизу */
   .chat-main.mobile-input-open {
     padding-bottom: 8px;
   }

@@ -34,12 +34,13 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.23.0] панель ввода прилипает к клавиатуре (как в Telegram)
 // [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус, нативная панель off
 // [2.22.1] свайп по капсуле: лок направления, чёткие пороги, поэтапное закрытие
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.22.2';
+const VERSION = '2.23.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -321,21 +322,32 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  /* ===== [2.22.2] Клавиатура: следим за visualViewport ===== */
+  /* ===== [2.23.0] Клавиатура: точная высота + флаг открытия =====
+     Считаем высоту так, чтобы покрыть оба поведения браузеров:
+       - Chrome (resizes-content): layout сжимается, innerHeight == vv.height,
+         kbHeight = 0 → панель просто остаётся на bottom: 0.
+       - Safari / Firefox: layout не сжимается, innerHeight > vv.height,
+         kbHeight = разнице → панель сдвигается transform'ом вверх.
+     Формула: innerHeight - (vv.height + vv.offsetTop). */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
 
     let rafId = 0;
     const apply = () => {
-      const gap = window.innerHeight - vv.height;
-      const isKeyboardOpen = gap > 120; // ниже этого — считаем, что клавиатура
-      document.documentElement.classList.toggle('keyboard-open', isKeyboardOpen);
+      const kbHeight = Math.max(
+        0,
+        window.innerHeight - (vv.height + vv.offsetTop)
+      );
+      const keyboardOpen = kbHeight > 100;
+
       document.documentElement.style.setProperty(
         '--kb-height',
-        `${Math.max(0, gap)}px`
+        `${kbHeight}px`
       );
+      document.documentElement.classList.toggle('keyboard-open', keyboardOpen);
     };
+
     const onResize = () => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(apply);
@@ -349,12 +361,12 @@ const Chat = () => {
       cancelAnimationFrame(rafId);
       vv.removeEventListener('resize', onResize);
       vv.removeEventListener('scroll', onResize);
-      document.documentElement.classList.remove('keyboard-open');
       document.documentElement.style.removeProperty('--kb-height');
+      document.documentElement.classList.remove('keyboard-open');
     };
   }, []);
 
-  /* ===== [2.22.2] Фокус инпута: сначала скролл, потом фокус ===== */
+  /* ===== [2.23.0] Фокус инпута: сначала скролл к низу, потом фокус ===== */
   useEffect(() => {
     if (!showMobileInput) return;
 
@@ -1025,8 +1037,10 @@ const Chat = () => {
             onTouchMove={handleInputTouchMove}
             onTouchEnd={handleInputTouchEnd}
             style={{
-              transform: `translateY(${inputDragY}px)`,
-              transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
+              transform: `translateY(calc(${inputDragY}px - var(--kb-height, 0px)))`,
+              transition: inputDragY === 0
+                ? 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
+                : 'none',
             }}
           >
             <input
