@@ -178,7 +178,7 @@ body.dark .sticker-menu-item--danger {
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   mask-composite: exclude;
-  animation: playerRingFill 1s linear forwards;
+  animation: playerRingFill 0.5s linear forwards;
 }
 
 @keyframes playerRingFill {

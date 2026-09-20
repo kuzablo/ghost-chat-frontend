@@ -47,7 +47,7 @@ const PlayersPanel = forwardRef(({
   const [menuTarget, setMenuTarget] = useState(null);
   const pressRef = useRef({ timer: null, startX: 0, startY: 0, fired: false, id: null });
 
-  const LONG_PRESS_MS = 1000;
+  const LONG_PRESS_MS = 500; // [2.20.2] ускорено с 1с до 0.5с
   const MOVE_CANCEL_PX = 8;
 
   const cancelPress = () => {

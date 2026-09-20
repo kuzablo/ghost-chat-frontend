@@ -274,3 +274,47 @@ body.dark .players-info-link {
     font-size: 12px;
   }
 }
+
+/* ===== [2.20.2] Мягкие разделители между секциями ===== */
+
+/* убираем жёсткий border-top у заголовков, кроме первого */
+.friends-header:not(:first-child) {
+  border-top: none;
+  position: relative;
+  padding-top: 14px;
+}
+
+/* градиентный разделитель — исчезает по краям */
+.friends-header:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--card-border) 15%,
+    var(--card-border) 85%,
+    transparent 100%
+  );
+  opacity: 0.55;
+}
+
+/* тонкая подсветка строки при hover — как акцент, что элемент живой */
+.player-item {
+  transition: background 0.12s;
+  border-radius: var(--radius-sm);
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.player-item:hover {
+  background: var(--messages-bg);
+}
+
+/* те же hover-правила для секции друга — иногда отличается */
+.players-list .player-item:hover .player-name {
+  color: var(--btn-bg);
+}
