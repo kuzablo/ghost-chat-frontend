@@ -249,10 +249,13 @@ body {
   font-size: 13px;
 }
 
+/* [2.18.2] время прижато к правому краю шапки, ник слева */
 .msg-time {
   font-size: 10px;
   color: var(--time-color);
-  margin-left: 4px;
+  margin-left: auto;
+  padding-left: 12px;
+  flex-shrink: 0;
 }
 
 .msg-text {

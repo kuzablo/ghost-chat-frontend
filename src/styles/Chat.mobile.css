@@ -97,7 +97,12 @@
   .msg-header { gap: 4px; }
   .msg-nick { font-size: 12px; }
   .msg-text { font-size: 13px; line-height: 1.35; }
-  .msg-time { font-size: 9px; }
+   /* [2.18.2] время прижато вправо */
+  .msg-time {
+    font-size: 9px;
+    margin-left: auto;
+    padding-left: 10px;
+  }
   .msg-action-btn {
     padding: 0 4px;
     font-size: 10px;
