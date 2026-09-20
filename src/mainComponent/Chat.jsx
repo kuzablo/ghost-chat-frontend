@@ -34,6 +34,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.23.2] инпут в потоке — плавный подъём через padding-bottom контейнера
 // [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
 // [2.23.0] панель ввода прилипает к клавиатуре (как в Telegram)
 // [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус, нативная панель off
@@ -41,7 +42,7 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.23.1';
+const VERSION = '2.23.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -323,7 +324,7 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  /* ===== [2.23.0] Клавиатура: точная высота + флаг открытия ===== */
+  /* ===== [2.23.2] visualViewport: считаем высоту клавиатуры ===== */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
@@ -334,13 +335,10 @@ const Chat = () => {
         0,
         window.innerHeight - (vv.height + vv.offsetTop)
       );
-      const keyboardOpen = kbHeight > 100;
-
       document.documentElement.style.setProperty(
         '--kb-height',
         `${kbHeight}px`
       );
-      document.documentElement.classList.toggle('keyboard-open', keyboardOpen);
     };
 
     const onResize = () => {
@@ -357,27 +355,17 @@ const Chat = () => {
       vv.removeEventListener('resize', onResize);
       vv.removeEventListener('scroll', onResize);
       document.documentElement.style.removeProperty('--kb-height');
-      document.documentElement.classList.remove('keyboard-open');
     };
   }, []);
 
-  /* ===== [2.23.0] Фокус инпута: сначала скролл к низу, потом фокус ===== */
+  /* ===== [2.23.2] Фокус инпута без рывков ===== */
   useEffect(() => {
     if (!showMobileInput) return;
-
-    const t1 = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ block: 'end' });
-    }, 80);
-
-    const t2 = setTimeout(() => {
+    const t = setTimeout(() => {
       inputRef.current?.focus({ preventScroll: true });
-    }, 220);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [showMobileInput, messagesEndRef]);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [showMobileInput]);
 
   useEffect(() => {
     const EDGE_ZONE = 40;
@@ -1032,13 +1020,11 @@ const Chat = () => {
             onTouchMove={handleInputTouchMove}
             onTouchEnd={handleInputTouchEnd}
             style={{
-              transform: `translateY(calc(${inputDragY}px - var(--kb-height, 0px)))`,
-              transition: inputDragY === 0
-                ? 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
-                : 'none',
+              transform: `translateY(${inputDragY}px)`,
+              transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
             }}
           >
-            {/* [2.23.1] type="search" + name-заглушка: Chrome не предлагает автозаполнение контактов */}
+            {/* [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов */}
             <input
               ref={inputRef}
               type="search"

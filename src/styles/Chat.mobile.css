@@ -130,7 +130,7 @@
     border-width: 1.5px;
   }
 
-  /* ===== [2.23.0] Инпут-строка прилипает к клавиатуре ===== */
+  /* ===== [2.23.2] Инпут в потоке, панель поднимается через padding контейнера ===== */
   .input-row {
     display: none;
     gap: 6px;
@@ -141,29 +141,21 @@
   }
   .chat-main.mobile-input-open .input-row {
     display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 8px 10px;
-    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
-    background: var(--card-bg);
-    border-top: 2px solid var(--card-border);
-    z-index: 60;
-    will-change: transform;
   }
 
-  .chat-main.mobile-input-open .messages-wrapper {
-    padding-bottom: calc(76px + var(--kb-height, 0px));
+  /* Клавиатура открыта — контейнер сам сжимается снизу на высоту клавиатуры.
+     На Chrome resizes-content --kb-height == 0 (layout уже сжат).
+     На Safari/Firefox --kb-height > 0, поэтому поджимаем контейнер вручную. */
+  .chat-main.mobile-input-open {
+    padding-bottom: calc(8px + var(--kb-height, 0px));
+    transition: padding-bottom 0.25s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
-  /* [2.23.1] input[type="search"] — Chrome не предлагает автозаполнение контактов */
   .input-row input[type="search"] {
     padding: 10px 14px;
     font-size: 16px;
     border-width: 2px;
     border-radius: 14px;
-    scroll-margin-bottom: 200px;
   }
 
   .input-row input[type="search"]:focus,
@@ -177,10 +169,6 @@
 
   .chat-main.mobile-input-open .mobile-capsule {
     display: none;
-  }
-
-  .chat-main.mobile-input-open {
-    padding-bottom: 8px;
   }
 
   .send-btn {
