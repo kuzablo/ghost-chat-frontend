@@ -10,15 +10,12 @@ import { useEffect, useRef, useState } from 'react';
     - эффект отслеживания позиции → showScrollDown;
     - scrollToBottom — ручной вызов анимации.
 
-  Контракт:
-    useAutoScroll({ messages, resetKey })
-      messages — массив сообщений (триггерит авто-скролл);
-      resetKey — ключ сброса (в нашем случае isAuth), при смене которого
-                 слушатель скролла переустанавливается.
-
-  Возвращает:
-    messagesContainerRef, messagesEndRef,
-    showScrollDown, scrollToBottom.
+  [правка 2.14.28]
+  На ПК плавная прокрутка не срабатывала: эффект бежал раньше, чем браузер
+  раскладывал .messages, и scrollHeight читался меньше реального — distance
+  получался 0, animateScrollToBottom тихо выходил.
+  Решение — двойной requestAnimationFrame: первый даёт React + CSS применить
+  layout, второй — уже после полного reflow.
 */
 
 const cubicBezier = (p1x, p1y, p2x, p2y) => {
@@ -83,21 +80,32 @@ export const useAutoScroll = ({ messages, resetKey }) => {
   const messagesEndRef = useRef(null);
   const hasAutoScrolledRef = useRef(false);
 
-  // Авто-скролл: первый раз — плавной анимацией, дальше — мгновенно
+  // Авто-скролл: первый раз — плавной анимацией, дальше — мгновенно.
+  // [правка 2.14.28] двойной RAF — ждём полного reflow.
   useEffect(() => {
     if (messages.length === 0) return;
 
-    const el = messagesContainerRef.current;
-    if (!el) return;
+    let raf1 = null;
+    let raf2 = null;
 
-    requestAnimationFrame(() => {
-      if (!hasAutoScrolledRef.current) {
-        animateScrollToBottom(el, 1400);
-        hasAutoScrolledRef.current = true;
-      } else {
-        el.scrollTop = el.scrollHeight;
-      }
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+
+        if (!hasAutoScrolledRef.current) {
+          animateScrollToBottom(el, 1400);
+          hasAutoScrolledRef.current = true;
+        } else {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
     });
+
+    return () => {
+      if (raf1) cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
   }, [messages]);
 
   // Индикатор «вниз»: показываем, когда далеко от низа

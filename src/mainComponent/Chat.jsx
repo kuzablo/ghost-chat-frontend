@@ -23,8 +23,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.26 → 2.14.27] рефакторинг шаг 3: скролл вынесен в useAutoScroll
-const VERSION = '2.14.27';
+// [правка 2.14.27 → 2.14.28] фикс: плавный авто-скролл на ПК (двойной RAF)
+const VERSION = '2.14.28';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
