@@ -1031,3 +1031,50 @@ button:active {
   transition: opacity 0.1s;
 }
 
+/* ===== [2.16.4] Долгое нажатие = редактирование ===== */
+
+/* прогресс кольца через кастомное свойство */
+@property --msg-edit-p {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.msg-edit-ring {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: calc(var(--radius-md) + 5px);
+  pointer-events: none;
+  z-index: 5;
+  padding: 3px;
+  background: conic-gradient(
+    from -90deg,
+    #3BB5E8 0deg,
+    #3BB5E8 var(--msg-edit-p),
+    rgba(59, 181, 232, 0.15) var(--msg-edit-p),
+    rgba(59, 181, 232, 0.15) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: msgEditRingFill 3s linear forwards;
+}
+
+@keyframes msgEditRingFill {
+  from { --msg-edit-p: 0deg; }
+  to   { --msg-edit-p: 360deg; }
+}
+
+/* для image-only — контейнер без бордера, нужен position: relative */
+.msg-content--image-only {
+  position: relative;
+}
+

@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.16.2 → 2.16.3] кнопка удаления на ПК, скрыта на мобилке
-const VERSION = '2.16.3';
+// feat(chat): редактирование долгим нажатием 3с с кольцом прогресса (2.16.4)
+const VERSION = '2.16.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

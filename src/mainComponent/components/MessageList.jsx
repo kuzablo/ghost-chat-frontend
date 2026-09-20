@@ -25,10 +25,18 @@ const MessageList = ({
 
   const [pickerAbove, setPickerAbove] = useState(false);
 
-  // [2.16.2] swipeState.direction: 'reply' | 'delete'
   const [swipeState, setSwipeState] = useState({ id: null, dx: 0, direction: null });
   const swipeStartRef = useRef(null);
   const swipeActiveRef = useRef(false);
+
+  // [2.16.4] долгое нажатие 3с на своё сообщение = редактирование
+  const [editRingId, setEditRingId] = useState(null);
+  const longPressRef = useRef({
+    timer: null,
+    completedAt: 0,
+  });
+  const LONG_PRESS_EDIT_MS = 3000;
+  const LONG_PRESS_IGNORE_MS = 500;
 
   useEffect(() => {
     if (isEditing) {
@@ -133,10 +141,18 @@ const MessageList = ({
     toggleReactions(messageId);
   };
 
-  // ===== Свайп: влево = reply, вправо = delete =====
+  // ===== Свайпы + long press =====
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 80;
   const DIRECTION_LOCK = 8;
+
+  const cancelLongPress = () => {
+    if (longPressRef.current.timer) {
+      clearTimeout(longPressRef.current.timer);
+      longPressRef.current.timer = null;
+    }
+    setEditRingId(null);
+  };
 
   const handleMsgTouchStart = (e, m) => {
     if (e.touches.length !== 1) return;
@@ -147,6 +163,17 @@ const MessageList = ({
       y: e.touches[0].clientY,
     };
     swipeActiveRef.current = false;
+
+    // [2.16.4] старт long press только для своих
+    if (m.userId === myId) {
+      setEditRingId(m.id);
+      longPressRef.current.timer = setTimeout(() => {
+        longPressRef.current.timer = null;
+        longPressRef.current.completedAt = Date.now();
+        setEditRingId(null);
+        startEdit(m);
+      }, LONG_PRESS_EDIT_MS);
+    }
   };
 
   const handleMsgTouchMove = (e, m) => {
@@ -160,6 +187,10 @@ const MessageList = ({
 
     if (!swipeActiveRef.current) {
       if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
+
+      // движение стартовало — отменяем long press
+      cancelLongPress();
+
       if (Math.abs(dy) > Math.abs(dx)) {
         swipeStartRef.current = null;
         return;
@@ -181,6 +212,8 @@ const MessageList = ({
   };
 
   const handleMsgTouchEnd = (e, m) => {
+    cancelLongPress();
+
     const start = swipeStartRef.current;
     if (!start || start.id !== m.id) {
       setSwipeState({ id: null, dx: 0, direction: null });
@@ -199,6 +232,13 @@ const MessageList = ({
     }
 
     setSwipeState({ id: null, dx: 0, direction: null });
+  };
+
+  const handleMsgClick = (e, m) => {
+    if (swipeActiveRef.current) return;
+    // [2.16.4] не открывать пикер, если только что сработал long press
+    if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
+    handleMessageTap(m.id, e);
   };
 
   const getSwipeStyle = (m) => {
@@ -267,6 +307,8 @@ const MessageList = ({
                         🗑
                       </div>
                     )}
+                    {/* [2.16.4] кольцо long press */}
+                    {editRingId === m.id && <div className="msg-edit-ring" />}
                     <div
                       className="msg-image-only-wrap"
                       style={getSwipeStyle(m)}
@@ -289,6 +331,7 @@ const MessageList = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (swipeState.id === m.id) return;
+                          if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
                           setFullscreenImage({ url: m.imageUrl, messageId: m.id });
                         }}
                       />
@@ -299,14 +342,13 @@ const MessageList = ({
                         <div className="msg-actions msg-actions--overlay">
                           {isOwn && (
                             <button
-                              className="msg-action-btn msg-action-btn--overlay"
+                              className="msg-action-btn msg-action-btn--overlay msg-action-btn--edit"
                               onClick={(e) => { e.stopPropagation(); startEdit(m); }}
                               title="Редактировать"
                             >
                               ✏️
                             </button>
                           )}
-                          {/* [2.16.3] корзина — на мобилке скрыта через CSS */}
                           {canDelete(m) && (
                             <button
                               className="msg-action-btn msg-action-btn--overlay msg-action-btn--delete"
@@ -358,10 +400,7 @@ const MessageList = ({
                 <div
                   className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''}`}
                   style={getSwipeStyle(m)}
-                  onClick={(e) => {
-                    if (swipeActiveRef.current) return;
-                    handleMessageTap(m.id, e);
-                  }}
+                  onClick={(e) => handleMsgClick(e, m)}
                   onTouchStart={(e) => handleMsgTouchStart(e, m)}
                   onTouchMove={(e) => handleMsgTouchMove(e, m)}
                   onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
@@ -383,20 +422,22 @@ const MessageList = ({
                     </div>
                   )}
 
+                  {/* [2.16.4] кольцо long press */}
+                  {editRingId === m.id && <div className="msg-edit-ring" />}
+
                   <div className="msg-header">
                     <span className="msg-nick">{m.nickname}</span>
 
                     <div className="msg-actions">
                       {isOwn && (
                         <button
-                          className="msg-action-btn"
+                          className="msg-action-btn msg-action-btn--edit"
                           onClick={(e) => { e.stopPropagation(); startEdit(m); }}
                           title="Редактировать"
                         >
                           ✏️
                         </button>
                       )}
-                      {/* [2.16.3] корзина — на мобилке скрыта через CSS */}
                       {canDelete(m) && (
                         <button
                           className="msg-action-btn msg-action-btn--delete"

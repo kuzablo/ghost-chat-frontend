@@ -465,4 +465,19 @@
   .msg-action-btn--delete {
     display: none !important;
   }
+
+    /* [2.16.4] на мобилке редактирование через long press — кнопку ✏️ прячем */
+  .msg-action-btn--edit {
+    display: none !important;
+  }
+
+  /* кольцо long press на мобилке */
+  .msg-edit-ring {
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: calc(var(--radius-md) + 4px);
+    padding: 2.5px;
+  }
 }
