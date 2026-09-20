@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [правка 2.15.9]
-  Добавлено:
-    - trackTitle — название текущего видео;
-    - hasStarted — запускался ли плеер хоть раз (для логики короткий/долгий тап).
+  [правка 2.15.11]
+  Добавлен pendingAction: если play/next вызван до того, как плеер готов —
+  запоминаем и выполняем в onReady.
 
-  ВНИМАНИЕ: скрытие плеера — против ToS YouTube. Может сломаться.
+  ВНИМАНИЕ: скрытие плеера — против ToS YouTube.
 */
 
 const PLAYLIST = [
@@ -49,6 +48,7 @@ export const useYouTubePlayer = () => {
   );
   const volumeRef = useRef(volume);
   const trackIndexRef = useRef(trackIndex);
+  const pendingActionRef = useRef(null);
 
   useEffect(() => { volumeRef.current = volume; }, [volume]);
   useEffect(() => { trackIndexRef.current = trackIndex; }, [trackIndex]);
@@ -79,9 +79,22 @@ export const useYouTubePlayer = () => {
           onReady: (e) => {
             setReady(true);
             e.target.setVolume(volumeRef.current);
+
+            // [правка 2.15.11] выполняем отложенное действие
+            const pending = pendingActionRef.current;
+            pendingActionRef.current = null;
+            if (pending === 'play') {
+              try { e.target.playVideo(); } catch (err) { /* noop */ }
+            } else if (pending === 'next') {
+              const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
+              setTrackIndex(nextIdx);
+              try {
+                e.target.loadVideoById(PLAYLIST[nextIdx]);
+                e.target.playVideo();
+              } catch (err) { /* noop */ }
+            }
           },
           onStateChange: (e) => {
-            // [правка 2.15.9] подтягиваем название трека
             try {
               const data = e.target.getVideoData?.();
               if (data?.title) setTrackTitle(data.title);
@@ -112,7 +125,14 @@ export const useYouTubePlayer = () => {
 
   const toggle = useCallback(() => {
     const p = playerRef.current;
-    if (!p || !ready) return;
+    if (!p) return;
+
+    // [правка 2.15.11] плеер ещё не готов — запоминаем намерение
+    if (!ready) {
+      pendingActionRef.current = 'play';
+      return;
+    }
+
     const state = p.getPlayerState?.();
     if (state === 1) p.pauseVideo();
     else p.playVideo();
@@ -120,7 +140,13 @@ export const useYouTubePlayer = () => {
 
   const next = useCallback(() => {
     const p = playerRef.current;
-    if (!p || !ready) return;
+    if (!p) return;
+
+    if (!ready) {
+      pendingActionRef.current = 'next';
+      return;
+    }
+
     const nextIdx = (trackIndexRef.current + 1) % PLAYLIST.length;
     setTrackIndex(nextIdx);
     p.loadVideoById(PLAYLIST[nextIdx]);

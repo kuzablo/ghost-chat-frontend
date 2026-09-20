@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.9 → 2.15.10] маскот: убран setPointerCapture, поднят порог drag
-const VERSION = '2.15.10';
+// [правка 2.15.10 → 2.15.11] маскот: touch-события вместо pointer, pending play
+const VERSION = '2.15.11';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -86,15 +86,15 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [правка 2.15.10] жесты маскота без pointer capture
+  // [правка 2.15.11] жесты маскота на touch/mouse
   const mascotGestureRef = useRef({
+    active: false,
     startY: 0,
     startTime: 0,
     volumeBase: 50,
     inVolumeDrag: false,
     longPressTimer: null,
     longPressFired: false,
-    pointerId: null,
   });
 
   const [mascotPressing, setMascotPressing] = useState(false);
@@ -421,10 +421,10 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [правка 2.15.10] Жесты маскота: document-слушатели вместо pointer capture =====
+  // ===== [правка 2.15.11] жесты маскота =====
   const LONG_PRESS_MS = 600;
   const VOLUME_PIXELS_PER_PERCENT = 2;
-  const VOLUME_DRAG_THRESHOLD = 15; // было 8 — мало, палец дрейфует на долгом тапе
+  const VOLUME_DRAG_THRESHOLD = 15;
 
   const showTrackTitle = () => {
     setTrackTitleVisible(true);
@@ -438,11 +438,12 @@ const Chat = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yt.trackIndex]);
 
-  const onMascotGlobalMove = useCallback((e) => {
+  // универсальный обработчик движения
+  const onMascotMove = useCallback((clientY) => {
     const ref = mascotGestureRef.current;
-    if (ref.pointerId !== e.pointerId) return;
+    if (!ref.active) return;
 
-    const dy = e.clientY - ref.startY;
+    const dy = clientY - ref.startY;
 
     if (Math.abs(dy) > VOLUME_DRAG_THRESHOLD) {
       if (!ref.inVolumeDrag) {
@@ -459,14 +460,18 @@ const Chat = () => {
     }
   }, [yt]);
 
-  const onMascotGlobalUp = useCallback((e) => {
+  // универсальный обработчик конца
+  const onMascotEnd = useCallback(() => {
     const ref = mascotGestureRef.current;
-    if (ref.pointerId !== e.pointerId) return;
-    ref.pointerId = null;
+    if (!ref.active) return;
+    ref.active = false;
 
-    document.removeEventListener('pointermove', onMascotGlobalMove);
-    document.removeEventListener('pointerup', onMascotGlobalUp);
-    document.removeEventListener('pointercancel', onMascotGlobalUp);
+    // снимаем все глобальные слушатели
+    document.removeEventListener('touchmove', onGlobalTouchMove);
+    document.removeEventListener('touchend', onGlobalTouchEnd);
+    document.removeEventListener('touchcancel', onGlobalTouchEnd);
+    document.removeEventListener('mousemove', onGlobalMouseMove);
+    document.removeEventListener('mouseup', onGlobalMouseUp);
 
     setMascotPressing(false);
 
@@ -483,6 +488,7 @@ const Chat = () => {
 
     const duration = Date.now() - ref.startTime;
 
+    // ===== Долгий тап =====
     if (duration >= LONG_PRESS_MS || ref.longPressFired) {
       ref.longPressFired = false;
       setMascotActivating(true);
@@ -497,19 +503,40 @@ const Chat = () => {
       return;
     }
 
-    // короткий тап
+    // ===== Короткий тап =====
     if (!yt.hasStarted) return;
     yt.toggle();
-  }, [yt, onMascotGlobalMove]);
+  }, [yt]);
 
-  const handleMascotPointerDown = (e) => {
+  // обработчики для подписки на document — определены стабильно,
+  // чтобы removeEventListener всегда находил их
+  const onGlobalTouchMove = useCallback((e) => {
+    if (e.touches.length !== 1) return;
+    onMascotMove(e.touches[0].clientY);
+  }, [onMascotMove]);
+
+  const onGlobalTouchEnd = useCallback(() => {
+    onMascotEnd();
+  }, [onMascotEnd]);
+
+  const onGlobalMouseMove = useCallback((e) => {
+    onMascotMove(e.clientY);
+  }, [onMascotMove]);
+
+  const onGlobalMouseUp = useCallback(() => {
+    onMascotEnd();
+  }, [onMascotEnd]);
+
+  const startMascotGesture = (clientY) => {
     const ref = mascotGestureRef.current;
-    ref.startY = e.clientY;
+    if (ref.active) return; // защита от двойного срабатывания
+
+    ref.active = true;
+    ref.startY = clientY;
     ref.startTime = Date.now();
     ref.volumeBase = yt.volume;
     ref.inVolumeDrag = false;
     ref.longPressFired = false;
-    ref.pointerId = e.pointerId;
 
     setMascotPressing(true);
 
@@ -517,10 +544,20 @@ const Chat = () => {
       ref.longPressFired = true;
     }, LONG_PRESS_MS);
 
-    // [правка 2.15.10] глобальные слушатели вместо setPointerCapture
-    document.addEventListener('pointermove', onMascotGlobalMove);
-    document.addEventListener('pointerup', onMascotGlobalUp);
-    document.addEventListener('pointercancel', onMascotGlobalUp);
+    document.addEventListener('touchmove', onGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', onGlobalTouchEnd);
+    document.addEventListener('touchcancel', onGlobalTouchEnd);
+    document.addEventListener('mousemove', onGlobalMouseMove);
+    document.addEventListener('mouseup', onGlobalMouseUp);
+  };
+
+  const handleMascotTouchStart = (e) => {
+    if (e.touches.length !== 1) return;
+    startMascotGesture(e.touches[0].clientY);
+  };
+
+  const handleMascotMouseDown = (e) => {
+    startMascotGesture(e.clientY);
   };
 
   const handleMascotContextMenu = (e) => {
@@ -603,7 +640,8 @@ const Chat = () => {
                   (mascotActivating ? ' mascot-activating' : '')
                 }
                 draggable={false}
-                onPointerDown={handleMascotPointerDown}
+                onTouchStart={handleMascotTouchStart}
+                onMouseDown={handleMascotMouseDown}
                 onContextMenu={handleMascotContextMenu}
               />
               {mascotPressing && (
