@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.10 → 2.15.11] маскот: touch-события вместо pointer, pending play
-const VERSION = '2.15.11';
+// [правка 2.15.11 → 2.15.12] iOS: touchend на самом маскоте, а не на document
+const VERSION = '2.15.12';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -86,15 +86,13 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [правка 2.15.11] жесты маскота на touch/mouse
+  // [правка 2.15.12] жесты маскота: touchstart/touchend на элементе
   const mascotGestureRef = useRef({
     active: false,
     startY: 0,
     startTime: 0,
     volumeBase: 50,
     inVolumeDrag: false,
-    longPressTimer: null,
-    longPressFired: false,
   });
 
   const [mascotPressing, setMascotPressing] = useState(false);
@@ -421,7 +419,7 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [правка 2.15.11] жесты маскота =====
+  // ===== [правка 2.15.12] жесты маскота =====
   const LONG_PRESS_MS = 600;
   const VOLUME_PIXELS_PER_PERCENT = 2;
   const VOLUME_DRAG_THRESHOLD = 15;
@@ -438,20 +436,15 @@ const Chat = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yt.trackIndex]);
 
-  // универсальный обработчик движения
-  const onMascotMove = useCallback((clientY) => {
+  // Универсальный расчёт drag (для touchmove на document и mousemove)
+  const onMove = useCallback((clientY) => {
     const ref = mascotGestureRef.current;
     if (!ref.active) return;
-
     const dy = clientY - ref.startY;
 
     if (Math.abs(dy) > VOLUME_DRAG_THRESHOLD) {
       if (!ref.inVolumeDrag) {
         ref.inVolumeDrag = true;
-        if (ref.longPressTimer) {
-          clearTimeout(ref.longPressTimer);
-          ref.longPressTimer = null;
-        }
         setMascotPressing(false);
         setVolumeTipVisible(true);
       }
@@ -460,25 +453,17 @@ const Chat = () => {
     }
   }, [yt]);
 
-  // универсальный обработчик конца
-  const onMascotEnd = useCallback(() => {
+  // Завершение жеста — выполняется ВНУТРИ touchend/mouseup на маскоте,
+  // чтобы iOS Safari видел user gesture.
+  const finishGesture = useCallback(() => {
     const ref = mascotGestureRef.current;
     if (!ref.active) return;
     ref.active = false;
 
-    // снимаем все глобальные слушатели
     document.removeEventListener('touchmove', onGlobalTouchMove);
-    document.removeEventListener('touchend', onGlobalTouchEnd);
-    document.removeEventListener('touchcancel', onGlobalTouchEnd);
-    document.removeEventListener('mousemove', onGlobalMouseMove);
-    document.removeEventListener('mouseup', onGlobalMouseUp);
+    document.removeEventListener('touchcancel', onGlobalTouchCancel);
 
     setMascotPressing(false);
-
-    if (ref.longPressTimer) {
-      clearTimeout(ref.longPressTimer);
-      ref.longPressTimer = null;
-    }
 
     if (ref.inVolumeDrag) {
       ref.inVolumeDrag = false;
@@ -488,76 +473,80 @@ const Chat = () => {
 
     const duration = Date.now() - ref.startTime;
 
-    // ===== Долгий тап =====
-    if (duration >= LONG_PRESS_MS || ref.longPressFired) {
-      ref.longPressFired = false;
+    // ===== Долгий тап → next =====
+    if (duration >= LONG_PRESS_MS) {
       setMascotActivating(true);
       setTimeout(() => setMascotActivating(false), 400);
-
-      if (yt.hasStarted) {
-        yt.next();
-      } else {
-        yt.toggle();
-      }
+      yt.next();
       showTrackTitle();
       return;
     }
 
-    // ===== Короткий тап =====
-    if (!yt.hasStarted) return;
+    // ===== Короткий тап → play/pause =====
     yt.toggle();
+    if (!yt.hasStarted) showTrackTitle();
   }, [yt]);
 
-  // обработчики для подписки на document — определены стабильно,
-  // чтобы removeEventListener всегда находил их
   const onGlobalTouchMove = useCallback((e) => {
     if (e.touches.length !== 1) return;
-    onMascotMove(e.touches[0].clientY);
-  }, [onMascotMove]);
+    onMove(e.touches[0].clientY);
+  }, [onMove]);
 
-  const onGlobalTouchEnd = useCallback(() => {
-    onMascotEnd();
-  }, [onMascotEnd]);
-
-  const onGlobalMouseMove = useCallback((e) => {
-    onMascotMove(e.clientY);
-  }, [onMascotMove]);
-
-  const onGlobalMouseUp = useCallback(() => {
-    onMascotEnd();
-  }, [onMascotEnd]);
-
-  const startMascotGesture = (clientY) => {
+  const onGlobalTouchCancel = useCallback(() => {
     const ref = mascotGestureRef.current;
-    if (ref.active) return; // защита от двойного срабатывания
-
-    ref.active = true;
-    ref.startY = clientY;
-    ref.startTime = Date.now();
-    ref.volumeBase = yt.volume;
-    ref.inVolumeDrag = false;
-    ref.longPressFired = false;
-
-    setMascotPressing(true);
-
-    ref.longPressTimer = setTimeout(() => {
-      ref.longPressFired = true;
-    }, LONG_PRESS_MS);
-
-    document.addEventListener('touchmove', onGlobalTouchMove, { passive: false });
-    document.addEventListener('touchend', onGlobalTouchEnd);
-    document.addEventListener('touchcancel', onGlobalTouchEnd);
-    document.addEventListener('mousemove', onGlobalMouseMove);
-    document.addEventListener('mouseup', onGlobalMouseUp);
-  };
+    if (!ref.active) return;
+    ref.active = false;
+    document.removeEventListener('touchmove', onGlobalTouchMove);
+    document.removeEventListener('touchcancel', onGlobalTouchCancel);
+    setMascotPressing(false);
+    setVolumeTipVisible(false);
+  }, [onGlobalTouchMove]);
 
   const handleMascotTouchStart = (e) => {
     if (e.touches.length !== 1) return;
-    startMascotGesture(e.touches[0].clientY);
+    const ref = mascotGestureRef.current;
+    if (ref.active) return;
+
+    const t = e.touches[0];
+    ref.active = true;
+    ref.startY = t.clientY;
+    ref.startTime = Date.now();
+    ref.volumeBase = yt.volume;
+    ref.inVolumeDrag = false;
+
+    setMascotPressing(true);
+
+    // touchmove — глобально (если палец уйдёт с маскота, drag продолжится)
+    document.addEventListener('touchmove', onGlobalTouchMove, { passive: false });
+    document.addEventListener('touchcancel', onGlobalTouchCancel);
   };
 
+  const handleMascotTouchEnd = () => {
+    // ВАЖНО: этот обработчик на самом элементе → iOS считает user gesture
+    finishGesture();
+  };
+
+  // ПК-версия: mousedown/mouseup на самом элементе
   const handleMascotMouseDown = (e) => {
-    startMascotGesture(e.clientY);
+    const ref = mascotGestureRef.current;
+    if (ref.active) return;
+
+    ref.active = true;
+    ref.startY = e.clientY;
+    ref.startTime = Date.now();
+    ref.volumeBase = yt.volume;
+    ref.inVolumeDrag = false;
+
+    setMascotPressing(true);
+
+    const onMouseMove = (ev) => onMove(ev.clientY);
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      finishGesture();
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   const handleMascotContextMenu = (e) => {
@@ -641,6 +630,7 @@ const Chat = () => {
                 }
                 draggable={false}
                 onTouchStart={handleMascotTouchStart}
+                onTouchEnd={handleMascotTouchEnd}
                 onMouseDown={handleMascotMouseDown}
                 onContextMenu={handleMascotContextMenu}
               />
