@@ -327,3 +327,85 @@ body.dark .private-reaction-count {
   scrollbar-width: thin;
   scrollbar-color: var(--btn-bg) transparent;
 }
+
+/* ============================================================= */
+/* [2.26.1] ChatInput в приватном чате                           */
+/* ============================================================= */
+.private-input-row .chat-input-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+}
+
+.private-input-row .chat-input-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1;
+  max-width: calc(100% - 26px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.private-input-row .chat-input-editable {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.35;
+  outline: none;
+  touch-action: manipulation;
+
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  min-height: 40px;
+  cursor: text;
+
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.private-input-row .chat-input-editable::-webkit-scrollbar {
+  display: none;
+}
+
+.private-input-row .chat-input-editable:focus,
+.private-input-row .chat-input-editable:focus-visible {
+  outline: none;
+  border-color: var(--btn-bg);
+}
+
+/* Мобильная версия — 16px чтобы iOS не зумил */
+@media (max-width: 600px) {
+  .private-input-row .chat-input-editable {
+    font-size: 16px;
+    padding: 8px 10px;
+  }
+  .private-input-row .chat-input-placeholder {
+    font-size: 16px;
+    left: 11px;
+    max-width: calc(100% - 22px);
+  }
+}

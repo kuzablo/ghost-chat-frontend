@@ -1,12 +1,14 @@
 import { useRef, useState, useEffect } from 'react';
 import { formatTime } from '../utils';
+import ChatInput from './ChatInput';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 
 /*
-  [2.19.4] PrivateChat теперь принимает sendMessage (из useWebSocket)
-  вместо сырого ws. Так отправка работает всегда — sendMessage сам
-  проверяет readyState и берёт актуальный socket из useWebSocket.
+  [2.26.1] <input> заменён на ChatInput (тот же contentEditable).
+           Нет InputAssistant на iOS, единое поведение с общим чатом.
+  [2.19.4] PrivateChat принимает sendMessage (из useWebSocket)
+           вместо сырого ws.
 */
 const PrivateChat = ({
   userId,
@@ -93,10 +95,11 @@ const PrivateChat = ({
     setPickerFor(id);
   };
 
-  const handleInputChange = (e) => {
-    setInput(e.target.value);
+  /* [2.26.1] адаптировано под ChatInput: text вместо event */
+  const handlePrivateInput = (text) => {
+    setInput(text);
     if (!sendMessage) return;
-    if (e.target.value.trim()) {
+    if (text.trim()) {
       sendMessage({
         type: 'private_typing',
         data: { recipientId: userId, isTyping: true },
@@ -195,11 +198,12 @@ const PrivateChat = ({
           <div ref={messagesEndRef} />
         </div>
         <div className="private-input-row">
-          <input
+          <ChatInput
             value={input}
-            onChange={handleInputChange}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            onChange={handlePrivateInput}
+            onSend={handleSend}
             placeholder="Напишите сообщение..."
+            draftKey={null}
           />
           <button className="btn" onClick={handleSend}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

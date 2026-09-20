@@ -1,12 +1,13 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 
 /*
+  [2.26.1] draftKey — опциональный. null → черновик не используется.
   [2.26.0] IME composition fix, черновик в localStorage, лимит длины.
   [2.25.1] placeholder отдельным span-слоем — каретка в начале.
   [2.25.0] contentEditable вместо <input>.
 */
 
-const DRAFT_KEY = 'ghost-chat-draft';
+const DEFAULT_DRAFT_KEY = 'ghost-chat-draft';
 const MAX_LENGTH = 2000;
 
 const ChatInput = forwardRef(({
@@ -17,6 +18,7 @@ const ChatInput = forwardRef(({
   placeholder = '',
   className = '',
   maxLength = MAX_LENGTH,
+  draftKey = DEFAULT_DRAFT_KEY,
 }, ref) => {
   const elRef = useRef(null);
   const domValueRef = useRef('');
@@ -30,11 +32,12 @@ const ChatInput = forwardRef(({
 
   /* Черновик: восстановить при монтировании */
   useEffect(() => {
+    if (!draftKey) return;
     const el = elRef.current;
     if (!el) return;
     let draft = '';
     try {
-      draft = localStorage.getItem(DRAFT_KEY) || '';
+      draft = localStorage.getItem(draftKey) || '';
     } catch { /* noop */ }
 
     if (draft && !value) {
@@ -43,7 +46,7 @@ const ChatInput = forwardRef(({
       onChange(draft);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [draftKey]);
 
   useEffect(() => {
     const el = elRef.current;
@@ -64,9 +67,10 @@ const ChatInput = forwardRef(({
   }, [value]);
 
   const persistDraft = (text) => {
+    if (!draftKey) return;
     try {
-      if (text) localStorage.setItem(DRAFT_KEY, text);
-      else localStorage.removeItem(DRAFT_KEY);
+      if (text) localStorage.setItem(draftKey, text);
+      else localStorage.removeItem(draftKey);
     } catch { /* noop */ }
   };
 
@@ -102,7 +106,6 @@ const ChatInput = forwardRef(({
   };
 
   const handleKeyDown = (e) => {
-    // IME composition — не мешаем
     if (e.nativeEvent?.isComposing || composingRef.current) return;
     if (e.key !== 'Enter') return;
 
