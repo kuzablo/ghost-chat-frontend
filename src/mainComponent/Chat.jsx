@@ -19,15 +19,18 @@ import { useAuth } from './hooks/useAuth';
 import { useDuel } from './hooks/useDuel';
 import { usePrivateChat } from './hooks/usePrivateChat';
 import { useChat } from './hooks/useChat';
+// [правка 2.15.7] радио-маскот
+import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
 import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
+import '../styles/Chat.mascot.css';
 
-// [правка 2.15.5 → 2.15.6] drag инпута вниз скрывает его
-const VERSION = '2.15.6';
+// [правка 2.15.6 → 2.15.7] маскот-радио: tap/двойной тап/долгий тап/drag
+const VERSION = '2.15.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -65,12 +68,11 @@ const Chat = () => {
   // ===== 3. Локальное состояние Chat.jsx =====
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
-
-  // [правка 2.15.3] состояние свайпа в fullscreen
   const [dragY, setDragY] = useState(0);
-
-  // [правка 2.15.6] состояние drag инпута
   const [inputDragY, setInputDragY] = useState(0);
+
+  // [правка 2.15.7] состояние показа подсказки громкости
+  const [volumeTipVisible, setVolumeTipVisible] = useState(false);
 
   // ===== 4. Refs =====
   const playersOverlayRef = useRef(null);
@@ -79,19 +81,32 @@ const Chat = () => {
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
 
-  // [правка 2.15.3] refs для свайпа в fullscreen
   const touchStartYRef = useRef(null);
 
-  // [правка 2.15.5] refs для свайпа панели игроков
   const swipeStartXRef = useRef(null);
   const swipeStartYRef = useRef(null);
   const swipeActiveRef = useRef(false);
   const swipeDirectionRef = useRef(null);
   const showPlayersRef = useRef(showPlayers);
 
-  // [правка 2.15.6] refs для drag инпута
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
+
+  // [правка 2.15.7] refs для жестов маскота
+  const mascotGestureRef = useRef({
+    startY: 0,
+    startTime: 0,
+    volumeBase: 50,
+    inVolumeDrag: false,
+    longPressTimer: null,
+    longPressFired: false,
+    lastTapTime: 0,
+    tapTimer: null,
+    pointerId: null,
+  });
+
+  // [правка 2.15.7] YouTube-плеер
+  const yt = useYouTubePlayer();
 
   // ===== 5. WebSocket =====
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
@@ -247,7 +262,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // ===== [правка 2.15.5] Свайп панели игроков через document =====
+  // ===== Свайп панели игроков (2.15.5) =====
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -361,7 +376,7 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
-  // ===== [правка 2.15.3] Свайп в fullscreen =====
+  // ===== Свайп в fullscreen (2.15.3) =====
   const SWIPE_CLOSE_THRESHOLD = 120;
 
   const handleFsTouchStart = (e) => {
@@ -373,15 +388,11 @@ const Chat = () => {
     if (touchStartYRef.current == null) return;
     const t = e.touches[0];
     const dy = t.clientY - touchStartYRef.current;
-    if (dy > 0) {
-      setDragY(dy);
-    }
+    if (dy > 0) setDragY(dy);
   };
 
   const handleFsTouchEnd = () => {
-    if (dragY > SWIPE_CLOSE_THRESHOLD) {
-      closeFullscreen();
-    }
+    if (dragY > SWIPE_CLOSE_THRESHOLD) closeFullscreen();
     setDragY(0);
     touchStartYRef.current = null;
   };
@@ -390,7 +401,7 @@ const Chat = () => {
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
 
-  // ===== [правка 2.15.6] Drag инпута вниз =====
+  // ===== Drag инпута вниз (2.15.6) =====
   const INPUT_DRAG_THRESHOLD = 60;
 
   const handleInputTouchStart = (e) => {
@@ -405,21 +416,115 @@ const Chat = () => {
     const dy = t.clientY - inputTouchStartYRef.current;
     const dx = t.clientX - inputTouchStartXRef.current;
 
-    // отсев горизонтальных жестов
     if (Math.abs(dx) > Math.abs(dy)) return;
-
-    if (dy > 0) {
-      setInputDragY(dy);
-    }
+    if (dy > 0) setInputDragY(dy);
   };
 
   const handleInputTouchEnd = () => {
-    if (inputDragY > INPUT_DRAG_THRESHOLD) {
-      setShowMobileInput(false);
-    }
+    if (inputDragY > INPUT_DRAG_THRESHOLD) setShowMobileInput(false);
     setInputDragY(0);
     inputTouchStartYRef.current = null;
     inputTouchStartXRef.current = null;
+  };
+
+  // ===== [правка 2.15.7] Жесты маскота =====
+  // single tap → play/pause (с задержкой 250мс, чтобы поймать double tap)
+  // double tap → next
+  // long press (600мс) → next
+  // drag up/down → volume
+  const LONG_PRESS_MS = 600;
+  const DOUBLE_TAP_MS = 250;
+  const VOLUME_PIXELS_PER_PERCENT = 2; // 2px свайпа = 1% громкости
+
+  const handleMascotPointerDown = (e) => {
+    const ref = mascotGestureRef.current;
+    ref.startY = e.clientY;
+    ref.startTime = Date.now();
+    ref.volumeBase = yt.volume;
+    ref.inVolumeDrag = false;
+    ref.longPressFired = false;
+    ref.pointerId = e.pointerId;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+
+    ref.longPressTimer = setTimeout(() => {
+      ref.longPressFired = true;
+      yt.next();
+    }, LONG_PRESS_MS);
+  };
+
+  const handleMascotPointerMove = (e) => {
+    const ref = mascotGestureRef.current;
+    if (ref.pointerId !== e.pointerId) return;
+    const dy = e.clientY - ref.startY;
+
+    if (Math.abs(dy) > 8) {
+      if (!ref.inVolumeDrag) {
+        ref.inVolumeDrag = true;
+        if (ref.longPressTimer) {
+          clearTimeout(ref.longPressTimer);
+          ref.longPressTimer = null;
+        }
+        if (ref.tapTimer) {
+          clearTimeout(ref.tapTimer);
+          ref.tapTimer = null;
+        }
+        setVolumeTipVisible(true);
+      }
+      // вверх (dy<0) = громче
+      const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
+      yt.setVolume(ref.volumeBase + delta);
+    }
+  };
+
+  const handleMascotPointerUp = (e) => {
+    const ref = mascotGestureRef.current;
+    if (ref.pointerId !== e.pointerId) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) { /* noop */ }
+    ref.pointerId = null;
+
+    if (ref.longPressTimer) {
+      clearTimeout(ref.longPressTimer);
+      ref.longPressTimer = null;
+    }
+
+    if (ref.inVolumeDrag) {
+      ref.inVolumeDrag = false;
+      // прячем подсказку с задержкой
+      setTimeout(() => setVolumeTipVisible(false), 600);
+      return;
+    }
+
+    if (ref.longPressFired) {
+      ref.longPressFired = false;
+      return;
+    }
+
+    const duration = Date.now() - ref.startTime;
+    if (duration > LONG_PRESS_MS) return;
+
+    const now = Date.now();
+    if (now - ref.lastTapTime < DOUBLE_TAP_MS) {
+      // double tap → next
+      if (ref.tapTimer) {
+        clearTimeout(ref.tapTimer);
+        ref.tapTimer = null;
+      }
+      ref.lastTapTime = 0;
+      yt.next();
+      return;
+    }
+
+    ref.lastTapTime = now;
+    ref.tapTimer = setTimeout(() => {
+      ref.tapTimer = null;
+      ref.lastTapTime = 0;
+      yt.toggle();
+    }, DOUBLE_TAP_MS);
+  };
+
+  const handleMascotContextMenu = (e) => {
+    // отключаем контекстное меню на долгий тап (мобилка)
+    e.preventDefault();
   };
 
   return (
@@ -488,7 +593,25 @@ const Chat = () => {
       <div className="chat-container">
         <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
-            <img src="/mascot.png" alt="banjoboy" className="chat-header-logo" />
+            {/* [правка 2.15.7] обёртка маскота для подсказки громкости и точек */}
+            <div className="chat-header-mascot-wrap">
+              <img
+                src="/mascot.png"
+                alt="banjoboy"
+                className="chat-header-logo"
+                draggable={false}
+                onPointerDown={handleMascotPointerDown}
+                onPointerMove={handleMascotPointerMove}
+                onPointerUp={handleMascotPointerUp}
+                onPointerCancel={handleMascotPointerUp}
+                onContextMenu={handleMascotContextMenu}
+              />
+              {volumeTipVisible && (
+                <div className="mascot-volume-tip">🔊 {yt.volume}</div>
+              )}
+              {yt.isPlaying && <span className="mascot-playing-dot" />}
+            </div>
+
             <div className="chat-header-text">
               <div className="chat-header-title">banjoboy's crew</div>
               <div className="chat-header-subtitle">
@@ -556,12 +679,6 @@ const Chat = () => {
             {typingUsers.length > 0 && `${typingUsers.join(', ')} печатает...`}
           </div>
 
-          {/*
-            [правка 2.15.6] Drag инпута вниз:
-              - тянем вниз > 60px → инпут скрывается;
-              - горизонтальные жесты игнорируются;
-              - во время drag — плавный сдвиг вниз.
-          */}
           <div
             className="input-row"
             onTouchStart={handleInputTouchStart}
@@ -754,6 +871,11 @@ const Chat = () => {
           />
         </div>
       )}
+
+      {/* [правка 2.15.7] скрытый YouTube-плеер. Только звук. */}
+      <div className="yt-hidden-host">
+        <div id={yt.containerId} />
+      </div>
     </>
   );
 };

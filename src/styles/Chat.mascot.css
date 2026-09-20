@@ -1,0 +1,77 @@
+/*
+  [2.15.7] Стили маскота-радио и скрытого YouTube-плеера.
+*/
+
+/* Скрытый плеер: держим в DOM, но за экраном. YT не даёт display:none. */
+.yt-hidden-host {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 200px;
+  height: 200px;
+  opacity: 0.01;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Обёртка маскота: для absolute-подсказки громкости */
+.chat-header-mascot-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Маскот кликабелен и «драгается» */
+.chat-header-logo {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+.chat-header-logo:active {
+  cursor: grabbing;
+}
+
+/* Подсказка громкости над маскотом */
+.mascot-volume-tip {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #FFF;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: mascotTipFade 0.15s ease-out;
+  z-index: 10;
+}
+
+@keyframes mascotTipFade {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Индикатор «играет» — маленькая точка рядом с маскотом */
+.mascot-playing-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22C55E;
+  border: 2px solid var(--card-bg);
+  pointer-events: none;
+  animation: mascotPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mascotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.15); opacity: 0.7; }
+}
