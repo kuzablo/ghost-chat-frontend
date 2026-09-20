@@ -17,12 +17,13 @@ import {
   playSendSound,
 } from './utils';
 import '../styles/Chat.css';
+import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
 import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-const VERSION = '2.14.13';
+const VERSION = '2.14.14';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -401,33 +402,6 @@ const Chat = () => {
       }
     });
   }, [messages]);
-
-  // ===== Подгонка картинок под высоту .messages =====
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (!el) return;
-
-    const fitImages = () => {
-      const h = el.clientHeight;
-      if (!h) return;
-      const maxH = Math.max(120, Math.floor(h * 0.6));
-      el.querySelectorAll('.msg-image-only-img').forEach(img => {
-        img.style.maxHeight = `${maxH}px`;
-      });
-    };
-
-    fitImages();
-
-    const t1 = setTimeout(fitImages, 200);
-    const t2 = setTimeout(fitImages, 800);
-    const t3 = setTimeout(fitImages, 2000);
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
-  }, [messages.length, isAuth]);
 
   // ===== Скролл-индикатор «вниз» =====
   useEffect(() => {
