@@ -34,8 +34,8 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// ui(players): sticky-заголовки, long-press 0.5с, убрана кнопка «Мои диалоги» (2.20.4)
-const VERSION = '2.20.4';
+// [2.20.5] переключение темы не закрывает панели
+const VERSION = '2.20.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -265,6 +265,9 @@ const Chat = () => {
       if (mobilePlayersBtnRef.current?.contains(e.target)) return;
       // [2.20.1] не закрываем панель при тапе в стикер-меню
       if (e.target.closest && e.target.closest('.sticker-menu-overlay')) return;
+      // [2.20.5] клик по кнопкам темы и диалогов не закрывает панель игроков
+      if (e.target.closest && e.target.closest('.theme-toggle')) return;
+      if (e.target.closest && e.target.closest('.dialogs-toggle')) return;
 
       if (playersOverlayRef.current && !playersOverlayRef.current.contains(e.target)) {
         setShowPlayers(false);
