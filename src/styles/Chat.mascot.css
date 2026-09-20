@@ -1,14 +1,57 @@
-/* [откат к 2.15.8] Стили маскота. Без дребезжания, без эквалайзера. */
+/*
+  [2.15.21] Стили маскота-радио.
+  - .chat-header-mascot-wrap — обёртка маскота
+  - .mascot-playing-dot — зелёная точка «играет»
+  - .mascot-volume-tip — подсказка громкости при drag
+  - .yt-hidden-host — по умолчанию спрятан; --visible → показываем плеер
+*/
 
 .yt-hidden-host {
   position: fixed;
   top: -9999px;
   left: -9999px;
   width: 200px;
-  height: 200px;
+  height: 120px;
   opacity: 0.01;
   pointer-events: none;
   z-index: -1;
+  transition: opacity 0.2s ease-out;
+}
+
+/* [2.15.21] мини-плеер для первого play (iOS требует user gesture внутри iframe) */
+.yt-hidden-host--visible {
+  top: auto;
+  left: auto;
+  bottom: 20px;
+  right: 20px;
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 9999;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.yt-hidden-host--visible iframe {
+  width: 200px;
+  height: 120px;
+  display: block;
+  border: 0;
+}
+
+.yt-mini-hint {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #FFF;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  animation: mascotTipFade 0.2s ease-out;
 }
 
 .chat-header-mascot-wrap {

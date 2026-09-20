@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [откат к 2.15.8] Простой плеер. Без mute/unmute, без pending.
-  Именно в таком виде работало на iOS.
+  [2.15.21] Простой плеер. Без mute/unmute, без pending.
+  Управление через маскот; первый play — через видимый мини-плеер (для iOS).
 */
 
 const PLAYLIST = [
@@ -58,13 +58,13 @@ export const useYouTubePlayer = () => {
       if (!host) return;
 
       playerRef.current = new YT.Player(containerIdRef.current, {
-        height: '1',
-        width: '1',
+        height: '120',
+        width: '200',
         videoId: PLAYLIST[0],
         playerVars: {
           autoplay: 0,
-          controls: 0,
-          disablekb: 1,
+          controls: 1,
+          disablekb: 0,
           fs: 0,
           modestbranding: 1,
           playsinline: 1,

@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [откат к 2.15.8] маскот-радио: pointerup на маскоте, синхронный toggle
-const VERSION = '2.15.20';
+// [правка 2.15.20 → 2.15.21] видимый мини-плеер для первого play на iOS
+const VERSION = '2.15.21';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -68,6 +68,9 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
 
+  // [правка 2.15.21] показываем мини-плеер для первого user gesture на iOS
+  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
@@ -93,9 +96,15 @@ const Chat = () => {
     longPressTimer: null,
     longPressFired: false,
     pointerId: null,
+    lastTapTime: 0,
   });
 
   const yt = useYouTubePlayer();
+
+  // [правка 2.15.21] как только плеер запустился — прячем мини-плеер
+  useEffect(() => {
+    if (yt.hasStarted) setShowMiniPlayer(false);
+  }, [yt.hasStarted]);
 
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
@@ -414,7 +423,7 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [откат к 2.15.8] Жесты маскота через pointer events =====
+  // ===== жесты маскота =====
   const LONG_PRESS_MS = 600;
   const DOUBLE_TAP_MS = 250;
   const VOLUME_PIXELS_PER_PERCENT = 2;
@@ -486,6 +495,13 @@ const Chat = () => {
       return;
     }
     ref.lastTapTime = now;
+
+    // [правка 2.15.21] если плеер никогда не запускался — показываем
+    // мини-плеер, чтобы юзер сам тапнул play (iOS требует gesture внутри iframe)
+    if (!yt.hasStarted) {
+      setShowMiniPlayer(true);
+      return;
+    }
     yt.toggle();
   };
 
@@ -582,9 +598,7 @@ const Chat = () => {
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
-              <div className="chat-header-version">
-                v{VERSION} R:{yt.ready ? 1 : 0} H:{yt.hasStarted ? 1 : 0} P:{yt.isPlaying ? 1 : 0}
-              </div>
+              <div className="chat-header-version">v{VERSION}</div>
             </div>
             <button
               className="chat-header-theme"
@@ -839,8 +853,12 @@ const Chat = () => {
         </div>
       )}
 
-      <div className="yt-hidden-host">
+      {/* [правка 2.15.21] класс --visible показывает мини-плеер, пока не запустилось */}
+      <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
         <div id={yt.containerId} />
+        {showMiniPlayer && (
+          <div className="yt-mini-hint">▼ нажми play</div>
+        )}
       </div>
     </>
   );
