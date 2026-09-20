@@ -23,8 +23,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.20 → 2.14.21] пикер закрывается после выбора реакции
-const VERSION = '2.14.21';
+// [правка 2.14.21 → 2.14.22] пикер: авто-позиция (сверху/снизу)
+const VERSION = '2.14.22';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 

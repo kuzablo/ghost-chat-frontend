@@ -24,6 +24,10 @@ const MessageList = ({
   // [правка 2.14.19] pop-анимация при тапе по сообщению — как в приватном чате
   const [poppingId, setPoppingId] = useState(null);
 
+  // [правка 2.14.22] позиция пикера: снизу (по умолчанию) или сверху,
+  // если пикер не влезает в контейнер сообщений
+  const [pickerAbove, setPickerAbove] = useState(false);
+
   useEffect(() => {
     if (isEditing) {
       const html = document.documentElement;
@@ -107,10 +111,31 @@ const MessageList = ({
     !!message?.reactions?.[emoji]?.includes(nickname);
 
   // [правка 2.14.19] тап по сообщению = pop + toggle пикера
-  // (та же логика, что handleMessageTap в PrivateChat.jsx)
-  const handleMessageTap = (messageId) => {
+  // [правка 2.14.22] + расчёт позиции: если пикер не влезает снизу — показываем сверху
+  const handleMessageTap = (messageId, e) => {
+    // если закрываем — просто toggle без расчёта
+    if (activeMessageId === messageId) {
+      toggleReactions(messageId);
+      return;
+    }
+
     setPoppingId(messageId);
     setTimeout(() => setPoppingId(null), 380);
+
+    // считаем свободное место снизу от карточки до нижней границы контейнера
+    const cardEl = e?.currentTarget;
+    const containerEl = containerRef?.current;
+    if (cardEl && containerEl) {
+      const cardRect = cardEl.getBoundingClientRect();
+      const containerRect = containerEl.getBoundingClientRect();
+      // примерная высота пикера с padding и отступом
+      const pickerHeight = 54;
+      const spaceBelow = containerRect.bottom - cardRect.bottom;
+      setPickerAbove(spaceBelow < pickerHeight);
+    } else {
+      setPickerAbove(false);
+    }
+
     toggleReactions(messageId);
   };
 
@@ -131,11 +156,6 @@ const MessageList = ({
           ) : null;
 
           // ==== Image-only ====
-          // [правка 2.14.18]
-          //  - время вынесено вниз-справа с градиентом (Telegram-style);
-          //  - реакции — под карточкой, вылезают за нижнюю границу,
-          //    визуал скопирован с private-reaction-badge (круглые 15×15);
-          //  - верхний оверлей: только ник + действия.
           if (isImageOnly) {
             return (
               <React.Fragment key={i}>
@@ -215,11 +235,6 @@ const MessageList = ({
           }
 
           // ==== Обычное сообщение ====
-          // [правка 2.14.19] реакции и пикер — под карточкой, как в личке:
-          //   - бейджи .msg-reaction-badge (круглые 15×15, вылезают за границу);
-          //   - пикер .msg-reaction-picker — 5 эмодзи, появляется под карточкой;
-          //   - pop-анимация карточки при тапе;
-          //   - из шапки убраны .reactions-header и .reactions-panel.
           return (
             <React.Fragment key={i}>
               {dateDivider}
@@ -229,7 +244,7 @@ const MessageList = ({
                 </div>
                 <div
                   className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''}`}
-                  onClick={() => handleMessageTap(m.id)}
+                  onClick={(e) => handleMessageTap(m.id, e)}
                 >
                   <div className="msg-header">
                     <span className="msg-nick">{m.nickname}</span>
@@ -305,7 +320,6 @@ const MessageList = ({
                     </div>
                   )}
 
-                  {/* реакции — под карточкой, вылезают за нижнюю границу */}
                   {hasReactions(m) && (
                     <div className="msg-reactions">
                       {Object.entries(m.reactions).map(([emoji, users]) => (
@@ -322,10 +336,9 @@ const MessageList = ({
                     </div>
                   )}
 
-                  {/* пикер реакций — 5 эмодзи, как в личке */}
                   {activeMessageId === m.id && !isEditingThis && (
                     <div
-                      className="msg-reaction-picker"
+                      className={`msg-reaction-picker ${pickerAbove ? 'msg-reaction-picker--top' : ''}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
@@ -336,7 +349,7 @@ const MessageList = ({
                             className={isActive ? 'active' : ''}
                             onClick={() => {
                               sendReaction(m.id, emoji);
-                              toggleReactions(m.id); // [правка 2.14.21] закрываем пикер после выбора — как в личке
+                              toggleReactions(m.id);
                             }}
                           >
                             {emoji}
