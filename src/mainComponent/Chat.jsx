@@ -31,7 +31,7 @@ import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
 // fix(capsule): вернул капсулу на мобилке (2.18.8)
-const VERSION = '2.18.8';
+const VERSION = '2.18.9';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
