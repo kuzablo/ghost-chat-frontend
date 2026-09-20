@@ -30,14 +30,15 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// fix(capsule): вернул капсулу на мобилке (2.18.8)
-const VERSION = '2.18.9';
+// [2.19.1] adminUserId из auth — писать админу можно всегда
+const VERSION = '2.19.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
   const auth = useAuth();
   const {
     token, nickname, isAuth, isAdmin, myId, serverVersion,
+    adminUserId, adminNickname,
     isRegisterMode, setIsRegisterMode,
     authNickname, setAuthNickname,
     authPassword, setAuthPassword,
@@ -94,8 +95,6 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [2.18.7] жест по капсуле: свайп вверх = открыть, свайп вниз = закрыть.
-  // didSwipe — чтобы onClick после touchend не открыл капсулу обратно.
   const capsuleSwipeRef = useRef({ startY: 0, active: false, didSwipe: false });
 
   const mascotGestureRef = useRef({
@@ -278,7 +277,6 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // Свайпы: панель игроков + инфо-панель
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -472,7 +470,6 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== жесты маскота =====
   const LONG_PRESS_MS = 600;
   const DOUBLE_TAP_MS = 250;
   const VOLUME_PIXELS_PER_PERCENT = 2;
@@ -566,9 +563,21 @@ const Chat = () => {
     setShowMobileInput(true);
   };
 
-  // ===== [2.18.7] мобильная капсула: тап + свайп вверх/вниз =====
+  // [2.19.1] писать админу можно всегда — сообщение сохранится в БД,
+  // а админ увидит его, когда зайдёт (через unread_private_list)
+  const handleMessageAdmin = () => {
+    setShowInfo(false);
+    if (!adminUserId) {
+      setDuelNotice('Админ ещё не назначен');
+      setTimeout(() => setDuelNotice(''), 3000);
+      return;
+    }
+    const adminOnline = players.find(p => p.userId === adminUserId);
+    const nick = adminOnline?.nickname || adminNickname || 'admin';
+    openPrivateChat(adminUserId, nick);
+  };
+
   const handleCapsuleTap = () => {
-    // если только что был свайп — onClick игнорируем, иначе откроется обратно
     if (capsuleSwipeRef.current.didSwipe) {
       capsuleSwipeRef.current.didSwipe = false;
       return;
@@ -601,7 +610,6 @@ const Chat = () => {
 
     const dy = e.touches[0].clientY - capsuleSwipeRef.current.startY;
 
-    // свайп вверх — открыть
     if (!capsuleOpen && dy < -20) {
       capsuleSwipeRef.current.active = false;
       capsuleSwipeRef.current.didSwipe = true;
@@ -609,7 +617,6 @@ const Chat = () => {
       return;
     }
 
-    // свайп вниз — закрыть
     if (capsuleOpen && dy > 40) {
       capsuleSwipeRef.current.active = false;
       capsuleSwipeRef.current.didSwipe = true;
@@ -661,7 +668,11 @@ const Chat = () => {
       )}
 
       {showInfo && (
-        <InfoPanel ref={infoPanelRef} onClose={() => setShowInfo(false)} />
+        <InfoPanel
+          ref={infoPanelRef}
+          onClose={() => setShowInfo(false)}
+          onMessageAdmin={handleMessageAdmin}
+        />
       )}
 
       {privateChat && (
@@ -871,7 +882,6 @@ const Chat = () => {
             </button>
           </div>
 
-          {/* [2.18.7] мобильная капсула-тюбик: тап или свайп вверх открывает */}
           <div
             className={`mobile-capsule ${capsuleOpen ? 'mobile-capsule--open' : ''}`}
             onClick={handleCapsuleTap}

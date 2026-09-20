@@ -1,22 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 
-/*
-  [новый хук, рефакторинг 2.14.29]
-  Вынесено из Chat.jsx — вся авторизация:
-    - state: token, nickname, isAuth, isAdmin, myId, serverVersion;
-    - поля формы: isRegisterMode, authNickname, authPassword, authError, showPassword;
-    - handleAuthSubmit — запрос /api/register | /api/login;
-    - applyAuthOk — успешный WS auth_ok (устанавливает userId/role/version);
-    - forceLogout — выход по бану/idle;
-    - showIdleNotice — «вы были отключены за неактивность»;
-    - nicknameRef, tokenRef — для useWebSocket и других хуков.
-
-  WS-обработка (switch) остаётся в Chat.jsx, чтобы не рвать
-  зависимость на sendMessage. Хук отдаёт чистые методы.
-*/
-
 const API_URL = 'https://api.banjoboy420.ru';
 
+/*
+  [2.16.0] добавлены adminUserId и adminNickname —
+  нужны, чтобы писать админу, даже если он офлайн.
+*/
 export const useAuth = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
   const storedNickname = localStorage.getItem('ghost-chat-nickname') || '';
@@ -27,6 +16,8 @@ export const useAuth = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [myId, setMyId] = useState(null);
   const [serverVersion, setServerVersion] = useState('');
+  const [adminUserId, setAdminUserId] = useState(null);
+  const [adminNickname, setAdminNickname] = useState(null);
 
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [authNickname, setAuthNickname] = useState('');
@@ -38,7 +29,6 @@ export const useAuth = () => {
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
 
-  // При разлогине — подсветить причину (idle/бан)
   useEffect(() => {
     if (!isAuth) {
       setShowIdleNotice(true);
@@ -86,16 +76,17 @@ export const useAuth = () => {
     }
   };
 
-  // [правка 2.14.29] успешный WS auth_ok — вынести из switch
   const applyAuthOk = (data) => {
     setMyId(data.userId);
     setNickname(data.nickname);
     setIsAuth(true);
     setIsAdmin(data.role === 'admin');
     setServerVersion(data.serverVersion || '');
+    // [2.16.0]
+    setAdminUserId(data.adminUserId || null);
+    setAdminNickname(data.adminNickname || null);
   };
 
-  // [правка 2.14.29] выход — по бану или idle. Логика была в Chat.jsx.
   const forceLogout = (reason) => {
     setAuthError(reason || '');
     setIsAuth(false);
@@ -107,6 +98,7 @@ export const useAuth = () => {
 
   return {
     token, nickname, isAuth, isAdmin, myId, serverVersion,
+    adminUserId, adminNickname,
     isRegisterMode, setIsRegisterMode,
     authNickname, setAuthNickname,
     authPassword, setAuthPassword,
