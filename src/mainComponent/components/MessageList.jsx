@@ -15,7 +15,7 @@ const MessageList = ({
   myId,
   onEditMessage,
   containerRef,
-  onReply, // [2.16.0] вызвать reply на сообщение
+  onReply,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -23,7 +23,9 @@ const MessageList = ({
   const [confirmData, setConfirmData] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
 
-  // [2.16.0] состояние свайпа для reply
+  // [2.16.1] восстановлено: пикер не влезает снизу — показываем сверху
+  const [pickerAbove, setPickerAbove] = useState(false);
+
   const [swipeState, setSwipeState] = useState({ id: null, dx: 0 });
   const swipeStartRef = useRef(null);
   const swipeActiveRef = useRef(false);
@@ -119,6 +121,7 @@ const MessageList = ({
     setPoppingId(messageId);
     setTimeout(() => setPoppingId(null), 380);
 
+    // [2.16.1] считаем, влезает ли пикер снизу
     const cardEl = e?.currentTarget;
     const containerEl = containerRef?.current;
     if (cardEl && containerEl) {
@@ -126,19 +129,20 @@ const MessageList = ({
       const containerRect = containerEl.getBoundingClientRect();
       const pickerHeight = 54;
       const spaceBelow = containerRect.bottom - cardRect.bottom;
-      // логика пикера выше/ниже — из существующего кода
+      setPickerAbove(spaceBelow < pickerHeight);
+    } else {
+      setPickerAbove(false);
     }
 
     toggleReactions(messageId);
   };
 
-  // ===== [2.16.0] Свайп для reply =====
+  // ===== Свайп для reply =====
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 80;
 
   const handleMsgTouchStart = (e, m) => {
     if (e.touches.length !== 1) return;
-    // не свайпаем пока открыт редактор этой карточки
     if (editingMessageId === m.id) return;
     swipeStartRef.current = {
       id: m.id,
@@ -160,12 +164,10 @@ const MessageList = ({
     if (!swipeActiveRef.current) {
       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
       if (Math.abs(dy) > Math.abs(dx)) {
-        // вертикальный — не наш, отменяем
         swipeStartRef.current = null;
         return;
       }
       if (dx < 0) {
-        // только вправо
         swipeStartRef.current = null;
         return;
       }
@@ -222,7 +224,6 @@ const MessageList = ({
             </div>
           ) : null;
 
-          // [2.16.0] блок цитаты — используется в обоих режимах
           const replyBlock = m.replyTo ? (
             <div className="msg-reply-quote">
               <div className="msg-reply-quote-nick">{m.replyTo.nickname}</div>
@@ -242,7 +243,6 @@ const MessageList = ({
                     {getInitial(m.nickname)}
                   </div>
                   <div className="msg-content msg-content--image-only">
-                    {/* [2.16.0] стрелка reply */}
                     {swipeState.id === m.id && (
                       <div
                         className="msg-reply-arrow"
@@ -349,7 +349,6 @@ const MessageList = ({
                   onTouchMove={(e) => handleMsgTouchMove(e, m)}
                   onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                 >
-                  {/* [2.16.0] стрелка reply */}
                   {swipeState.id === m.id && (
                     <div
                       className="msg-reply-arrow"
@@ -453,7 +452,7 @@ const MessageList = ({
 
                   {activeMessageId === m.id && !isEditingThis && (
                     <div
-                      className="msg-reaction-picker"
+                      className={`msg-reaction-picker ${pickerAbove ? 'msg-reaction-picker--top' : ''}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
