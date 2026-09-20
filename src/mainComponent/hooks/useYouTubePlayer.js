@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [2.15.23] Плеер рабочий (nocookie + мини-плеер для первого play).
-  Добавлено: trackTitle для показа названия в шапке.
+  [правка 2.15.23 → 2.15.24]
+  Первый трек заменён: dn_HJ0G3JXI → 6VGePXh16l0
 */
 
 const PLAYLIST = [
-  'dn_HJ0G3JXI',
+  '6VGePXh16l0',
   'rY8drrmx4k4',
   '6gRXToZhO1A',
 ];
@@ -78,7 +78,6 @@ export const useYouTubePlayer = () => {
             e.target.setVolume(volumeRef.current);
           },
           onStateChange: (e) => {
-            // подтягиваем название трека
             try {
               const data = e.target.getVideoData?.();
               if (data?.title) setTrackTitle(data.title);

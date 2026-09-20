@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.22 → 2.15.23] название трека + дребезжание + эквалайзер
-const VERSION = '2.15.23';
+// 
+const VERSION = '2.15.24';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
