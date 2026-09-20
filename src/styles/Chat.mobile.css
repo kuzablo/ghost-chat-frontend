@@ -443,9 +443,81 @@
                 box-shadow 0.25s;
   }
 
+  /* [2.18.1] приглашение — стрелка вверх + пульс свечения, только когда свёрнута */
+  .mobile-capsule:not(.mobile-capsule--open) {
+    animation: capsuleBreath 2.6s ease-in-out infinite;
+  }
+
+  @keyframes capsuleBreath {
+    0%, 100% {
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08),
+                  0 -1px 0 rgba(245, 169, 192, 0.4);
+    }
+    50% {
+      box-shadow: 0 -4px 14px rgba(245, 169, 192, 0.55),
+                  0 -1px 0 rgba(245, 169, 192, 0.85);
+    }
+  }
+
+  /* стрелка вверх — еле видная, пульсирует вверх-вниз */
+  .mobile-capsule:not(.mobile-capsule--open)::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid #111;
+    transform: translateX(-50%);
+    animation: capsuleArrowBob 1.8s ease-in-out infinite;
+    pointer-events: none;
+    opacity: 0.55;
+    z-index: 3;
+  }
+
+  @keyframes capsuleArrowBob {
+    0%, 100% {
+      transform: translateX(-50%) translateY(0);
+      opacity: 0.35;
+    }
+    50% {
+      transform: translateX(-50%) translateY(-2px);
+      opacity: 0.85;
+    }
+  }
+
+  /* пробегающий блик по полоске */
+  .mobile-capsule:not(.mobile-capsule--open)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -30%;
+    width: 30%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    animation: capsuleShimmer 3.4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  @keyframes capsuleShimmer {
+    0%   { left: -30%; opacity: 0; }
+    10%  { opacity: 1; }
+    50%  { left: 100%; opacity: 0; }
+    100% { left: 100%; opacity: 0; }
+  }
+
   .mobile-capsule--open {
     height: 84px;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
+    animation: none;
   }
 
   /* пульсирующая точка непрочитанного */
@@ -461,7 +533,7 @@
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
     animation: capsulePulse 1.4s ease-in-out infinite;
     pointer-events: none;
-    z-index: 2;
+    z-index: 4;
   }
 
   @keyframes capsulePulse {
@@ -473,6 +545,12 @@
       transform: translateX(-50%) scale(1.45);
       opacity: 0.55;
     }
+  }
+
+  /* когда есть непрочитанные — пульс, а стрелку и блик притушить */
+  .mobile-capsule:not(.mobile-capsule--open):has(.capsule-pulse)::before {
+    opacity: 0;
+    animation: none;
   }
 
   /* контейнер кнопок-стикеров */
@@ -595,6 +673,25 @@
   body.dark .mobile-capsule {
     background: linear-gradient(to top, #172236 0%, #23324A 100%);
     border-top-color: #2C3E5A;
+  }
+
+  body.dark .mobile-capsule:not(.mobile-capsule--open)::before {
+    border-bottom-color: #EAF2FA;
+  }
+
+  body.dark .mobile-capsule:not(.mobile-capsule--open) {
+    animation: capsuleBreathDark 2.6s ease-in-out infinite;
+  }
+
+  @keyframes capsuleBreathDark {
+    0%, 100% {
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2),
+                  0 -1px 0 rgba(59, 181, 232, 0.3);
+    }
+    50% {
+      box-shadow: 0 -4px 14px rgba(59, 181, 232, 0.45),
+                  0 -1px 0 rgba(59, 181, 232, 0.7);
+    }
   }
 
   body.dark .capsule-btn {

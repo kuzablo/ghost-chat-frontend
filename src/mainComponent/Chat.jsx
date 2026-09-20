@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// [правка 2.17.3 → 2.18.0] мобильная капсула-тюбик со стикерами
-const VERSION = '2.18.0';
+// ui(capsule): стрелка-подсказка + дыхание + блик (2.18.1)
+const VERSION = '2.18.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
