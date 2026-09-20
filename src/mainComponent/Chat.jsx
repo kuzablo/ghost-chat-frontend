@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.17 → 2.15.18] iframe внутри viewport для iOS
-const VERSION = '2.15.19';
+// [откат к 2.15.8] маскот-радио: pointerup на маскоте, синхронный toggle
+const VERSION = '2.15.8';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -67,11 +67,6 @@ const Chat = () => {
   const [dragY, setDragY] = useState(0);
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
-  const [trackTitleVisible, setTrackTitleVisible] = useState(false);
-
-  // [правка 2.15.17] диагностика
-  const [dbgTouch, setDbgTouch] = useState(0);
-  const [dbgMouse, setDbgMouse] = useState(0);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -91,19 +86,14 @@ const Chat = () => {
   const inputTouchStartXRef = useRef(null);
 
   const mascotGestureRef = useRef({
-    active: false,
     startY: 0,
     startTime: 0,
     volumeBase: 50,
     inVolumeDrag: false,
+    longPressTimer: null,
+    longPressFired: false,
+    pointerId: null,
   });
-
-  const lastTouchTimeRef = useRef(0);
-
-  const [mascotPressing, setMascotPressing] = useState(false);
-  const [mascotActivating, setMascotActivating] = useState(false);
-
-  const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
 
@@ -254,6 +244,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
+  // Свайп панели игроков
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -423,48 +414,56 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== жесты маскота =====
+  // ===== [откат к 2.15.8] Жесты маскота через pointer events =====
   const LONG_PRESS_MS = 600;
+  const DOUBLE_TAP_MS = 250;
   const VOLUME_PIXELS_PER_PERCENT = 2;
-  const VOLUME_DRAG_THRESHOLD = 15;
 
-  const showTrackTitle = () => {
-    setTrackTitleVisible(true);
-    clearTimeout(titleTimeoutRef.current);
-    titleTimeoutRef.current = setTimeout(() => setTrackTitleVisible(false), 5000);
+  const handleMascotPointerDown = (e) => {
+    const ref = mascotGestureRef.current;
+    ref.startY = e.clientY;
+    ref.startTime = Date.now();
+    ref.volumeBase = yt.volume;
+    ref.inVolumeDrag = false;
+    ref.longPressFired = false;
+    ref.pointerId = e.pointerId;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+
+    ref.longPressTimer = setTimeout(() => {
+      ref.longPressFired = true;
+      yt.next();
+    }, LONG_PRESS_MS);
   };
 
-  useEffect(() => {
-    if (!yt.hasStarted) return;
-    showTrackTitle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yt.trackIndex]);
-
-  const onMove = useCallback((clientY) => {
+  const handleMascotPointerMove = (e) => {
     const ref = mascotGestureRef.current;
-    if (!ref.active) return;
-    const dy = clientY - ref.startY;
+    if (ref.pointerId !== e.pointerId) return;
+    const dy = e.clientY - ref.startY;
 
-    if (Math.abs(dy) > VOLUME_DRAG_THRESHOLD) {
+    if (Math.abs(dy) > 8) {
       if (!ref.inVolumeDrag) {
         ref.inVolumeDrag = true;
-        setMascotPressing(false);
+        if (ref.longPressTimer) {
+          clearTimeout(ref.longPressTimer);
+          ref.longPressTimer = null;
+        }
         setVolumeTipVisible(true);
       }
       const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
       yt.setVolume(ref.volumeBase + delta);
     }
-  }, [yt]);
+  };
 
-  const finishGesture = useCallback(() => {
+  const handleMascotPointerUp = (e) => {
     const ref = mascotGestureRef.current;
-    if (!ref.active) return;
-    ref.active = false;
+    if (ref.pointerId !== e.pointerId) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) { /* noop */ }
+    ref.pointerId = null;
 
-    document.removeEventListener('touchmove', onGlobalTouchMove);
-    document.removeEventListener('touchcancel', onGlobalTouchCancel);
-
-    setMascotPressing(false);
+    if (ref.longPressTimer) {
+      clearTimeout(ref.longPressTimer);
+      ref.longPressTimer = null;
+    }
 
     if (ref.inVolumeDrag) {
       ref.inVolumeDrag = false;
@@ -472,84 +471,22 @@ const Chat = () => {
       return;
     }
 
-    const duration = Date.now() - ref.startTime;
-
-    if (duration >= LONG_PRESS_MS) {
-      setMascotActivating(true);
-      setTimeout(() => setMascotActivating(false), 400);
-      yt.next();
-      showTrackTitle();
+    if (ref.longPressFired) {
+      ref.longPressFired = false;
       return;
     }
 
+    const duration = Date.now() - ref.startTime;
+    if (duration > LONG_PRESS_MS) return;
+
+    const now = Date.now();
+    if (now - ref.lastTapTime < DOUBLE_TAP_MS) {
+      ref.lastTapTime = 0;
+      yt.next();
+      return;
+    }
+    ref.lastTapTime = now;
     yt.toggle();
-    if (!yt.hasStarted) showTrackTitle();
-  }, [yt]);
-
-  const onGlobalTouchMove = useCallback((e) => {
-    if (e.touches.length !== 1) return;
-    onMove(e.touches[0].clientY);
-  }, [onMove]);
-
-  const onGlobalTouchCancel = useCallback(() => {
-    const ref = mascotGestureRef.current;
-    if (!ref.active) return;
-    ref.active = false;
-    document.removeEventListener('touchmove', onGlobalTouchMove);
-    document.removeEventListener('touchcancel', onGlobalTouchCancel);
-    setMascotPressing(false);
-    setVolumeTipVisible(false);
-  }, [onGlobalTouchMove]);
-
-  const handleMascotTouchStart = (e) => {
-    if (e.touches.length !== 1) return;
-
-    lastTouchTimeRef.current = Date.now();
-
-    const ref = mascotGestureRef.current;
-    if (ref.active) return;
-
-    const t = e.touches[0];
-    ref.active = true;
-    ref.startY = t.clientY;
-    ref.startTime = Date.now();
-    ref.volumeBase = yt.volume;
-    ref.inVolumeDrag = false;
-
-    setMascotPressing(true);
-
-    document.addEventListener('touchmove', onGlobalTouchMove, { passive: false });
-    document.addEventListener('touchcancel', onGlobalTouchCancel);
-  };
-
-  const handleMascotTouchEnd = () => {
-    setDbgTouch(c => c + 1); // [правка 2.15.17]
-    finishGesture();
-  };
-
-  const handleMascotMouseDown = (e) => {
-    setDbgMouse(c => c + 1); // [правка 2.15.17]
-    if (Date.now() - lastTouchTimeRef.current < 800) return;
-
-    const ref = mascotGestureRef.current;
-    if (ref.active) return;
-
-    ref.active = true;
-    ref.startY = e.clientY;
-    ref.startTime = Date.now();
-    ref.volumeBase = yt.volume;
-    ref.inVolumeDrag = false;
-
-    setMascotPressing(true);
-
-    const onMouseMove = (ev) => onMove(ev.clientY);
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      finishGesture();
-    };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
   };
 
   const handleMascotContextMenu = (e) => {
@@ -626,49 +563,26 @@ const Chat = () => {
               <img
                 src="/mascot.png"
                 alt="banjoboy"
-                className={
-                  `chat-header-logo` +
-                  (mascotPressing ? ' mascot-pressing' : '') +
-                  (mascotActivating ? ' mascot-activating' : '') +
-                  (yt.isPlaying && !mascotPressing && !mascotActivating ? ' mascot-playing' : '')
-                }
+                className="chat-header-logo"
                 draggable={false}
-                onTouchStart={handleMascotTouchStart}
-                onTouchEnd={handleMascotTouchEnd}
-                onMouseDown={handleMascotMouseDown}
+                onPointerDown={handleMascotPointerDown}
+                onPointerMove={handleMascotPointerMove}
+                onPointerUp={handleMascotPointerUp}
+                onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
-              {mascotPressing && (
-                <svg className="mascot-ring" viewBox="0 0 100 100">
-                  <circle className="mascot-ring-bg" cx="50" cy="50" r="46" />
-                  <circle className="mascot-ring-fg" cx="50" cy="50" r="46" />
-                </svg>
-              )}
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
-              {yt.isPlaying && (
-                <div className="mascot-equalizer">
-                  <span /><span /><span /><span />
-                </div>
-              )}
+              {yt.isPlaying && <span className="mascot-playing-dot" />}
             </div>
 
             <div className="chat-header-text">
-              {trackTitleVisible && yt.trackTitle ? (
-                <div className="chat-header-track-title" title={yt.trackTitle}>
-                  ♫ {yt.trackTitle}
-                </div>
-              ) : (
-                <div className="chat-header-title">banjoboy's crew</div>
-              )}
+              <div className="chat-header-title">banjoboy's crew</div>
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
-              {/* [правка 2.15.17] диагностика */}
-              <div className="chat-header-version">
-                v{VERSION} R:{yt.ready ? 1 : 0} H:{yt.hasStarted ? 1 : 0} P:{yt.isPlaying ? 1 : 0} T:{dbgTouch} M:{dbgMouse}
-              </div>
+              <div className="chat-header-version">v{VERSION}</div>
             </div>
             <button
               className="chat-header-theme"

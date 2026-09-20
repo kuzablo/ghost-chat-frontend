@@ -1,24 +1,14 @@
-/*
-  [правка 2.15.19] iframe 200×200 в углу, почти прозрачный.
-*/
+/* [откат к 2.15.8] Стили маскота. Без дребезжания, без эквалайзера. */
 
 .yt-hidden-host {
   position: fixed;
-  bottom: 4px;
-  right: 4px;
+  top: -9999px;
+  left: -9999px;
   width: 200px;
   height: 200px;
   opacity: 0.01;
   pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
-}
-
-.yt-hidden-host iframe {
-  width: 200px;
-  height: 200px;
-  border: 0;
-  display: block;
+  z-index: -1;
 }
 
 .chat-header-mascot-wrap {
@@ -33,100 +23,10 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  transition: transform 0.15s ease-out;
 }
 
-.chat-header-logo.mascot-playing {
-  animation: mascotVibrate 1.4s ease-in-out infinite;
-}
-
-@keyframes mascotVibrate {
-  0%   { transform: translate(0, 0)    rotate(0deg); }
-  15%  { transform: translate(-1px, -1px) rotate(-1.2deg); }
-  30%  { transform: translate(1px, 0)   rotate(1.2deg); }
-  45%  { transform: translate(-1px, 1px) rotate(-0.8deg); }
-  60%  { transform: translate(1px, -1px) rotate(0.8deg); }
-  75%  { transform: translate(0, 1px)   rotate(-0.5deg); }
-  100% { transform: translate(0, 0)    rotate(0deg); }
-}
-
-.chat-header-logo.mascot-pressing {
-  animation: none;
-  transform: scale(0.92);
-}
-
-.chat-header-logo.mascot-activating {
-  animation: mascotActivate 0.4s ease-out;
-}
-
-@keyframes mascotActivate {
-  0%   { transform: scale(0.92); }
-  40%  { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-
-.mascot-equalizer {
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 10px;
-  pointer-events: none;
-  z-index: 3;
-}
-
-.mascot-equalizer span {
-  display: block;
-  width: 3px;
-  background: #3BB5E8;
-  border-radius: 2px;
-  box-shadow: 0 0 3px rgba(59, 181, 232, 0.6);
-  animation: mascotEqBar 0.9s ease-in-out infinite;
-}
-
-.mascot-equalizer span:nth-child(1) { animation-delay: 0s; }
-.mascot-equalizer span:nth-child(2) { animation-delay: 0.15s; }
-.mascot-equalizer span:nth-child(3) { animation-delay: 0.3s; }
-.mascot-equalizer span:nth-child(4) { animation-delay: 0.45s; }
-
-@keyframes mascotEqBar {
-  0%   { height: 3px; }
-  50%  { height: 10px; }
-  100% { height: 3px; }
-}
-
-.mascot-ring {
-  position: absolute;
-  inset: -5px;
-  width: calc(100% + 10px);
-  height: calc(100% + 10px);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.mascot-ring circle {
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.mascot-ring .mascot-ring-bg { stroke: rgba(59, 181, 232, 0.2); }
-
-.mascot-ring .mascot-ring-fg {
-  stroke: #3BB5E8;
-  stroke-dasharray: 289;
-  stroke-dashoffset: 289;
-  transform-origin: center;
-  transform: rotate(-90deg);
-  animation: mascotRingFill 0.6s linear forwards;
-}
-
-@keyframes mascotRingFill {
-  from { stroke-dashoffset: 289; }
-  to   { stroke-dashoffset: 0; }
+.chat-header-logo:active {
+  cursor: grabbing;
 }
 
 .mascot-volume-tip {
@@ -151,18 +51,20 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-.chat-header-track-title {
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--nick-color);
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  animation: trackTitleFade 0.25s ease-out;
+.mascot-playing-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22C55E;
+  border: 2px solid var(--card-bg);
+  pointer-events: none;
+  animation: mascotPulse 1.6s ease-in-out infinite;
 }
 
-@keyframes trackTitleFade {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes mascotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.15); opacity: 0.7; }
 }
