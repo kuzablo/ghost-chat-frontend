@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.20 → 2.15.21] видимый мини-плеер для первого play на iOS
-const VERSION = '2.15.21';
+// 
+const VERSION = '2.15.22';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

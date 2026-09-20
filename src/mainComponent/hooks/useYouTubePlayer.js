@@ -70,6 +70,7 @@ export const useYouTubePlayer = () => {
           playsinline: 1,
           iv_load_policy: 3,
           rel: 0,
+          host: 'https://www.youtube-nocookie.com',
         },
         events: {
           onReady: (e) => {
