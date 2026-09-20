@@ -34,9 +34,11 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.22.1] свайп по капсуле: лок направления, чёткие пороги, поэтапное закрытие
+// [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.21.0';
+const VERSION = '2.22.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -131,7 +133,14 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  const capsuleSwipeRef = useRef({ startY: 0, active: false, didSwipe: false });
+  // [2.22.1] состояние жеста по капсуле: старт, лок направления, флаг «был свайп»
+  const capsuleSwipeRef = useRef({
+    startX: 0,
+    startY: 0,
+    active: false,
+    didSwipe: false,
+    direction: null,
+  });
 
   const mascotGestureRef = useRef({
     startY: 0,
@@ -293,11 +302,8 @@ const Chat = () => {
     const handleClickOutside = (e) => {
       if (playersBtnRef.current?.contains(e.target)) return;
       if (mobilePlayersBtnRef.current?.contains(e.target)) return;
-      // [2.20.1] не закрываем панель при тапе в стикер-меню
       if (e.target.closest && e.target.closest('.sticker-menu-overlay')) return;
-      // [2.20.5] клик по кнопкам темы и диалогов не закрывает панель игроков
       if (e.target.closest && e.target.closest('.theme-toggle')) return;
-      // [2.20.6] вторая кнопка темы — в шапке чата
       if (e.target.closest && e.target.closest('.chat-header-theme')) return;
       if (e.target.closest && e.target.closest('.dialogs-toggle')) return;
 
@@ -643,11 +649,14 @@ const Chat = () => {
     forceLogout('');
   };
 
+  /* ===== [2.22.1] Жесты по капсуле ===== */
+
+  const CAPSULE_SWIPE_UP = 30;      // порог открытия (вверх)
+  const CAPSULE_SWIPE_DOWN = 40;    // порог закрытия (вниз)
+  const CAPSULE_DIRECTION_LOCK = 8; // мёртвая зона + лок направления
+
   const handleCapsuleTap = () => {
-    if (capsuleSwipeRef.current.didSwipe) {
-      capsuleSwipeRef.current.didSwipe = false;
-      return;
-    }
+    if (capsuleSwipeRef.current.didSwipe) return;
     if (!capsuleOpen) setCapsuleOpen(true);
   };
 
@@ -665,34 +674,82 @@ const Chat = () => {
 
   const handleCapsuleTouchStart = (e) => {
     if (e.touches.length !== 1) return;
-    capsuleSwipeRef.current.startY = e.touches[0].clientY;
-    capsuleSwipeRef.current.active = true;
-    capsuleSwipeRef.current.didSwipe = false;
+    const t = e.touches[0];
+    capsuleSwipeRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      active: true,
+      didSwipe: false,
+      direction: null,
+    };
   };
 
   const handleCapsuleTouchMove = (e) => {
-    if (!capsuleSwipeRef.current.active) return;
+    const s = capsuleSwipeRef.current;
+    if (!s.active) return;
     if (e.touches.length !== 1) return;
 
-    const dy = e.touches[0].clientY - capsuleSwipeRef.current.startY;
+    const t = e.touches[0];
+    const dx = t.clientX - s.startX;
+    const dy = t.clientY - s.startY;
 
-    if (!capsuleOpen && dy < -20) {
-      capsuleSwipeRef.current.active = false;
-      capsuleSwipeRef.current.didSwipe = true;
-      setCapsuleOpen(true);
+    // Лок направления: пока не прошли мёртвую зону — ничего не делаем
+    if (!s.direction) {
+      if (
+        Math.abs(dx) < CAPSULE_DIRECTION_LOCK &&
+        Math.abs(dy) < CAPSULE_DIRECTION_LOCK
+      ) {
+        return;
+      }
+      s.direction = Math.abs(dy) > Math.abs(dx) ? 'vertical' : 'horizontal';
+    }
+    if (s.direction === 'horizontal') return;
+
+    // Вертикаль — блокируем скролл/выделение
+    if (e.cancelable) e.preventDefault();
+
+    if (dy <= -CAPSULE_SWIPE_UP) {
+      // Свайп вверх: раскрываем поэтапно
+      s.didSwipe = true;
+      s.active = false;
+
+      if (!capsuleOpen) {
+        setCapsuleOpen(true);
+        setShowMobileInput(true);
+      } else if (!showMobileInput) {
+        setShowMobileInput(true);
+      }
       return;
     }
 
-    if (capsuleOpen && dy > 40) {
-      capsuleSwipeRef.current.active = false;
-      capsuleSwipeRef.current.didSwipe = true;
-      setCapsuleOpen(false);
+    if (dy >= CAPSULE_SWIPE_DOWN) {
+      // Свайп вниз: закрываем сначала поле, потом капсулу
+      s.didSwipe = true;
+      s.active = false;
+
+      if (showMobileInput) {
+        setShowMobileInput(false);
+      } else if (capsuleOpen) {
+        setCapsuleOpen(false);
+      }
     }
   };
 
   const handleCapsuleTouchEnd = () => {
-    capsuleSwipeRef.current.active = false;
+    const s = capsuleSwipeRef.current;
+    s.active = false;
+    if (s.didSwipe) {
+      // Гасим возможный синтетический click после touchend.
+      // Сброс отложен, чтобы не съесть следующий тап.
+      setTimeout(() => {
+        if (capsuleSwipeRef.current) {
+          capsuleSwipeRef.current.didSwipe = false;
+        }
+      }, 250);
+    }
   };
+
+  /* ===== / Жесты по капсуле ===== */
 
   return (
     <>
