@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// const VERSION = '2.16.1';
-const VERSION = '2.16.1';
+// const VERSION = '2.16.2';
+const VERSION = '2.16.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {

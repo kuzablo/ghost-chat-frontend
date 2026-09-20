@@ -452,4 +452,12 @@
 
   .reply-preview-nick { font-size: 10px; }
   .reply-preview-text { font-size: 11px; }
+
+    /* [2.16.2] корзина на мобилке */
+  .msg-delete-arrow {
+    right: -30px;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
 }

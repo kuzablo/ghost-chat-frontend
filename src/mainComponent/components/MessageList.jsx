@@ -23,10 +23,10 @@ const MessageList = ({
   const [confirmData, setConfirmData] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
 
-  // [2.16.1] восстановлено: пикер не влезает снизу — показываем сверху
   const [pickerAbove, setPickerAbove] = useState(false);
 
-  const [swipeState, setSwipeState] = useState({ id: null, dx: 0 });
+  // [2.16.2] swipeState.direction: 'reply' | 'delete'
+  const [swipeState, setSwipeState] = useState({ id: null, dx: 0, direction: null });
   const swipeStartRef = useRef(null);
   const swipeActiveRef = useRef(false);
 
@@ -95,11 +95,6 @@ const MessageList = ({
     cancelEdit();
   };
 
-  const handleDeleteClick = (messageId, e) => {
-    e.stopPropagation();
-    setConfirmData({ messageId });
-  };
-
   const handleConfirmDelete = () => {
     if (confirmData) {
       deleteMessage(confirmData.messageId);
@@ -112,6 +107,8 @@ const MessageList = ({
   const didIReact = (message, emoji) =>
     !!message?.reactions?.[emoji]?.includes(nickname);
 
+  const canDelete = (m) => isAdmin || m.userId === myId;
+
   const handleMessageTap = (messageId, e) => {
     if (activeMessageId === messageId) {
       toggleReactions(messageId);
@@ -121,7 +118,6 @@ const MessageList = ({
     setPoppingId(messageId);
     setTimeout(() => setPoppingId(null), 380);
 
-    // [2.16.1] считаем, влезает ли пикер снизу
     const cardEl = e?.currentTarget;
     const containerEl = containerRef?.current;
     if (cardEl && containerEl) {
@@ -137,9 +133,10 @@ const MessageList = ({
     toggleReactions(messageId);
   };
 
-  // ===== Свайп для reply =====
+  // ===== Свайп: влево = reply, вправо = delete =====
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 80;
+  const DIRECTION_LOCK = 8;
 
   const handleMsgTouchStart = (e, m) => {
     if (e.touches.length !== 1) return;
@@ -162,12 +159,13 @@ const MessageList = ({
     const dy = t.clientY - start.y;
 
     if (!swipeActiveRef.current) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
       if (Math.abs(dy) > Math.abs(dx)) {
         swipeStartRef.current = null;
         return;
       }
-      if (dx < 0) {
+      // вправо можно только если юзер может удалять
+      if (dx > 0 && !canDelete(m)) {
         swipeStartRef.current = null;
         return;
       }
@@ -175,24 +173,33 @@ const MessageList = ({
     }
 
     if (e.cancelable) e.preventDefault();
-    setSwipeState({ id: m.id, dx: Math.min(dx, SWIPE_MAX) });
+
+    if (dx < 0) {
+      setSwipeState({ id: m.id, dx: Math.max(dx, -SWIPE_MAX), direction: 'reply' });
+    } else if (dx > 0) {
+      setSwipeState({ id: m.id, dx: Math.min(dx, SWIPE_MAX), direction: 'delete' });
+    }
   };
 
   const handleMsgTouchEnd = (e, m) => {
     const start = swipeStartRef.current;
     if (!start || start.id !== m.id) {
-      setSwipeState({ id: null, dx: 0 });
+      setSwipeState({ id: null, dx: 0, direction: null });
       return;
     }
     const t = e.changedTouches[0];
     const dx = t.clientX - start.x;
+    const dir = swipeState.direction;
     swipeStartRef.current = null;
     swipeActiveRef.current = false;
 
-    if (dx >= SWIPE_THRESHOLD && onReply) {
+    if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply) {
       onReply(m);
+    } else if (dir === 'delete' && dx >= SWIPE_THRESHOLD && canDelete(m)) {
+      setConfirmData({ messageId: m.id });
     }
-    setSwipeState({ id: null, dx: 0 });
+
+    setSwipeState({ id: null, dx: 0, direction: null });
   };
 
   const getSwipeStyle = (m) => {
@@ -203,9 +210,11 @@ const MessageList = ({
     };
   };
 
-  const getReplyArrowOpacity = (m) => {
+  const getArrowOpacity = (m, dir) => {
     if (swipeState.id !== m.id) return 0;
-    return Math.min(swipeState.dx / SWIPE_THRESHOLD, 1);
+    if (swipeState.direction !== dir) return 0;
+    const abs = Math.abs(swipeState.dx);
+    return Math.min(abs / SWIPE_THRESHOLD, 1);
   };
 
   return (
@@ -243,12 +252,20 @@ const MessageList = ({
                     {getInitial(m.nickname)}
                   </div>
                   <div className="msg-content msg-content--image-only">
-                    {swipeState.id === m.id && (
+                    {swipeState.id === m.id && swipeState.direction === 'reply' && (
                       <div
                         className="msg-reply-arrow"
-                        style={{ opacity: getReplyArrowOpacity(m) }}
+                        style={{ opacity: getArrowOpacity(m, 'reply') }}
                       >
                         ↩
+                      </div>
+                    )}
+                    {swipeState.id === m.id && swipeState.direction === 'delete' && (
+                      <div
+                        className="msg-delete-arrow"
+                        style={{ opacity: getArrowOpacity(m, 'delete') }}
+                      >
+                        🗑
                       </div>
                     )}
                     <div
@@ -288,15 +305,6 @@ const MessageList = ({
                               title="Редактировать"
                             >
                               ✏️
-                            </button>
-                          )}
-                          {(isAdmin || isOwn) && (
-                            <button
-                              className="msg-action-btn msg-action-btn--overlay"
-                              onClick={(e) => handleDeleteClick(m.id, e)}
-                              title="Удалить"
-                            >
-                              🗑️
                             </button>
                           )}
                         </div>
@@ -349,12 +357,20 @@ const MessageList = ({
                   onTouchMove={(e) => handleMsgTouchMove(e, m)}
                   onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                 >
-                  {swipeState.id === m.id && (
+                  {swipeState.id === m.id && swipeState.direction === 'reply' && (
                     <div
                       className="msg-reply-arrow"
-                      style={{ opacity: getReplyArrowOpacity(m) }}
+                      style={{ opacity: getArrowOpacity(m, 'reply') }}
                     >
                       ↩
+                    </div>
+                  )}
+                  {swipeState.id === m.id && swipeState.direction === 'delete' && (
+                    <div
+                      className="msg-delete-arrow"
+                      style={{ opacity: getArrowOpacity(m, 'delete') }}
+                    >
+                      🗑
                     </div>
                   )}
 
@@ -369,15 +385,6 @@ const MessageList = ({
                           title="Редактировать"
                         >
                           ✏️
-                        </button>
-                      )}
-                      {(isAdmin || isOwn) && (
-                        <button
-                          className="msg-action-btn"
-                          onClick={(e) => handleDeleteClick(m.id, e)}
-                          title="Удалить"
-                        >
-                          🗑️
                         </button>
                       )}
                     </div>
