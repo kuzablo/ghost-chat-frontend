@@ -29,7 +29,6 @@ const MessageList = ({
   const swipeStartRef = useRef(null);
   const swipeActiveRef = useRef(false);
 
-  // [2.16.4] долгое нажатие на своё сообщение = редактирование
   const [editRingId, setEditRingId] = useState(null);
   const longPressRef = useRef({
     timer: null,
@@ -141,7 +140,6 @@ const MessageList = ({
     toggleReactions(messageId);
   };
 
-  // [2.17.1] тап по цитате — проскроллить к исходному сообщению
   const handleQuoteClick = (replyId, e) => {
     if (e) e.stopPropagation();
     if (!replyId) return;
@@ -285,7 +283,6 @@ const MessageList = ({
             </div>
           ) : null;
 
-          // [2.17.1] блок цитаты, тап — к исходному
           const replyBlock = m.replyTo ? (
             <div
               className="msg-reply-quote"
@@ -387,7 +384,11 @@ const MessageList = ({
                       </div>
 
                       {hasReactions(m) && (
-                        <div className="msg-image-only-reactions">
+                        <div
+                          className={`msg-image-only-reactions ${
+                            activeMessageId === m.id ? 'msg-image-only-reactions--above-picker' : ''
+                          }`}
+                        >
                           {Object.entries(m.reactions).map(([emoji, users]) => (
                             <span
                               key={emoji}
@@ -520,7 +521,11 @@ const MessageList = ({
                   )}
 
                   {hasReactions(m) && (
-                    <div className="msg-reactions">
+                    <div
+                      className={`msg-reactions ${
+                        activeMessageId === m.id ? 'msg-reactions--above-picker' : ''
+                      }`}
+                    >
                       {Object.entries(m.reactions).map(([emoji, users]) => (
                         <span
                           key={emoji}
