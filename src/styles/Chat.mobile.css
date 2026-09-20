@@ -42,6 +42,7 @@
   .chat-header-subtitle { font-size: 11px; }
   .chat-header-version { font-size: 10px; margin-top: 2px; }
 
+  /* кнопка темы в шапке */
   .chat-header-theme {
     display: flex;
     position: absolute;
@@ -89,7 +90,8 @@
     border-width: 1.5px;
   }
   .msg-content {
-    padding: 5px 9px;
+    /* [2.18.3] верхний отступ меньше */
+    padding: 3px 9px 5px;
     max-width: 82%;
     border-width: 1.5px;
     border-radius: 12px;
@@ -97,12 +99,14 @@
   .msg-header { gap: 4px; }
   .msg-nick { font-size: 12px; }
   .msg-text { font-size: 13px; line-height: 1.35; }
-   /* [2.18.2] время прижато вправо */
+
+  /* [2.18.2] время прижато вправо */
   .msg-time {
     font-size: 9px;
     margin-left: auto;
     padding-left: 10px;
   }
+
   .msg-action-btn {
     padding: 0 4px;
     font-size: 10px;
@@ -358,11 +362,11 @@
     border-width: 1.5px;
   }
 
-  /* Реакции в обычных сообщениях */
+  /* [2.18.3] реакции +2px на мобилке */
   .msg-reaction-badge {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
   }
 
   .msg-reaction-count {
@@ -381,7 +385,7 @@
     padding: 3px 5px;
   }
 
-  /* reply */
+  /* reply на мобилке */
   .msg-reply-arrow {
     left: -30px;
     width: 22px;
@@ -389,6 +393,7 @@
     font-size: 14px;
   }
 
+  /* корзина на мобилке */
   .msg-delete-arrow {
     right: -30px;
     width: 22px;
@@ -396,14 +401,17 @@
     font-size: 12px;
   }
 
+  /* на мобилке удаление свайпом — кнопку 🗑️ прячем */
   .msg-action-btn--delete {
     display: none !important;
   }
 
+  /* на мобилке редактирование через long press — кнопку ✏️ прячем */
   .msg-action-btn--edit {
     display: none !important;
   }
 
+  /* кольцо long press на мобилке */
   .msg-edit-ring {
     top: -4px;
     left: -4px;
@@ -421,6 +429,7 @@
   .reply-preview-nick { font-size: 10px; }
   .reply-preview-text { font-size: 11px; }
 
+  /* компактнее цитата на мобилке */
   .msg-reply-quote {
     padding: 2px 6px;
     margin-bottom: 3px;
@@ -448,7 +457,7 @@
                 box-shadow 0.25s;
   }
 
-  /* [2.18.1] приглашение — стрелка вверх + пульс свечения, только когда свёрнута */
+  /* [2.18.1] дыхание — только когда свёрнута */
   .mobile-capsule:not(.mobile-capsule--open) {
     animation: capsuleBreath 2.6s ease-in-out infinite;
   }
@@ -464,7 +473,7 @@
     }
   }
 
-  /* стрелка вверх — еле видная, пульсирует вверх-вниз */
+  /* стрелка вверх */
   .mobile-capsule:not(.mobile-capsule--open)::before {
     content: '';
     position: absolute;
@@ -493,7 +502,7 @@
     }
   }
 
-  /* пробегающий блик по полоске */
+  /* пробегающий блик */
   .mobile-capsule:not(.mobile-capsule--open)::after {
     content: '';
     position: absolute;
@@ -552,7 +561,7 @@
     }
   }
 
-  /* когда есть непрочитанные — пульс, а стрелку и блик притушить */
+  /* если есть непрочитанные — стрелку гасим */
   .mobile-capsule:not(.mobile-capsule--open):has(.capsule-pulse)::before {
     opacity: 0;
     animation: none;

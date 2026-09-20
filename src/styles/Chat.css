@@ -232,15 +232,17 @@ body {
   background: var(--card-bg);
   border: 2px solid var(--msg-border);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
+  /* [2.18.3] верхний отступ меньше — ник и время ближе к краю */
+  padding: 3px 10px 6px;
   transition: background 0.2s, border-color 0.2s;
 }
 
+/* [2.18.3] шапка ниже — меньше места сверху */
 .msg-header {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .msg-nick {
@@ -249,7 +251,7 @@ body {
   font-size: 13px;
 }
 
-/* [2.18.2] время прижато к правому краю шапки, ник слева */
+/* [2.18.2] время прижато к правому краю шапки */
 .msg-time {
   font-size: 10px;
   color: var(--time-color);
@@ -314,16 +316,17 @@ body {
   pointer-events: none;
 }
 
+/* [2.18.3] +2px к размеру реакции */
 .msg-reaction-badge {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   background: var(--card-bg);
   border: 1.5px solid var(--card-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   position: relative;
   padding: 0;
@@ -842,7 +845,6 @@ body.dark .unread-badge {
 }
 
 /* ===== Утилиты ===== */
-
 @media (pointer: fine) {
   .attach-btn { display: none !important; }
 }
@@ -1064,9 +1066,6 @@ button:active {
 
 /* ===== [2.17.1] Подсветка сообщения, к которому перепрыгнули по цитате ===== */
 
-/* в image-only .msg-content включает в себя цитату + картинку,
-   поэтому подсвечиваем ТОЛЬКО саму картинку.
-   В обычных сообщениях — .msg-content. Одна подсветка, без вложенных. */
 .msg--highlight .msg-content:not(.msg-content--image-only),
 .msg--highlight .msg-image-only-wrap {
   animation: msgHighlightPulse 1.6s ease-out;
