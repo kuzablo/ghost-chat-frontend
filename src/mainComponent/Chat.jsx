@@ -19,7 +19,6 @@ import { useAuth } from './hooks/useAuth';
 import { useDuel } from './hooks/useDuel';
 import { usePrivateChat } from './hooks/usePrivateChat';
 import { useChat } from './hooks/useChat';
-// [правка 2.15.7] радио-маскот
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
@@ -29,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// [правка 2.15.6 → 2.15.7] маскот-радио: tap/двойной тап/долгий тап/drag
-const VERSION = '2.15.7';
+// [правка 2.15.7 → 2.15.8] фикс маскота на iOS Safari
+const VERSION = '2.15.8';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -70,8 +69,6 @@ const Chat = () => {
   const [duelNotice, setDuelNotice] = useState('');
   const [dragY, setDragY] = useState(0);
   const [inputDragY, setInputDragY] = useState(0);
-
-  // [правка 2.15.7] состояние показа подсказки громкости
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
 
   // ===== 4. Refs =====
@@ -92,7 +89,7 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [правка 2.15.7] refs для жестов маскота
+  // [правка 2.15.8] жесты маскота: без setTimeout для toggle
   const mascotGestureRef = useRef({
     startY: 0,
     startTime: 0,
@@ -101,11 +98,9 @@ const Chat = () => {
     longPressTimer: null,
     longPressFired: false,
     lastTapTime: 0,
-    tapTimer: null,
     pointerId: null,
   });
 
-  // [правка 2.15.7] YouTube-плеер
   const yt = useYouTubePlayer();
 
   // ===== 5. WebSocket =====
@@ -262,7 +257,7 @@ const Chat = () => {
     }
   }, [showMobileInput]);
 
-  // ===== Свайп панели игроков (2.15.5) =====
+  // ===== Свайп панели игроков (2.15.5) + [правка 2.15.8] исключение маскота =====
   useEffect(() => {
     const EDGE_ZONE = 40;
     const THRESHOLD = 50;
@@ -270,6 +265,14 @@ const Chat = () => {
 
     const handleStart = (e) => {
       if (e.touches.length !== 1) return;
+
+      // [правка 2.15.8] если тач начался на маскоте — не трогаем, это его жест
+      const target = e.target;
+      if (target && target.closest && target.closest('.chat-header-mascot-wrap')) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+
       const t = e.touches[0];
 
       if (showPlayersRef.current) {
@@ -427,14 +430,10 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
-  // ===== [правка 2.15.7] Жесты маскота =====
-  // single tap → play/pause (с задержкой 250мс, чтобы поймать double tap)
-  // double tap → next
-  // long press (600мс) → next
-  // drag up/down → volume
+  // ===== [правка 2.15.8] Жесты маскота, синхронный play для iOS =====
   const LONG_PRESS_MS = 600;
   const DOUBLE_TAP_MS = 250;
-  const VOLUME_PIXELS_PER_PERCENT = 2; // 2px свайпа = 1% громкости
+  const VOLUME_PIXELS_PER_PERCENT = 2;
 
   const handleMascotPointerDown = (e) => {
     const ref = mascotGestureRef.current;
@@ -464,13 +463,8 @@ const Chat = () => {
           clearTimeout(ref.longPressTimer);
           ref.longPressTimer = null;
         }
-        if (ref.tapTimer) {
-          clearTimeout(ref.tapTimer);
-          ref.tapTimer = null;
-        }
         setVolumeTipVisible(true);
       }
-      // вверх (dy<0) = громче
       const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
       yt.setVolume(ref.volumeBase + delta);
     }
@@ -489,7 +483,6 @@ const Chat = () => {
 
     if (ref.inVolumeDrag) {
       ref.inVolumeDrag = false;
-      // прячем подсказку с задержкой
       setTimeout(() => setVolumeTipVisible(false), 600);
       return;
     }
@@ -502,28 +495,20 @@ const Chat = () => {
     const duration = Date.now() - ref.startTime;
     if (duration > LONG_PRESS_MS) return;
 
+    // [правка 2.15.8] СИНХРОННЫЙ toggle/next для iOS Safari.
+    // Раньше toggle был в setTimeout — Safari не считал это user gesture.
     const now = Date.now();
     if (now - ref.lastTapTime < DOUBLE_TAP_MS) {
-      // double tap → next
-      if (ref.tapTimer) {
-        clearTimeout(ref.tapTimer);
-        ref.tapTimer = null;
-      }
       ref.lastTapTime = 0;
       yt.next();
       return;
     }
-
     ref.lastTapTime = now;
-    ref.tapTimer = setTimeout(() => {
-      ref.tapTimer = null;
-      ref.lastTapTime = 0;
-      yt.toggle();
-    }, DOUBLE_TAP_MS);
+    // Сразу играем/пауза. Если через 250мс придёт второй тап — сделает next.
+    yt.toggle();
   };
 
   const handleMascotContextMenu = (e) => {
-    // отключаем контекстное меню на долгий тап (мобилка)
     e.preventDefault();
   };
 
@@ -593,7 +578,6 @@ const Chat = () => {
       <div className="chat-container">
         <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
-            {/* [правка 2.15.7] обёртка маскота для подсказки громкости и точек */}
             <div className="chat-header-mascot-wrap">
               <img
                 src="/mascot.png"
@@ -872,7 +856,6 @@ const Chat = () => {
         </div>
       )}
 
-      {/* [правка 2.15.7] скрытый YouTube-плеер. Только звук. */}
       <div className="yt-hidden-host">
         <div id={yt.containerId} />
       </div>

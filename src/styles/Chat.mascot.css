@@ -1,8 +1,8 @@
 /*
-  [2.15.7] Стили маскота-радио и скрытого YouTube-плеера.
+  [2.15.7 → 2.15.8] Стили маскота-радио.
+  [правка 2.15.8] touch-action: none на маскоте — чтобы скролл не перебивал drag-громкость.
 */
 
-/* Скрытый плеер: держим в DOM, но за экраном. YT не даёт display:none. */
 .yt-hidden-host {
   position: fixed;
   top: -9999px;
@@ -14,14 +14,12 @@
   z-index: -1;
 }
 
-/* Обёртка маскота: для absolute-подсказки громкости */
 .chat-header-mascot-wrap {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
 }
 
-/* Маскот кликабелен и «драгается» */
 .chat-header-logo {
   cursor: grab;
   touch-action: none;
@@ -34,7 +32,6 @@
   cursor: grabbing;
 }
 
-/* Подсказка громкости над маскотом */
 .mascot-volume-tip {
   position: absolute;
   top: -32px;
@@ -57,7 +54,6 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* Индикатор «играет» — маленькая точка рядом с маскотом */
 .mascot-playing-dot {
   position: absolute;
   bottom: 0;
