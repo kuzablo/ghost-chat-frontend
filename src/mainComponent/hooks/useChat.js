@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-// [2.26.0] чистка черновика после отправки
+  [2.27.0] hiddenUnread — счётчик сообщений, пришедших в скрытую вкладку.
+  [2.26.0] чистка черновика после отправки.
   [2.16.0] Добавлен replyTo — цитата для следующего сообщения.
   handleSendMessage шлёт replyTo и сбрасывает.
 */
@@ -25,6 +26,8 @@ export const useChat = ({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  // [2.27.0] сообщения, пришедшие в скрытую вкладку
+  const [hiddenUnread, setHiddenUnread] = useState(0);
 
   // [2.16.0] активная цитата для ответа
   const [replyTo, setReplyTo] = useState(null);
@@ -48,6 +51,15 @@ export const useChat = ({
   useEffect(() => { audioRef.current = audio; }, [audio]);
   useEffect(() => { onNoticeRef.current = onNotice; }, [onNotice]);
   useEffect(() => { replyToRef.current = replyTo; }, [replyTo]);
+
+  // [2.27.0] сбрасываем счётчик, когда вкладка стала видимой
+  useEffect(() => {
+    const onVis = () => {
+      if (!document.hidden) setHiddenUnread(0);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   // ===== Эффект «ник зашёл/вышел» =====
   useEffect(() => {
@@ -232,6 +244,13 @@ export const useChat = ({
       case 'message':
         setMessages(prev => [...prev, msg.data]);
         if (audioRef.current) audioRef.current.playNotification();
+        // [2.27.0] если вкладка скрыта и сообщение не моё — считаем
+        if (
+          document.hidden &&
+          msg.data.nickname !== nicknameRef.current
+        ) {
+          setHiddenUnread(n => n + 1);
+        }
         return true;
 
       case 'message_update':
@@ -297,7 +316,7 @@ export const useChat = ({
       default:
         return false;
     }
-  }, []);
+  }, [nicknameRef]);
 
   return {
     messages,
@@ -313,6 +332,8 @@ export const useChat = ({
     setInput,
     sending,
     isUploading,
+    // [2.27.0]
+    hiddenUnread,
     // [2.16.0]
     replyTo,
     setReplyTo,

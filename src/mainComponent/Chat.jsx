@@ -35,6 +35,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.27.0] счётчик непрочитанных в заголовке вкладки + Badging API
 // [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
 // [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
 // [2.23.4] откат contentEditable → <input type="search">
@@ -47,8 +48,9 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.26.0';
+const VERSION = '2.27.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
+const BASE_TITLE = "banjoboy's crew";
 
 const ThemeIcon = () => (
   <span className="theme-icon" aria-hidden="true">
@@ -221,6 +223,7 @@ const Chat = () => {
     setInput,
     sending,
     isUploading,
+    hiddenUnread,
     replyTo,
     setReplyTo,
     handleWs: handleChatWs,
@@ -259,6 +262,34 @@ const Chat = () => {
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
+
+  // [2.27.0] общий счётчик непрочитанного
+  const totalUnread = hiddenUnread + unreadCount + friendRequestsCount;
+
+  // [2.27.0] заголовок вкладки + Badging API
+  useEffect(() => {
+    document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
+
+    if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
+      try {
+        if (totalUnread > 0) {
+          navigator.setAppBadge(totalUnread);
+        } else if ('clearAppBadge' in navigator) {
+          navigator.clearAppBadge();
+        }
+      } catch { /* noop */ }
+    }
+  }, [totalUnread]);
+
+  // [2.27.0] при размонтировании возвращаем базовый заголовок
+  useEffect(() => {
+    return () => {
+      document.title = BASE_TITLE;
+      if (typeof navigator !== 'undefined' && 'clearAppBadge' in navigator) {
+        try { navigator.clearAppBadge(); } catch { /* noop */ }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     showPlayersRef.current = showPlayers;
