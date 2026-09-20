@@ -34,9 +34,38 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.20.6';
+const VERSION = '2.21.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
+
+const ThemeIcon = () => (
+  <span className="theme-icon" aria-hidden="true">
+    <svg
+      className="theme-icon-sun"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+    <svg
+      className="theme-icon-moon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  </span>
+);
 
 const Chat = () => {
   const auth = useAuth();
@@ -58,6 +87,7 @@ const Chat = () => {
 
   const {
     isDark, setIsDark,
+    toggleTheme,
     activeMessageId,
     toggleReactions,
     showPlayers, setShowPlayers,
@@ -666,8 +696,12 @@ const Chat = () => {
 
   return (
     <>
-      <button className="theme-toggle" onClick={() => setIsDark(!isDark)}>
-        {isDark ? '☀️' : '🌙'}
+      <button
+        className="theme-toggle"
+        onClick={toggleTheme}
+        aria-label="Переключить тему"
+      >
+        <ThemeIcon />
       </button>
 
       {isAuth && (
@@ -812,11 +846,11 @@ const Chat = () => {
             </div>
             <button
               className="chat-header-theme"
-              onClick={() => setIsDark(!isDark)}
+              onClick={toggleTheme}
               title={isDark ? 'Светлая тема' : 'Тёмная тема'}
               aria-label="Переключить тему"
             >
-              {isDark ? '☀️' : '🌙'}
+              <ThemeIcon />
             </button>
           </div>
 

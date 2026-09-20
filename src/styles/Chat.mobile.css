@@ -48,6 +48,7 @@
   .chat-header-subtitle { font-size: 11px; }
   .chat-header-version { font-size: 10px; margin-top: 2px; }
 
+  /* [2.21.0] кнопка темы в шапке — иконка теперь SVG */
   .chat-header-theme {
     display: flex;
     position: absolute;
@@ -59,8 +60,6 @@
     background: var(--input-bg);
     border: none;
     padding: 0;
-    font-size: 18px;
-    line-height: 1;
     color: var(--text);
     cursor: pointer;
     align-items: center;
@@ -71,6 +70,12 @@
 
   .chat-header-theme:active {
     transform: scale(0.9);
+  }
+
+  /* иконка внутри мобильной кнопки — чуть меньше */
+  .chat-header-theme .theme-icon {
+    width: 20px;
+    height: 20px;
   }
 
   /* Сообщения */
@@ -727,7 +732,7 @@
     border-color: #172236;
   }
 
-    /* [2.20.0] на мобилке кнопки действий скрыты — они в long-press меню */
+  /* [2.20.0] на мобилке кнопки действий скрыты — они в long-press меню */
   .player-actions {
     display: none !important;
   }
