@@ -13,8 +13,9 @@ import {
   getInitial,
 } from './utils';
 import { useAudio } from './hooks/useAudio';
-// [правка 2.14.26] UI-состояние вынесено в отдельный хук
 import { useChatUI } from './hooks/useChatUI';
+// [правка 2.14.27] скролл вынесен в отдельный хук
+import { useAutoScroll } from './hooks/useAutoScroll';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -22,65 +23,10 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.25 → 2.14.26] рефакторинг шаг 2: UI-состояние вынесено в useChatUI
-const VERSION = '2.14.26';
+// [правка 2.14.26 → 2.14.27] рефакторинг шаг 3: скролл вынесен в useAutoScroll
+const VERSION = '2.14.27';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
-
-const cubicBezier = (p1x, p1y, p2x, p2y) => {
-  const cx = 3 * p1x;
-  const bx = 3 * (p2x - p1x) - cx;
-  const ax = 1 - cx - bx;
-  const cy = 3 * p1y;
-  const by = 3 * (p2y - p1y) - cy;
-  const ay = 1 - cy - by;
-
-  const sampleX = (t) => ((ax * t + bx) * t + cx) * t;
-  const sampleY = (t) => ((ay * t + by) * t + cy) * t;
-  const sampleDX = (t) => (3 * ax * t + 2 * bx) * t + cx;
-
-  const solveT = (x) => {
-    let t = x;
-    for (let i = 0; i < 8; i++) {
-      const x2 = sampleX(t) - x;
-      if (Math.abs(x2) < 1e-6) return t;
-      const d = sampleDX(t);
-      if (Math.abs(d) < 1e-6) break;
-      t -= x2 / d;
-    }
-    let lo = 0, hi = 1;
-    t = x;
-    while (lo < hi) {
-      const x2 = sampleX(t);
-      if (Math.abs(x2 - x) < 1e-6) return t;
-      if (x2 < x) lo = t;
-      else hi = t;
-      t = (lo + hi) / 2;
-    }
-    return t;
-  };
-
-  return (x) => sampleY(solveT(x));
-};
-
-const animateScrollToBottom = (el, duration = 1400) => {
-  if (!el) return;
-  const startTop = el.scrollTop;
-  const targetTop = el.scrollHeight - el.clientHeight;
-  const distance = targetTop - startTop;
-  if (distance <= 0) return;
-
-  const ease = cubicBezier(0.16, 0.84, 0.44, 1);
-  const startTime = performance.now();
-
-  const tick = (now) => {
-    const elapsed = now - startTime;
-    const t = Math.min(elapsed / duration, 1);
-    el.scrollTop = startTop + distance * ease(t);
-    if (t < 1) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-};
 
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -113,14 +59,8 @@ const Chat = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [serverVersion, setServerVersion] = useState('');
   const [friendRequests, setFriendRequests] = useState([]);
-  const [showScrollDown, setShowScrollDown] = useState(false);
   const [notices, setNotices] = useState([]);
 
-  // [правка 2.14.26] UI-состояние вынесено в useChatUI:
-  //   isDark, activeMessageId, toggleReactions, showPlayers, searchQuery,
-  //   sending, banConfirm, showPassword, isUploading,
-  //   fullscreenImage, showFullscreenReactions, closeFullscreen,
-  //   showMobileInput.
   const {
     isDark, setIsDark,
     activeMessageId,
@@ -139,9 +79,6 @@ const Chat = () => {
 
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
-  const messagesEndRef = useRef(null);
-  const messagesContainerRef = useRef(null);
-  const hasAutoScrolledRef = useRef(false);
   const typingTimeoutRef = useRef(null);
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -150,6 +87,16 @@ const Chat = () => {
   const inputRef = useRef(null);
   const prevPlayerNicksRef = useRef(new Set());
   const firstPlayersLoadRef = useRef(true);
+
+  // [правка 2.14.27] скролл вынесен в useAutoScroll.
+  //   messagesContainerRef, messagesEndRef, hasAutoScrolledRef, showScrollDown,
+  //   scrollToBottom — теперь оттуда.
+  const {
+    messagesContainerRef,
+    messagesEndRef,
+    showScrollDown,
+    scrollToBottom,
+  } = useAutoScroll({ messages, resetKey: isAuth });
 
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
@@ -391,44 +338,9 @@ const Chat = () => {
     }
   }, [wsError]);
 
-  // ===== Скролл при появлении сообщений =====
-  useEffect(() => {
-    if (messages.length === 0) return;
+  // [правка 2.14.27] эффект «скролл при появлении сообщений» переехал в useAutoScroll
 
-    const el = messagesContainerRef.current;
-    if (!el) return;
-
-    requestAnimationFrame(() => {
-      if (!hasAutoScrolledRef.current) {
-        animateScrollToBottom(el, 1400);
-        hasAutoScrolledRef.current = true;
-      } else {
-        el.scrollTop = el.scrollHeight;
-      }
-    });
-  }, [messages]);
-
-  // ===== Скролл-индикатор «вниз» =====
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (!el) return;
-
-    let rafId = null;
-    const handleScroll = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        setShowScrollDown(distanceFromBottom > 200);
-      });
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      el.removeEventListener('scroll', handleScroll);
-    };
-  }, [isAuth]);
+  // [правка 2.14.27] эффект «скролл-индикатор вниз» переехал в useAutoScroll
 
   // ===== Уведомления «ник зашёл/вышел» =====
   useEffect(() => {
@@ -469,8 +381,6 @@ const Chat = () => {
       }, 4000);
     });
   }, [players]);
-
-  // [правка 2.14.26] эффект темы переехал в useChatUI
 
   useEffect(() => {
     if (!isAuth) {
@@ -661,8 +571,6 @@ const Chat = () => {
     }
   };
 
-  // [правка 2.14.26] toggleReactions теперь из useChatUI
-
   const openPrivateChat = (userId, nickname) => {
     if (userId === myId) return;
     setPrivateChat({ userId, nickname, messages: [] });
@@ -740,11 +648,7 @@ const Chat = () => {
     setShowPlayers(prev => !prev);
   };
 
-  // [правка 2.14.26] closeFullscreen теперь из useChatUI
-
-  const scrollToBottom = () => {
-    animateScrollToBottom(messagesContainerRef.current, 800);
-  };
+  // [правка 2.14.27] scrollToBottom — из useAutoScroll
 
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
