@@ -1,9 +1,14 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 
 /*
-  [2.25.1] placeholder вынесен из contentEditable — отдельным span-слоем.
-  [2.25.0] contentEditable-инпут. iOS Safari не вызывает InputAssistant.
+  [2.26.0] IME composition fix, черновик в localStorage, лимит длины.
+  [2.25.1] placeholder отдельным span-слоем — каретка в начале.
+  [2.25.0] contentEditable вместо <input>.
 */
+
+const DRAFT_KEY = 'ghost-chat-draft';
+const MAX_LENGTH = 2000;
+
 const ChatInput = forwardRef(({
   value,
   onChange,
@@ -11,16 +16,34 @@ const ChatInput = forwardRef(({
   disabled = false,
   placeholder = '',
   className = '',
-  maxLength,
+  maxLength = MAX_LENGTH,
 }, ref) => {
   const elRef = useRef(null);
   const domValueRef = useRef('');
+  const composingRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     focus: (opts) => elRef.current?.focus(opts),
     blur: () => elRef.current?.blur(),
     getEl: () => elRef.current,
   }), []);
+
+  /* Черновик: восстановить при монтировании */
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+    let draft = '';
+    try {
+      draft = localStorage.getItem(DRAFT_KEY) || '';
+    } catch { /* noop */ }
+
+    if (draft && !value) {
+      el.textContent = draft;
+      domValueRef.current = draft;
+      onChange(draft);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const el = elRef.current;
@@ -39,6 +62,13 @@ const ChatInput = forwardRef(({
       sel.addRange(range);
     }
   }, [value]);
+
+  const persistDraft = (text) => {
+    try {
+      if (text) localStorage.setItem(DRAFT_KEY, text);
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch { /* noop */ }
+  };
 
   const setText = (text) => {
     const el = elRef.current;
@@ -67,22 +97,36 @@ const ChatInput = forwardRef(({
       domValueRef.current = text;
     }
 
+    persistDraft(text);
     onChange(text);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (!disabled && value.trim()) {
-        onSend?.();
-      }
+    // IME composition — не мешаем
+    if (e.nativeEvent?.isComposing || composingRef.current) return;
+    if (e.key !== 'Enter') return;
+
+    e.preventDefault();
+    if (!disabled && value.trim()) {
+      persistDraft('');
+      onSend?.();
     }
+  };
+
+  const handleCompositionStart = () => {
+    composingRef.current = true;
+  };
+  const handleCompositionEnd = () => {
+    composingRef.current = false;
   };
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const raw = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
-    const clean = raw.replace(/\s+/g, ' ').trim();
+    let raw = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    let clean = raw.replace(/\s+/g, ' ').trim();
+    if (maxLength && clean.length > maxLength) {
+      clean = clean.slice(0, maxLength);
+    }
     if (!clean) return;
     document.execCommand('insertText', false, clean);
   };
@@ -109,6 +153,8 @@ const ChatInput = forwardRef(({
         aria-disabled={isDisabled}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         onPaste={handlePaste}
         onDrop={handleDrop}
         suppressContentEditableWarning

@@ -35,6 +35,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
 // [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
 // [2.23.4] откат contentEditable → <input type="search">
 // [2.23.3] iOS-фикс: сглажен visualViewport, убран «подлёт» панели
@@ -46,7 +47,7 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.25.1';
+const VERSION = '2.26.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -1057,6 +1058,7 @@ const Chat = () => {
               onSend={handleSendMessage}
               disabled={!isAuth || isUploading}
               placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
+              maxLength={2000}
             />
             <button
               className="attach-btn"

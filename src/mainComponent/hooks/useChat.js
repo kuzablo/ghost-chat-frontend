@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+// [2.26.0] чистка черновика после отправки
   [2.16.0] Добавлен replyTo — цитата для следующего сообщения.
   handleSendMessage шлёт replyTo и сбрасывает.
 */
@@ -103,6 +104,9 @@ export const useChat = ({
     setReplyTo(null);
     sendMessageRef.current({ type: 'typing', data: { isTyping: false } });
     setTimeout(() => setSending(false), 800);
+
+    // [2.26.0] чистим черновик после успешной отправки
+    try { localStorage.removeItem('ghost-chat-draft'); } catch { /* noop */ }
   }, [input, sending]);
 
   const handleEditMessage = useCallback((messageId, newText) => {
