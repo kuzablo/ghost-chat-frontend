@@ -334,7 +334,10 @@ const MessageList = ({
                           <button
                             key={emoji}
                             className={isActive ? 'active' : ''}
-                            onClick={() => sendReaction(m.id, emoji)}
+                            onClick={() => {
+                              sendReaction(m.id, emoji);
+                              toggleReactions(m.id); // [правка 2.14.21] закрываем пикер после выбора — как в личке
+                            }}
                           >
                             {emoji}
                           </button>
