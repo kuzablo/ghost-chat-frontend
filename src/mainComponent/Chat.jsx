@@ -12,8 +12,9 @@ import {
   getAvatarColor,
   getInitial,
 } from './utils';
-// [правка 2.14.25] звук вынесен в отдельный хук
 import { useAudio } from './hooks/useAudio';
+// [правка 2.14.26] UI-состояние вынесено в отдельный хук
+import { useChatUI } from './hooks/useChatUI';
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -21,8 +22,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.24 → 2.14.25] рефакторинг шаг 1: звук вынесен в useAudio
-const VERSION = '2.14.25';
+// [правка 2.14.25 → 2.14.26] рефакторинг шаг 2: UI-состояние вынесено в useChatUI
+const VERSION = '2.14.26';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
@@ -84,7 +85,8 @@ const animateScrollToBottom = (el, duration = 1400) => {
 const Chat = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
   const storedNickname = localStorage.getItem('ghost-chat-nickname') || '';
-  const storedTheme = localStorage.getItem('ghost-chat-theme') || 'light';
+
+  // ===== Состояние, оставшееся в Chat.jsx (уедет в следующие хуки) =====
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [nickname, setNickname] = useState(storedNickname);
@@ -99,9 +101,6 @@ const Chat = () => {
   const [bannedUntil, setBannedUntil] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
-  const [isDark, setIsDark] = useState(storedTheme === 'dark');
-  const [activeMessageId, setActiveMessageId] = useState(null);
-  const [showPlayers, setShowPlayers] = useState(false);
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [authNickname, setAuthNickname] = useState('');
   const [authPassword, setAuthPassword] = useState('');
@@ -111,19 +110,32 @@ const Chat = () => {
   const [duelNotice, setDuelNotice] = useState('');
   const [showIdleNotice, setShowIdleNotice] = useState(false);
   const [unreadByUser, setUnreadByUser] = useState({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sending, setSending] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [serverVersion, setServerVersion] = useState('');
-  const [banConfirm, setBanConfirm] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState(null);
-  const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [notices, setNotices] = useState([]);
-  const [showMobileInput, setShowMobileInput] = useState(false);
+
+  // [правка 2.14.26] UI-состояние вынесено в useChatUI:
+  //   isDark, activeMessageId, toggleReactions, showPlayers, searchQuery,
+  //   sending, banConfirm, showPassword, isUploading,
+  //   fullscreenImage, showFullscreenReactions, closeFullscreen,
+  //   showMobileInput.
+  const {
+    isDark, setIsDark,
+    activeMessageId,
+    toggleReactions,
+    showPlayers, setShowPlayers,
+    searchQuery, setSearchQuery,
+    sending, setSending,
+    banConfirm, setBanConfirm,
+    showPassword, setShowPassword,
+    isUploading, setIsUploading,
+    fullscreenImage, setFullscreenImage,
+    showFullscreenReactions, setShowFullscreenReactions,
+    closeFullscreen,
+    showMobileInput, setShowMobileInput,
+  } = useChatUI();
 
   const nicknameRef = useRef(storedNickname);
   const tokenRef = useRef(storedToken);
@@ -149,7 +161,6 @@ const Chat = () => {
     (msg) => handleWebSocketMessage(msg)
   );
 
-  // [правка 2.14.25] звук: разблокировка AudioContext + обёртки
   const audio = useAudio();
 
   const handleWebSocketMessage = useCallback((msg) => {
@@ -194,7 +205,7 @@ const Chat = () => {
         break;
       case 'message':
         setMessages(prev => [...prev, msg.data]);
-        audio.playNotification(); // [правка 2.14.25]
+        audio.playNotification();
         break;
       case 'message_update':
         if (msg.data.id) {
@@ -366,7 +377,6 @@ const Chat = () => {
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  // [правка 2.14.25] audio в зависимостях
   }, [myId, privateChat, sendMessage, players, audio]);
 
   useEffect(() => {
@@ -380,8 +390,6 @@ const Chat = () => {
       return () => clearTimeout(timer);
     }
   }, [wsError]);
-
-  // [правка 2.14.25] эффект разблокировки AudioContext переехал в useAudio
 
   // ===== Скролл при появлении сообщений =====
   useEffect(() => {
@@ -462,10 +470,7 @@ const Chat = () => {
     });
   }, [players]);
 
-  useEffect(() => {
-    document.body.classList.toggle('dark', isDark);
-    localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
+  // [правка 2.14.26] эффект темы переехал в useChatUI
 
   useEffect(() => {
     if (!isAuth) {
@@ -495,7 +500,7 @@ const Chat = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [showPlayers]);
+  }, [showPlayers, setShowPlayers]);
 
   useEffect(() => {
     const onlineUserIds = new Set(players.map(p => p.userId));
@@ -560,7 +565,7 @@ const Chat = () => {
       type: 'message',
       data: { text: input.trim() }
     });
-    audio.playSend(); // [правка 2.14.25]
+    audio.playSend();
     setInput('');
     sendMessage({ type: 'typing', data: { isTyping: false } });
     setTimeout(() => setSending(false), 800);
@@ -601,7 +606,7 @@ const Chat = () => {
           imageUrl: data.imageUrl
         }
       });
-      audio.playSend(); // [правка 2.14.25]
+      audio.playSend();
 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -656,9 +661,7 @@ const Chat = () => {
     }
   };
 
-  const toggleReactions = (messageId) => {
-    setActiveMessageId(prev => prev === messageId ? null : messageId);
-  };
+  // [правка 2.14.26] toggleReactions теперь из useChatUI
 
   const openPrivateChat = (userId, nickname) => {
     if (userId === myId) return;
@@ -737,10 +740,7 @@ const Chat = () => {
     setShowPlayers(prev => !prev);
   };
 
-  const closeFullscreen = () => {
-    setFullscreenImage(null);
-    setShowFullscreenReactions(false);
-  };
+  // [правка 2.14.26] closeFullscreen теперь из useChatUI
 
   const scrollToBottom = () => {
     animateScrollToBottom(messagesContainerRef.current, 800);
