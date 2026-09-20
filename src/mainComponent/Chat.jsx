@@ -28,8 +28,8 @@ import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 
-// 
-const VERSION = '2.15.22';
+// [правка 2.15.22 → 2.15.23] название трека + дребезжание + эквалайзер
+const VERSION = '2.15.23';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -67,9 +67,10 @@ const Chat = () => {
   const [dragY, setDragY] = useState(0);
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
-
-  // [правка 2.15.21] показываем мини-плеер для первого user gesture на iOS
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+
+  // [2.15.23] название трека в шапке
+  const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -99,12 +100,24 @@ const Chat = () => {
     lastTapTime: 0,
   });
 
+  // [2.15.23] таймер скрытия названия трека
+  const titleTimeoutRef = useRef(null);
+
   const yt = useYouTubePlayer();
 
-  // [правка 2.15.21] как только плеер запустился — прячем мини-плеер
+  // [2.15.23] как только плеер запустился — прячем мини-плеер
   useEffect(() => {
     if (yt.hasStarted) setShowMiniPlayer(false);
   }, [yt.hasStarted]);
+
+  // [2.15.23] показываем название трека на 5 сек при смене
+  useEffect(() => {
+    if (!yt.hasStarted) return;
+    setTrackTitleVisible(true);
+    clearTimeout(titleTimeoutRef.current);
+    titleTimeoutRef.current = setTimeout(() => setTrackTitleVisible(false), 5000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yt.trackIndex]);
 
   const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
     WS_URL,
@@ -496,8 +509,7 @@ const Chat = () => {
     }
     ref.lastTapTime = now;
 
-    // [правка 2.15.21] если плеер никогда не запускался — показываем
-    // мини-плеер, чтобы юзер сам тапнул play (iOS требует gesture внутри iframe)
+    // если плеер никогда не запускался — показываем мини-плеер
     if (!yt.hasStarted) {
       setShowMiniPlayer(true);
       return;
@@ -579,7 +591,10 @@ const Chat = () => {
               <img
                 src="/mascot.png"
                 alt="banjoboy"
-                className="chat-header-logo"
+                className={
+                  `chat-header-logo` +
+                  (yt.isPlaying ? ' mascot-playing' : '')
+                }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
                 onPointerMove={handleMascotPointerMove}
@@ -590,11 +605,21 @@ const Chat = () => {
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
-              {yt.isPlaying && <span className="mascot-playing-dot" />}
+              {yt.isPlaying && (
+                <div className="mascot-equalizer">
+                  <span /><span /><span /><span />
+                </div>
+              )}
             </div>
 
             <div className="chat-header-text">
-              <div className="chat-header-title">banjoboy's crew</div>
+              {trackTitleVisible && yt.trackTitle ? (
+                <div className="chat-header-track-title" title={yt.trackTitle}>
+                  ♫ {yt.trackTitle}
+                </div>
+              ) : (
+                <div className="chat-header-title">banjoboy's crew</div>
+              )}
               <div className="chat-header-subtitle">
                 {isConnected ? 'онлайн' : 'оффлайн'}
               </div>
@@ -853,7 +878,6 @@ const Chat = () => {
         </div>
       )}
 
-      {/* [правка 2.15.21] класс --visible показывает мини-плеер, пока не запустилось */}
       <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
         <div id={yt.containerId} />
         {showMiniPlayer && (

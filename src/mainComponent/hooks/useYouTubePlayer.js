@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [2.15.21] Простой плеер. Без mute/unmute, без pending.
-  Управление через маскот; первый play — через видимый мини-плеер (для iOS).
+  [2.15.23] Плеер рабочий (nocookie + мини-плеер для первого play).
+  Добавлено: trackTitle для показа названия в шапке.
 */
 
 const PLAYLIST = [
@@ -78,6 +78,7 @@ export const useYouTubePlayer = () => {
             e.target.setVolume(volumeRef.current);
           },
           onStateChange: (e) => {
+            // подтягиваем название трека
             try {
               const data = e.target.getVideoData?.();
               if (data?.title) setTrackTitle(data.title);
