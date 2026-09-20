@@ -30,8 +30,8 @@ import '../styles/Chat.mobile.css';
 import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 
-// fix(chat): автоскролл на ПК (2.18.6)
-const VERSION = '2.18.6';
+// [2.18.7] свайп вверх открывает капсулу + капсула крупнее в 2 раза
+const VERSION = '2.18.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const Chat = () => {
@@ -73,7 +73,6 @@ const Chat = () => {
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
-  // [2.18.0] состояние мобильной капсулы
   const [capsuleOpen, setCapsuleOpen] = useState(false);
 
   const playersOverlayRef = useRef(null);
@@ -95,8 +94,9 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
 
-  // [2.18.0] жест по капсуле (свайп вниз — закрыть)
-  const capsuleSwipeRef = useRef({ startY: 0, active: false });
+  // [2.18.7] жест по капсуле: свайп вверх = открыть, свайп вниз = закрыть.
+  // didSwipe — чтобы onClick после touchend не открыл капсулу обратно.
+  const capsuleSwipeRef = useRef({ startY: 0, active: false, didSwipe: false });
 
   const mascotGestureRef = useRef({
     startY: 0,
@@ -293,7 +293,6 @@ const Chat = () => {
         return;
       }
 
-      // [2.18.0] тач по капсуле не должен активировать глобальные свайпы
       if (target && target.closest && target.closest('.mobile-capsule')) {
         swipeDirectionRef.current = null;
         return;
@@ -567,11 +566,14 @@ const Chat = () => {
     setShowMobileInput(true);
   };
 
-  // ===== [2.18.0] мобильная капсула =====
+  // ===== [2.18.7] мобильная капсула: тап + свайп вверх/вниз =====
   const handleCapsuleTap = () => {
-    if (!capsuleOpen) {
-      setCapsuleOpen(true);
+    // если только что был свайп — onClick игнорируем, иначе откроется обратно
+    if (capsuleSwipeRef.current.didSwipe) {
+      capsuleSwipeRef.current.didSwipe = false;
+      return;
     }
+    if (!capsuleOpen) setCapsuleOpen(true);
   };
 
   const handlePlayersCapsuleTap = (e) => {
@@ -587,19 +589,30 @@ const Chat = () => {
   };
 
   const handleCapsuleTouchStart = (e) => {
-    if (!capsuleOpen) return;
     if (e.touches.length !== 1) return;
     capsuleSwipeRef.current.startY = e.touches[0].clientY;
     capsuleSwipeRef.current.active = true;
+    capsuleSwipeRef.current.didSwipe = false;
   };
 
   const handleCapsuleTouchMove = (e) => {
     if (!capsuleSwipeRef.current.active) return;
     if (e.touches.length !== 1) return;
+
     const dy = e.touches[0].clientY - capsuleSwipeRef.current.startY;
-    // если сдвинулся больше чем на 40px вниз — считаем это жестом закрытия
-    if (dy > 40) {
+
+    // свайп вверх — открыть
+    if (!capsuleOpen && dy < -20) {
       capsuleSwipeRef.current.active = false;
+      capsuleSwipeRef.current.didSwipe = true;
+      setCapsuleOpen(true);
+      return;
+    }
+
+    // свайп вниз — закрыть
+    if (capsuleOpen && dy > 40) {
+      capsuleSwipeRef.current.active = false;
+      capsuleSwipeRef.current.didSwipe = true;
       setCapsuleOpen(false);
     }
   };
@@ -858,7 +871,7 @@ const Chat = () => {
             </button>
           </div>
 
-          {/* [2.18.0] мобильная капсула-тюбик со стикерами */}
+          {/* [2.18.7] мобильная капсула-тюбик: тап или свайп вверх открывает */}
           <div
             className={`mobile-capsule ${capsuleOpen ? 'mobile-capsule--open' : ''}`}
             onClick={handleCapsuleTap}

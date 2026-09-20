@@ -89,7 +89,6 @@
     border-width: 1.5px;
   }
   .msg-content {
-    /* [2.18.5] верхний отступ ещё меньше */
     padding: 1.5px 9px 4px;
     max-width: 82%;
     border-width: 1.5px;
@@ -97,11 +96,8 @@
   }
   .msg-header { gap: 4px; }
   .msg-nick { font-size: 12px; }
-
-  /* [2.18.5] текст крупнее */
   .msg-text { font-size: 14px; line-height: 1.38; }
 
-  /* [2.18.2] время прижато вправо */
   .msg-time {
     font-size: 9px;
     margin-left: auto;
@@ -363,7 +359,7 @@
     border-width: 1.5px;
   }
 
-  /* [2.18.3] реакции +2px на мобилке */
+  /* реакции в обычных сообщениях */
   .msg-reaction-badge {
     width: 18px;
     height: 18px;
@@ -386,7 +382,7 @@
     padding: 3px 5px;
   }
 
-  /* [2.18.4] реакции над пикером — увеличение мягче */
+  /* реакции над пикером */
   .msg-reactions--above-picker {
     transform: translateY(65%) scale(1.1);
   }
@@ -394,7 +390,7 @@
     transform: translateY(60%) scale(1.1);
   }
 
-  /* reply на мобилке */
+  /* reply */
   .msg-reply-arrow {
     left: -30px;
     width: 22px;
@@ -402,7 +398,6 @@
     font-size: 14px;
   }
 
-  /* корзина на мобилке */
   .msg-delete-arrow {
     right: -30px;
     width: 22px;
@@ -410,17 +405,14 @@
     font-size: 12px;
   }
 
-  /* на мобилке удаление свайпом — кнопку 🗑️ прячем */
   .msg-action-btn--delete {
     display: none !important;
   }
 
-  /* на мобилке редактирование через long press — кнопку ✏️ прячем */
   .msg-action-btn--edit {
     display: none !important;
   }
 
-  /* кольцо long press на мобилке */
   .msg-edit-ring {
     top: -4px;
     left: -4px;
@@ -438,7 +430,6 @@
   .reply-preview-nick { font-size: 10px; }
   .reply-preview-text { font-size: 11px; }
 
-  /* компактнее цитата на мобилке */
   .msg-reply-quote {
     padding: 2px 6px;
     margin-bottom: 3px;
@@ -446,16 +437,16 @@
   .msg-reply-quote-nick { font-size: 10px; }
   .msg-reply-quote-text { font-size: 10.5px; max-width: 180px; }
 
-  /* ===== [2.18.0] Мобильная капсула-тюбик со стикерами ===== */
+  /* ===== [2.18.7] Мобильная капсула-тюбик: увеличена в 2 раза (14 → 28px) ===== */
 
   .mobile-capsule {
     position: relative;
-    height: 14px;
+    height: 28px;
     margin-top: 4px;
     background: linear-gradient(to top, #F5A9C0 0%, #FBC5D8 100%);
     border-top: 2px solid #111;
-    border-top-left-radius: 14px;
-    border-top-right-radius: 14px;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
     overflow: hidden;
     cursor: pointer;
     flex-shrink: 0;
@@ -466,7 +457,7 @@
                 box-shadow 0.25s;
   }
 
-  /* [2.18.1] дыхание — только когда свёрнута */
+  /* дыхание — только когда свёрнута */
   .mobile-capsule:not(.mobile-capsule--open) {
     animation: capsuleBreath 2.6s ease-in-out infinite;
   }
@@ -482,17 +473,17 @@
     }
   }
 
-  /* стрелка вверх */
+  /* стрелка вверх — покрупнее и по центру увеличенной полоски */
   .mobile-capsule:not(.mobile-capsule--open)::before {
     content: '';
     position: absolute;
-    top: 2px;
+    top: 8px;
     left: 50%;
     width: 0;
     height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-bottom: 5px solid #111;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 8px solid #111;
     transform: translateX(-50%);
     animation: capsuleArrowBob 1.8s ease-in-out infinite;
     pointer-events: none;
@@ -506,7 +497,7 @@
       opacity: 0.35;
     }
     50% {
-      transform: translateX(-50%) translateY(-2px);
+      transform: translateX(-50%) translateY(-3px);
       opacity: 0.85;
     }
   }
@@ -538,19 +529,19 @@
   }
 
   .mobile-capsule--open {
-    height: 84px;
+    height: 92px;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
     animation: none;
   }
 
-  /* пульсирующая точка непрочитанного */
+  /* пульсирующая точка непрочитанного — подросла с полоской */
   .capsule-pulse {
     position: absolute;
-    top: 3px;
+    top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 7px;
-    height: 7px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     background: #E11D48;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
@@ -586,7 +577,7 @@
     justify-content: center;
     align-items: flex-end;
     gap: 26px;
-    height: 78px;
+    height: 86px;
     pointer-events: none;
   }
 
@@ -667,7 +658,6 @@
     fill: none;
   }
 
-  /* бейдж непрочитанного на кнопке игроков */
   .capsule-badge {
     position: absolute;
     top: -7px;
