@@ -34,8 +34,9 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.23.4] inputMode="search" + autoComplete="new-password" —
-//          гасим iOS InputAssistant «Автозаполнить контакт»
+// [2.24.0] инпут → contentEditable div: iOS больше не показывает
+//          «Автозаполнить контакт» над клавиатурой
+// [2.23.4] inputMode="search" + autoComplete="new-password" (не помогло на iOS)
 // [2.23.3] iOS-фикс: сглажен visualViewport, убран «подлёт» панели
 // [2.23.2] инпут в потоке — плавный подъём через padding-bottom контейнера
 // [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
@@ -45,7 +46,7 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.23.4';
+const VERSION = '2.24.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -338,7 +339,12 @@ const Chat = () => {
 
     const isInputFocused = () => {
       const el = document.activeElement;
-      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+      if (!el) return false;
+      return (
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.isContentEditable === true
+      );
     };
 
     const apply = () => {
@@ -378,7 +384,7 @@ const Chat = () => {
     };
   }, []);
 
-  /* ===== [2.23.3] Фокус инпута: одна попытка, без скроллов ===== */
+  /* ===== [2.23.3] Фокус: одна попытка, без скроллов ===== */
   useEffect(() => {
     if (!showMobileInput) return;
     const t = setTimeout(() => {
@@ -386,6 +392,17 @@ const Chat = () => {
     }, 60);
     return () => clearTimeout(t);
   }, [showMobileInput]);
+
+  /* ===== [2.24.0] contentEditable: синхронизация state → DOM =====
+     Реагируем только когда значение пришло извне (отправка → setInput('')).
+     Во время набора DOM == state, поэтому эффект ничего не делает. */
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    if (el.textContent !== input) {
+      el.textContent = input;
+    }
+  }, [input]);
 
   useEffect(() => {
     const EDGE_ZONE = 40;
@@ -708,6 +725,49 @@ const Chat = () => {
     setShowPlayers(false);
     forceLogout('');
   };
+
+  /* ===== [2.24.0] contentEditable: обработчики =====
+     Эмулируем event.target.value, чтобы handleInputChange работал как раньше. */
+  const handleEditableInput = (e) => {
+    const el = e.currentTarget;
+    let text = el.textContent || '';
+    // Safari иногда оставляет <br> на пустом поле — чистим
+    if (text === '' && el.innerHTML !== '') {
+      el.innerHTML = '';
+    }
+    // защита от переноса строки вставкой
+    if (text.includes('\n')) {
+      text = text.replace(/\n/g, ' ');
+      el.textContent = text;
+      // перемещаем каретку в конец
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    handleInputChange({ target: { value: text } });
+  };
+
+  const handleEditableKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent?.isComposing) {
+      e.preventDefault();
+      if (input.trim() && !sending && !isUploading) {
+        handleSendMessage();
+      }
+    }
+  };
+
+  const handleEditablePaste = (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain') || '';
+    if (!text) return;
+    // eslint-disable-next-line deprecation/deprecation
+    document.execCommand('insertText', false, text.replace(/\n/g, ' '));
+  };
+
+  const handleEditableDrop = (e) => e.preventDefault();
 
   /* ===== [2.22.1] Жесты по капсуле ===== */
 
@@ -1044,23 +1104,23 @@ const Chat = () => {
               transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
             }}
           >
-            {/* [2.23.4] autoComplete="new-password" + inputMode="search" —
-                        гасим iOS InputAssistant «Автозаполнить контакт» */}
-            <input
+            {/* [2.24.0] contentEditable вместо <input> — iOS не показывает
+                        InputAssistant «Автозаполнить контакт».
+                        Роль и подписи — для доступности. */}
+            <div
               ref={inputRef}
-              type="search"
-              name="chat-message"
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              disabled={!isAuth || isUploading}
-              placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
-              autoComplete="new-password"
-              autoCorrect="off"
-              autoCapitalize="sentences"
-              spellCheck={false}
-              enterKeyHint="send"
-              inputMode="search"
+              className={`chat-input-editable${input ? '' : ' is-empty'}`}
+              contentEditable={isAuth && !isUploading ? 'true' : 'false'}
+              role="textbox"
+              aria-label="Сообщение"
+              aria-multiline="false"
+              aria-disabled={!isAuth || isUploading}
+              data-placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
+              onInput={handleEditableInput}
+              onKeyDown={handleEditableKeyDown}
+              onPaste={handleEditablePaste}
+              onDrop={handleEditableDrop}
+              suppressContentEditableWarning
             />
             <button
               className="attach-btn"

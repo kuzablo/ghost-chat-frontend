@@ -130,7 +130,7 @@
     border-width: 1.5px;
   }
 
-  /* ===== [2.23.3] Инпут в потоке, без анимаций и без transition ===== */
+  /* ===== [2.24.1] Инпут в потоке, contentEditable ===== */
   .input-row {
     display: none;
     gap: 6px;
@@ -142,13 +142,12 @@
     display: flex;
   }
 
-  /* [2.23.3] убраны transition и animation — устранили «подлёт» на iOS.
-     Подъём теперь делается просто через padding-bottom, а высота
-     клавиатуры приходит уже сглаженной из Chat.jsx. */
   .chat-main.mobile-input-open {
     padding-bottom: calc(8px + var(--kb-height, 0px));
   }
 
+  /* поле ввода — общие правила для contentEditable и для фолбэка search */
+  .input-row .chat-input-editable,
   .input-row input[type="search"] {
     padding: 10px 14px;
     font-size: 16px;
@@ -156,19 +155,23 @@
     border-radius: 14px;
   }
 
-.input-row input[type="search"]:focus,
-.input-row input[type="search"]:focus-visible {
-  outline: none;
-  border-color: var(--btn-bg);
-  box-shadow: 0 0 0 4px rgba(245, 169, 192, 0.28);
-}
+  .input-row .chat-input-editable:focus,
+  .input-row .chat-input-editable:focus-visible,
+  .input-row input[type="search"]:focus,
+  .input-row input[type="search"]:focus-visible {
+    outline: none;
+    border-color: var(--btn-bg);
+    box-shadow: 0 0 0 4px rgba(245, 169, 192, 0.28);
+  }
 
-body.dark .input-row input[type="search"]:focus,
-body.dark .input-row input[type="search"]:focus-visible {
-  outline: none;
-  border-color: var(--btn-bg);
-  box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.18);
-}
+  body.dark .input-row .chat-input-editable:focus,
+  body.dark .input-row .chat-input-editable:focus-visible,
+  body.dark .input-row input[type="search"]:focus,
+  body.dark .input-row input[type="search"]:focus-visible {
+    outline: none;
+    border-color: var(--btn-bg);
+    box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.18);
+  }
 
   .chat-main.mobile-input-open .mobile-capsule {
     display: none;
