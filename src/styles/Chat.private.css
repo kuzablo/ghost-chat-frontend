@@ -77,6 +77,13 @@
   max-width: 80%;
   position: relative;
   cursor: pointer;
+  z-index: 1; /* [правка 2.14.24] базовый слой */
+}
+
+/* [правка 2.14.24] когда пикер открыт — сообщение уходит на верхний слой,
+   чтобы пикер не перекрывался следующей карточкой */
+.private-msg--picker-open {
+  z-index: 100;
 }
 
 .private-msg--other {
@@ -237,6 +244,12 @@ body.dark .private-reaction-count {
   animation: reactionPop 0.25s ease-out;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   z-index: 10;
+}
+
+/* [правка 2.14.24] пикер не влезает снизу — показываем сверху сообщения */
+.private-reaction-picker--top {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 
 .private-msg--own .private-reaction-picker {

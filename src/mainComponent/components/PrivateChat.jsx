@@ -16,7 +16,13 @@ const PrivateChat = ({
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const [pickerFor, setPickerFor] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
+
+  // [правка 2.14.24] авто-позиция пикера: снизу (по умолчанию) или сверху,
+  // если не влезает в контейнер сообщений
+  const [pickerAbove, setPickerAbove] = useState(false);
+
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null); // [правка 2.14.24]
   const typingTimeoutRef = useRef(null);
   const wsRef = useRef(ws);
 
@@ -61,12 +67,33 @@ const PrivateChat = ({
     setPickerFor(null);
   };
 
+  // [правка 2.14.24] тап по сообщению = pop + toggle пикера + расчёт позиции
   const handleMessageTap = (id, e) => {
     if (e.target.closest('.private-reaction-picker')) return;
 
+    // если закрываем — просто toggle без расчёта
+    if (pickerFor === id) {
+      setPickerFor(null);
+      return;
+    }
+
     setPoppingId(id);
     setTimeout(() => setPoppingId(null), 380);
-    setPickerFor(prev => (prev === id ? null : id));
+
+    // считаем свободное место снизу от карточки до нижней границы контейнера
+    const cardEl = e.currentTarget;
+    const containerEl = messagesContainerRef.current;
+    if (cardEl && containerEl) {
+      const cardRect = cardEl.getBoundingClientRect();
+      const containerRect = containerEl.getBoundingClientRect();
+      const pickerHeight = 54; // примерная высота пикера с padding и отступом
+      const spaceBelow = containerRect.bottom - cardRect.bottom;
+      setPickerAbove(spaceBelow < pickerHeight);
+    } else {
+      setPickerAbove(false);
+    }
+
+    setPickerFor(id);
   };
 
   const handleInputChange = (e) => {
@@ -106,7 +133,7 @@ const PrivateChat = ({
         <div className="private-typing">
           {localTypingUser ? `${localTypingUser} печатает...` : ''}
         </div>
-        <div className="private-messages">
+        <div className="private-messages" ref={messagesContainerRef}>
           {initialMessages.map((m, i) => {
             const isOwn = m.senderId === myId;
             const reactions = m.reactions || {};
@@ -115,7 +142,7 @@ const PrivateChat = ({
             return (
               <div
                 key={i}
-                className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''}`}
+                className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''}`}
                 onClick={(e) => handleMessageTap(m.id, e)}
               >
                 <span className="private-msg-nick">
@@ -144,7 +171,7 @@ const PrivateChat = ({
 
                 {pickerFor === m.id && (
                   <div
-                    className="private-reaction-picker"
+                    className={`private-reaction-picker ${pickerAbove ? 'private-reaction-picker--top' : ''}`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     {REACTIONS.map(emoji => {

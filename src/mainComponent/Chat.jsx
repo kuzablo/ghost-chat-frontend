@@ -23,12 +23,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.22 → 2.14.23]
-//  - починен звук: ensureAudioContext вызывается при первом user gesture и перед playSendSound;
-//  - useWebSocket теперь отдаёт ws как state (убран костыль wsRef.current = ws);
-//  - удалён мёртвый код: unmountedRef, reconnectTimeoutRef, wsRef;
-//  - удалён мёртвый импорт formatTime.
-const VERSION = '2.14.23';
+// [правка 2.14.23 → 2.14.24] приватный чат: пикер с авто-позицией и z-index
+const VERSION = '2.14.24';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
