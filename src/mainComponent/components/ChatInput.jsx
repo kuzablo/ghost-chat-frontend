@@ -1,16 +1,8 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 
 /*
-  [2.25.0] contentEditable-инпут. Работает и на iOS Safari
-  (не вызывает системный InputAssistant «Автозаполнить контакт»),
-  и на десктопе.
-
-  Принцип:
-    - React НЕ управляет содержимым (нет children).
-    - domValueRef хранит то, что мы сами записали в DOM.
-    - useEffect([value]) реагирует ТОЛЬКО на внешние изменения.
-      Во время набора domValueRef.current === value → DOM не трогаем,
-      каретка не прыгает.
+  [2.25.1] placeholder вынесен из contentEditable — отдельным span-слоем.
+  [2.25.0] contentEditable-инпут. iOS Safari не вызывает InputAssistant.
 */
 const ChatInput = forwardRef(({
   value,
@@ -98,23 +90,30 @@ const ChatInput = forwardRef(({
   const handleDrop = (e) => e.preventDefault();
 
   const isDisabled = !!disabled;
+  const showPlaceholder = !value && !!placeholder;
 
   return (
-    <div
-      ref={elRef}
-      className={`chat-input-editable ${value ? '' : 'is-empty'} ${className}`.trim()}
-      contentEditable={!isDisabled}
-      role="textbox"
-      aria-label={placeholder}
-      aria-multiline="false"
-      aria-disabled={isDisabled}
-      data-placeholder={placeholder}
-      onInput={handleInput}
-      onKeyDown={handleKeyDown}
-      onPaste={handlePaste}
-      onDrop={handleDrop}
-      suppressContentEditableWarning
-    />
+    <div className={`chat-input-wrap ${className}`.trim()}>
+      {showPlaceholder && (
+        <span className="chat-input-placeholder" aria-hidden="true">
+          {placeholder}
+        </span>
+      )}
+      <div
+        ref={elRef}
+        className="chat-input-editable"
+        contentEditable={!isDisabled}
+        role="textbox"
+        aria-label={placeholder}
+        aria-multiline="false"
+        aria-disabled={isDisabled}
+        onInput={handleInput}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        onDrop={handleDrop}
+        suppressContentEditableWarning
+      />
+    </div>
   );
 });
 

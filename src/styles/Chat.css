@@ -566,8 +566,34 @@ input[type="search"] {
 }
 
 /* ============================================================= */
-/* [2.25.0] contentEditable-инпут                                */
+/* [2.25.1] contentEditable-инпут: обёртка + отдельный placeholder */
 /* ============================================================= */
+.input-row .chat-input-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+}
+
+.input-row .chat-input-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 17px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1;
+  max-width: calc(100% - 34px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .input-row .chat-input-editable {
   flex: 1 1 0;
   min-width: 0;
@@ -600,15 +626,6 @@ input[type="search"] {
 
 .input-row .chat-input-editable::-webkit-scrollbar {
   display: none;
-}
-
-.input-row .chat-input-editable.is-empty::before {
-  content: attr(data-placeholder);
-  color: var(--text-muted);
-  opacity: 0.75;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 .input-row .chat-input-editable:focus,
