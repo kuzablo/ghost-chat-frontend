@@ -285,34 +285,16 @@ body {
 
 /* ===== Реакции в общем чате ===== */
 
-/*
-  [правка 2.14.19]
-  Логика и визуал скопированы из приватного чата:
-    - .reactions-header и .reactions-panel больше не используются
-      (бейджи и пикер переехали под карточку);
-    - реакции — круглые бейджи .msg-reaction-badge, вылезают за нижнюю границу
-      (1-в-1 как .private-reaction-badge);
-    - пикер .msg-reaction-picker — 5 эмодзи (👍 👎 ❤️ 🔥 😢), появляется
-      под карточкой (1-в-1 как .private-reaction-picker);
-    - pop-анимация при тапе — .msg-content--pop (1-в-1 как .private-msg--pop).
-
-  Старые .reactions-header / .reaction-badge / .reactions-panel / .reaction-btn
-  оставлены ниже на случай, если где-то ещё используются — но в JSX больше нет.
-*/
-
 /* --- позиционирование: контейнер для реакций и пикера --- */
 .msg-content {
   position: relative;
-  z-index: 1; /* [правка 2.14.20] базовый слой, чтобы карточки не «съедали» друг друга */
+  z-index: 1;
 }
 
-/* [правка 2.14.20] когда пикер открыт — карточка уходит на верхний слой,
-   чтобы пикер не перекрывался следующей карточкой */
 .msg-content--picker-open {
   z-index: 100;
 }
 
-/* --- pop-анимация карточки при тапе --- */
 .msg-content--pop {
   animation: msgPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -391,7 +373,6 @@ body.dark .msg-reaction-count {
   z-index: 10;
 }
 
-/* [правка 2.16.1] пикер не влезает снизу — показываем сверху карточки */
 .msg-reaction-picker--top {
   top: auto;
   bottom: calc(100% + 4px);
@@ -417,8 +398,7 @@ body.dark .msg-reaction-count {
   background: rgba(59, 181, 232, 0.25);
 }
 
-/* --- старые стили (в JSX больше не применяются, оставлены на всякий) --- */
-
+/* --- старые стили реакций (не используются) --- */
 .reactions-header {
   display: flex;
   gap: 2px;
@@ -788,12 +768,9 @@ body.dark .unread-badge {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   z-index: 10;
   transition: transform 0.15s;
-  /* [правка 2.14.23] была анимация fadeInUp с translate(-50%, …) — она сдвигала
-     кнопку влево на -50% её ширины. Для кнопки нужен только translateY. */
   animation: fadeInUpBtn 0.2s;
 }
 
-/* [правка 2.14.23] отдельные keyframes для кнопки «вниз» — без translateX */
 @keyframes fadeInUpBtn {
   from {
     opacity: 0;
@@ -885,14 +862,13 @@ button:active {
   color: var(--btn-text);
 }
 
-/* [правка 2.15.2] кнопка темы в шапке — на десктопе скрыта, на мобилке видна */
+/* кнопка темы в шапке — на десктопе скрыта, на мобилке видна */
 .chat-header-theme {
   display: none;
 }
 
 /* ===== [2.16.0] Reply на сообщение ===== */
 
-/* стрелка свайпа — появляется позади карточки */
 .msg-reply-arrow {
   position: absolute;
   left: -34px;
@@ -913,38 +889,69 @@ button:active {
   transition: opacity 0.1s;
 }
 
-/* блок цитаты внутри карточки */
+/* [2.16.2] корзина справа при свайпе вправо */
+.msg-delete-arrow {
+  position: absolute;
+  right: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: opacity 0.1s;
+}
+
+/* блок цитаты внутри карточки — [2.17.3] компактнее */
 .msg-reply-quote {
   border-left: 3px solid var(--btn-bg);
   background: rgba(59, 181, 232, 0.10);
   border-radius: 6px;
-  padding: 4px 8px;
-  margin-bottom: 6px;
+  padding: 2px 7px;
+  margin-bottom: 4px;
   cursor: pointer;
   user-select: none;
+  line-height: 1.15;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.msg-reply-quote:hover {
+  background: rgba(59, 181, 232, 0.18);
+}
+
+.msg-reply-quote:active {
+  transform: scale(0.985);
 }
 
 .msg-reply-quote-nick {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: var(--btn-bg);
-  margin-bottom: 2px;
-  line-height: 1.1;
+  margin-bottom: 1px;
+  line-height: 1.05;
 }
 
 .msg-reply-quote-text {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 220px;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 /* для image-only цитата — сверху картинки, отдельной плашкой */
 .msg-image-only-reply-wrap {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .msg-image-only-reply-wrap .msg-reply-quote {
   background: var(--card-bg);
@@ -952,7 +959,7 @@ button:active {
   border-radius: 8px;
   border: 1px solid var(--card-border);
   border-left-width: 3px;
-  padding: 5px 9px;
+  padding: 3px 8px;
 }
 
 /* превью ответа над инпутом */
@@ -1010,30 +1017,8 @@ button:active {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* [2.16.2] корзина справа при свайпе вправо */
-.msg-delete-arrow {
-  position: absolute;
-  right: -34px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--danger);
-  color: #FFF;
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: opacity 0.1s;
-}
-
 /* ===== [2.16.4] Долгое нажатие = редактирование ===== */
 
-/* прогресс кольца через кастомное свойство */
 @property --msg-edit-p {
   syntax: '<angle>';
   inherits: false;
@@ -1073,14 +1058,13 @@ button:active {
   to   { --msg-edit-p: 360deg; }
 }
 
-/* для image-only — контейнер без бордера, нужен position: relative */
 .msg-content--image-only {
   position: relative;
 }
 
 /* ===== [2.17.1] Подсветка сообщения, к которому перепрыгнули по цитате ===== */
 
-/* [2.17.2] в image-only .msg-content включает в себя цитату + картинку,
+/* в image-only .msg-content включает в себя цитату + картинку,
    поэтому подсвечиваем ТОЛЬКО саму картинку.
    В обычных сообщениях — .msg-content. Одна подсветка, без вложенных. */
 .msg--highlight .msg-content:not(.msg-content--image-only),
@@ -1102,17 +1086,3 @@ button:active {
     box-shadow: 0 0 0 0 rgba(59, 181, 232, 0), 0 0 0 0 rgba(59, 181, 232, 0);
   }
 }
-
-/* [2.17.1] цитата кликабельна — лёгкий отклик при наведении/тапе */
-.msg-reply-quote {
-  transition: background 0.15s, transform 0.1s;
-}
-
-.msg-reply-quote:hover {
-  background: rgba(59, 181, 232, 0.18);
-}
-
-.msg-reply-quote:active {
-  transform: scale(0.985);
-}
-

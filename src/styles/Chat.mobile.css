@@ -30,7 +30,7 @@
     padding: 4px 0 10px;
     margin-bottom: 8px;
     gap: 6px;
-    position: relative; /* [правка 2.15.2] для absolute-кнопки темы */
+    position: relative;
   }
   .chat-header-logo {
     width: 44px;
@@ -42,7 +42,7 @@
   .chat-header-subtitle { font-size: 11px; }
   .chat-header-version { font-size: 10px; margin-top: 2px; }
 
-  /* [правка 2.15.2] кнопка темы в шапке — только на мобилке */
+  /* кнопка темы в шапке */
   .chat-header-theme {
     display: flex;
     position: absolute;
@@ -105,7 +105,7 @@
     border-width: 1.5px;
   }
 
-  /* Реакции общего чата — старые классы */
+  /* старые реакции */
   .reaction-btn {
     padding: 2px 6px;
     font-size: 11px;
@@ -137,8 +137,6 @@
     border-radius: 14px;
   }
 
-  /* [правка 2.15.2] attach-btn больше не скрыт — фото переехало из бара в инпут */
-
   .send-btn {
     width: 60px;
     height: 60px;
@@ -159,7 +157,6 @@
     flex-shrink: 0;
   }
 
-  /* [правка 2.15.2] бар из 2 кнопок, без чёрного бордера, с лёгкой тенью */
   .mobile-bar-btn {
     width: 48px;
     height: 48px;
@@ -216,7 +213,6 @@
     }
   }
 
-  /* Статус */
   .status { font-size: 11px; margin-top: 4px; }
   .typing-indicator { font-size: 11px; min-height: 14px; }
 
@@ -287,7 +283,6 @@
   .private-input-row .btn { padding: 8px 12px; font-size: 12px; }
   .private-msg { max-width: 88%; }
 
-  /* Реакции в личке — мобильная версия */
   .private-reaction-badge {
     width: 16px;
     height: 16px;
@@ -414,7 +409,7 @@
     border-width: 1.5px;
   }
 
-  /* [правка 2.14.19] реакции в обычных сообщениях — как в приватном чате на мобилке */
+  /* Реакции в обычных сообщениях — как в приватном чате на мобилке */
   .msg-reaction-badge {
     width: 16px;
     height: 16px;
@@ -437,21 +432,13 @@
     padding: 3px 5px;
   }
 
-    /* [2.16.0] reply на мобилке */
+  /* reply на мобилке */
   .msg-reply-arrow {
     left: -30px;
     width: 22px;
     height: 22px;
     font-size: 14px;
   }
-
-  .reply-preview {
-    padding: 5px 8px;
-    margin-bottom: 4px;
-  }
-
-  .reply-preview-nick { font-size: 10px; }
-  .reply-preview-text { font-size: 11px; }
 
   /* [2.16.2] корзина на мобилке */
   .msg-delete-arrow {
@@ -466,7 +453,7 @@
     display: none !important;
   }
 
-    /* [2.16.4] на мобилке редактирование через long press — кнопку ✏️ прячем */
+  /* [2.16.4] на мобилке редактирование через long press — кнопку ✏️ прячем */
   .msg-action-btn--edit {
     display: none !important;
   }
@@ -480,4 +467,20 @@
     border-radius: calc(var(--radius-md) + 4px);
     padding: 2.5px;
   }
+
+  .reply-preview {
+    padding: 4px 8px;
+    margin-bottom: 4px;
+  }
+
+  .reply-preview-nick { font-size: 10px; }
+  .reply-preview-text { font-size: 11px; }
+
+  /* [2.17.3] компактнее цитата на мобилке */
+  .msg-reply-quote {
+    padding: 2px 6px;
+    margin-bottom: 3px;
+  }
+  .msg-reply-quote-nick { font-size: 10px; }
+  .msg-reply-quote-text { font-size: 10.5px; max-width: 180px; }
 }
