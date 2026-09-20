@@ -9,6 +9,7 @@ import DuelBox from './components/DuelBox';
 import InfoPanel from './components/InfoPanel';
 import DialogsPanel from './components/DialogsPanel';
 import ConfirmModal from './components/ConfirmModal';
+import ChatInput from './components/ChatInput';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -34,8 +35,8 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
 // [2.23.4] откат contentEditable → <input type="search">
-//          contentEditable в React стирал содержимое при ре-рендере
 // [2.23.3] iOS-фикс: сглажен visualViewport, убран «подлёт» панели
 // [2.23.2] инпут в потоке — плавный подъём через padding-bottom контейнера
 // [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
@@ -45,7 +46,7 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.23.4';
+const VERSION = '2.25.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -338,7 +339,12 @@ const Chat = () => {
 
     const isInputFocused = () => {
       const el = document.activeElement;
-      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+      if (!el) return false;
+      return (
+        el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.isContentEditable === true
+      );
     };
 
     const apply = () => {
@@ -1044,21 +1050,13 @@ const Chat = () => {
               transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
             }}
           >
-            <input
+            <ChatInput
               ref={inputRef}
-              type="search"
-              name="chat-message"
               value={input}
-              onChange={handleInputChange}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+              onChange={(text) => handleInputChange({ target: { value: text } })}
+              onSend={handleSendMessage}
               disabled={!isAuth || isUploading}
               placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="sentences"
-              spellCheck={false}
-              enterKeyHint="send"
-              inputMode="search"
             />
             <button
               className="attach-btn"

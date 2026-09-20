@@ -523,6 +523,7 @@ body.dark .msg-reaction-count {
   align-items: center;
 }
 
+/* Fallback: если вернёмся к <input type="search"> */
 .input-row input[type="search"] {
   flex: 1;
   padding: 10px 14px;
@@ -562,6 +563,66 @@ input[type="search"]::-webkit-search-results-decoration {
 input[type="search"] {
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* ============================================================= */
+/* [2.25.0] contentEditable-инпут                                */
+/* ============================================================= */
+.input-row .chat-input-editable {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 3px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.35;
+  outline: none;
+  touch-action: manipulation;
+  transition: border-color 0.22s ease, box-shadow 0.28s ease;
+
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  min-height: 46px;
+  cursor: text;
+
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.input-row .chat-input-editable::-webkit-scrollbar {
+  display: none;
+}
+
+.input-row .chat-input-editable.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.input-row .chat-input-editable:focus,
+.input-row .chat-input-editable:focus-visible {
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 4px rgba(245, 169, 192, 0.28);
+}
+
+body.dark .input-row .chat-input-editable:focus,
+body.dark .input-row .chat-input-editable:focus-visible {
+  outline: none;
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.18);
 }
 
 .attach-btn {
