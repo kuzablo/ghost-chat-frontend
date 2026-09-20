@@ -21,6 +21,9 @@ const MessageList = ({
   const [isEditing, setIsEditing] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
 
+  // [правка 2.14.19] pop-анимация при тапе по сообщению — как в приватном чате
+  const [poppingId, setPoppingId] = useState(null);
+
   useEffect(() => {
     if (isEditing) {
       const html = document.documentElement;
@@ -103,6 +106,14 @@ const MessageList = ({
   const didIReact = (message, emoji) =>
     !!message?.reactions?.[emoji]?.includes(nickname);
 
+  // [правка 2.14.19] тап по сообщению = pop + toggle пикера
+  // (та же логика, что handleMessageTap в PrivateChat.jsx)
+  const handleMessageTap = (messageId) => {
+    setPoppingId(messageId);
+    setTimeout(() => setPoppingId(null), 380);
+    toggleReactions(messageId);
+  };
+
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -122,8 +133,8 @@ const MessageList = ({
           // ==== Image-only ====
           // [правка 2.14.18]
           //  - время вынесено вниз-справа с градиентом (Telegram-style);
-          //  - реакции переехали под карточку и вылезают за нижнюю границу —
-          //    визуал скопирован с private-reaction-badge (круглые бейджи 15×15);
+          //  - реакции — под карточкой, вылезают за нижнюю границу,
+          //    визуал скопирован с private-reaction-badge (круглые 15×15);
           //  - верхний оверлей: только ник + действия.
           if (isImageOnly) {
             return (
@@ -150,7 +161,6 @@ const MessageList = ({
                         }}
                       />
 
-                      {/* верхний оверлей: ник + действия */}
                       <div className="msg-image-overlay">
                         <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
 
@@ -176,14 +186,12 @@ const MessageList = ({
                         </div>
                       </div>
 
-                      {/* нижний оверлей: время справа снизу */}
                       <div className="msg-image-bottom-overlay">
                         <span className="msg-time msg-time--bottom">
                           {formatMessageDate(m.time)}
                         </span>
                       </div>
 
-                      {/* реакции — под карточкой, вылезают за нижнюю границу */}
                       {hasReactions(m) && (
                         <div className="msg-image-only-reactions">
                           {Object.entries(m.reactions).map(([emoji, users]) => (
@@ -207,6 +215,11 @@ const MessageList = ({
           }
 
           // ==== Обычное сообщение ====
+          // [правка 2.14.19] реакции и пикер — под карточкой, как в личке:
+          //   - бейджи .msg-reaction-badge (круглые 15×15, вылезают за границу);
+          //   - пикер .msg-reaction-picker — 5 эмодзи, появляется под карточкой;
+          //   - pop-анимация карточки при тапе;
+          //   - из шапки убраны .reactions-header и .reactions-panel.
           return (
             <React.Fragment key={i}>
               {dateDivider}
@@ -215,8 +228,8 @@ const MessageList = ({
                   {getInitial(m.nickname)}
                 </div>
                 <div
-                  className="msg-content"
-                  onClick={() => toggleReactions(m.id)}
+                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''}`}
+                  onClick={() => handleMessageTap(m.id)}
                 >
                   <div className="msg-header">
                     <span className="msg-nick">{m.nickname}</span>
@@ -242,16 +255,6 @@ const MessageList = ({
                       )}
                     </div>
 
-                    <div className="reactions-header">
-                      {hasReactions(m) && Object.entries(m.reactions).map(([emoji, users]) => (
-                        <span
-                          key={emoji}
-                          className={`reaction-badge ${didIReact(m, emoji) ? 'own' : ''}`}
-                        >
-                          {emoji} {users.length}
-                        </span>
-                      ))}
-                    </div>
                     <span className="msg-time">{formatMessageDate(m.time)}</span>
                   </div>
 
@@ -302,17 +305,41 @@ const MessageList = ({
                     </div>
                   )}
 
-                  {activeMessageId === m.id && !isEditingThis && (
-                    <div className="reactions-panel">
-                      {['👍', '🔥', '😂'].map(emoji => (
-                        <button
+                  {/* реакции — под карточкой, вылезают за нижнюю границу */}
+                  {hasReactions(m) && (
+                    <div className="msg-reactions">
+                      {Object.entries(m.reactions).map(([emoji, users]) => (
+                        <span
                           key={emoji}
-                          className={`reaction-btn ${didIReact(m, emoji) ? 'active' : ''}`}
-                          onClick={(e) => { e.stopPropagation(); sendReaction(m.id, emoji); }}
+                          className={`msg-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
                         >
-                          {emoji} {m.reactions?.[emoji]?.length || 0}
-                        </button>
+                          {emoji}
+                          {users.length > 1 && (
+                            <span className="msg-reaction-count">{users.length}</span>
+                          )}
+                        </span>
                       ))}
+                    </div>
+                  )}
+
+                  {/* пикер реакций — 5 эмодзи, как в личке */}
+                  {activeMessageId === m.id && !isEditingThis && (
+                    <div
+                      className="msg-reaction-picker"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
+                        const isActive = didIReact(m, emoji);
+                        return (
+                          <button
+                            key={emoji}
+                            className={isActive ? 'active' : ''}
+                            onClick={() => sendReaction(m.id, emoji)}
+                          >
+                            {emoji}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

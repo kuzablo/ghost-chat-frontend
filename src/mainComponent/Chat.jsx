@@ -23,8 +23,8 @@ import '../styles/Chat.private.css';
 import '../styles/Chat.modals.css';
 import '../styles/Chat.mobile.css';
 
-// [правка 2.14.17 → 2.14.18] пикер реакций в fullscreen: 3 эмодзи → 5 (как в личке)
-const VERSION = '2.14.18';
+// [2.14.19] image-only + реакции в обычных сообщениях как в личке
+const VERSION = '2.14.19';
 const API_URL = 'https://api.banjoboy420.ru';
 const WS_URL = 'wss://api.banjoboy420.ru';
 

@@ -284,6 +284,128 @@ body {
 }
 
 /* ===== Реакции в общем чате ===== */
+
+/*
+  [правка 2.14.19]
+  Логика и визуал скопированы из приватного чата:
+    - .reactions-header и .reactions-panel больше не используются
+      (бейджи и пикер переехали под карточку);
+    - реакции — круглые бейджи .msg-reaction-badge, вылезают за нижнюю границу
+      (1-в-1 как .private-reaction-badge);
+    - пикер .msg-reaction-picker — 5 эмодзи (👍 👎 ❤️ 🔥 😢), появляется
+      под карточкой (1-в-1 как .private-reaction-picker);
+    - pop-анимация при тапе — .msg-content--pop (1-в-1 как .private-msg--pop).
+
+  Старые .reactions-header / .reaction-badge / .reactions-panel / .reaction-btn
+  оставлены ниже на случай, если где-то ещё используются — но в JSX больше нет.
+*/
+
+/* --- позиционирование: контейнер для реакций и пикера --- */
+.msg-content {
+  position: relative; /* [правка 2.14.19] нужно для absolute-реакций и пикера */
+}
+
+/* --- pop-анимация карточки при тапе --- */
+.msg-content--pop {
+  animation: msgPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --- реакции под карточкой --- */
+.msg-reactions {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  transform: translateY(65%);
+  display: flex;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.msg-reaction-badge {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1.5px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  position: relative;
+  padding: 0;
+  animation: reactionPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: auto;
+}
+
+.msg-reaction-badge.own {
+  background: var(--btn-bg);
+  border-color: var(--btn-border);
+}
+
+.msg-reaction-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 10px;
+  height: 10px;
+  padding: 0 2px;
+  border-radius: 5px;
+  background: var(--nick-color);
+  color: #FFF;
+  border: 1px solid var(--card-bg);
+  font-size: 7px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+body.dark .msg-reaction-count {
+  background: #3BB5E8;
+  color: #0E1726;
+}
+
+/* --- пикер реакций --- */
+.msg-reaction-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  gap: 2px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 24px;
+  padding: 4px 8px;
+  animation: reactionPop 0.25s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+
+.msg-reaction-picker button {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 50%;
+  transition: transform 0.12s, background 0.15s;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+.msg-reaction-picker button:active {
+  transform: scale(0.85);
+}
+
+.msg-reaction-picker button.active {
+  background: rgba(59, 181, 232, 0.25);
+}
+
+/* --- старые стили (в JSX больше не применяются, оставлены на всякий) --- */
+
 .reactions-header {
   display: flex;
   gap: 2px;

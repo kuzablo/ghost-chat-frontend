@@ -385,4 +385,26 @@
     font-size: 12px;
     border-width: 1.5px;
   }
+    /* [правка 2.14.19] реакции в обычных сообщениях — как в приватном чате на мобилке */
+  .msg-reaction-badge {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .msg-reaction-count {
+    min-width: 11px;
+    height: 11px;
+    font-size: 7px;
+  }
+
+  .msg-reaction-picker {
+    padding: 5px 10px;
+    gap: 3px;
+  }
+
+  .msg-reaction-picker button {
+    font-size: 24px;
+    padding: 3px 5px;
+  }
 }
