@@ -34,13 +34,14 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
 // [2.23.0] панель ввода прилипает к клавиатуре (как в Telegram)
 // [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус, нативная панель off
 // [2.22.1] свайп по капсуле: лок направления, чёткие пороги, поэтапное закрытие
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.23.0';
+const VERSION = '2.23.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 
 const ThemeIcon = () => (
@@ -322,13 +323,7 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  /* ===== [2.23.0] Клавиатура: точная высота + флаг открытия =====
-     Считаем высоту так, чтобы покрыть оба поведения браузеров:
-       - Chrome (resizes-content): layout сжимается, innerHeight == vv.height,
-         kbHeight = 0 → панель просто остаётся на bottom: 0.
-       - Safari / Firefox: layout не сжимается, innerHeight > vv.height,
-         kbHeight = разнице → панель сдвигается transform'ом вверх.
-     Формула: innerHeight - (vv.height + vv.offsetTop). */
+  /* ===== [2.23.0] Клавиатура: точная высота + флаг открытия ===== */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
@@ -1043,9 +1038,11 @@ const Chat = () => {
                 : 'none',
             }}
           >
+            {/* [2.23.1] type="search" + name-заглушка: Chrome не предлагает автозаполнение контактов */}
             <input
               ref={inputRef}
-              type="text"
+              type="search"
+              name="chat-message"
               value={input}
               onChange={handleInputChange}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}

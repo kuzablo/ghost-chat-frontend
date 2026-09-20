@@ -523,7 +523,7 @@ body.dark .msg-reaction-count {
   align-items: center;
 }
 
-.input-row input[type="text"] {
+.input-row input[type="search"] {
   flex: 1;
   padding: 10px 14px;
   border-radius: var(--radius-md);
@@ -533,29 +533,41 @@ body.dark .msg-reaction-count {
   font-size: 14px;
   outline: none;
   touch-action: manipulation;
-  /* [2.22.2] плавный переход рамки и мягкого свечения */
   transition: border-color 0.22s ease, box-shadow 0.28s ease;
 }
 
-/* [2.22.2] фокус: рамка не режет глаз — мягкая подсветка в тон темы */
-.input-row input[type="text"]:focus,
-.input-row input[type="text"]:focus-visible {
+.input-row input[type="search"]:focus,
+.input-row input[type="search"]:focus-visible {
   border-color: var(--input-border);
   box-shadow: 0 0 0 3px rgba(245, 169, 192, 0.45);
 }
 
-body.dark .input-row input[type="text"]:focus,
-body.dark .input-row input[type="text"]:focus-visible {
+body.dark .input-row input[type="search"]:focus,
+body.dark .input-row input[type="search"]:focus-visible {
   border-color: var(--input-border);
   box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.28);
 }
 
-/* [2.22.2] убираем дефолтный outline в webkit на мобилке */
 @supports (-webkit-touch-callout: none) {
-  .input-row input[type="text"] {
+  .input-row input[type="search"] {
     -webkit-appearance: none;
     appearance: none;
   }
+}
+
+/* [2.23.1] гасим системный крестик и дефолтный стиль search-поля */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .attach-btn {

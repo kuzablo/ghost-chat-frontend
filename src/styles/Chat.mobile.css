@@ -130,12 +130,7 @@
     border-width: 1.5px;
   }
 
-  /* ===== [2.23.0] Инпут-строка прилипает к клавиатуре =====
-     Панель вырвана из потока и висит над нижним краем окна.
-     При появлении клавиатуры transform сдвигает её вверх на --kb-height.
-     На Chrome (resizes-content) --kb-height = 0 → панель остаётся на месте,
-     а сам layout сжимается под неё. На Safari --kb-height > 0 → панель
-     поднимается вручную. В обоих случаях — плавно, без рывков. */
+  /* ===== [2.23.0] Инпут-строка прилипает к клавиатуре ===== */
   .input-row {
     display: none;
     gap: 6px;
@@ -158,12 +153,12 @@
     will-change: transform;
   }
 
-  /* [2.23.0] отступ под панель — сообщения не уходят под неё */
   .chat-main.mobile-input-open .messages-wrapper {
     padding-bottom: calc(76px + var(--kb-height, 0px));
   }
 
-  .input-row input[type="text"] {
+  /* [2.23.1] input[type="search"] — Chrome не предлагает автозаполнение контактов */
+  .input-row input[type="search"] {
     padding: 10px 14px;
     font-size: 16px;
     border-width: 2px;
@@ -171,17 +166,15 @@
     scroll-margin-bottom: 200px;
   }
 
-  /* фокус: мягкое свечение, не резкая синяя рамка */
-  .input-row input[type="text"]:focus,
-  .input-row input[type="text"]:focus-visible {
+  .input-row input[type="search"]:focus,
+  .input-row input[type="search"]:focus-visible {
     box-shadow: 0 0 0 3px rgba(245, 169, 192, 0.5);
   }
-  body.dark .input-row input[type="text"]:focus,
-  body.dark .input-row input[type="text"]:focus-visible {
+  body.dark .input-row input[type="search"]:focus,
+  body.dark .input-row input[type="search"]:focus-visible {
     box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.32);
   }
 
-  /* [2.22.2] при открытой клавиатуре капсула не нужна */
   .chat-main.mobile-input-open .mobile-capsule {
     display: none;
   }
