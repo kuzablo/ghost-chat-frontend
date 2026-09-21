@@ -43,7 +43,9 @@ import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
+import '../styles/Chat.instagram.css';
 
+// [2.35.0] Instagram-карточки в личных сообщениях
 // [2.34.4] fix: dialogsBg — единственный источник в useChat
 // [2.34.3] Кастомизация фона диалогов + крупнее аватарки
 // [2.34.1] Мои диалоги: разделители, мини-пульс, long-press → профиль
@@ -61,7 +63,7 @@ import '../styles/Chat.roompulse.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.34.4';
+const VERSION = '2.35.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { formatTime } from '../utils';
 import ChatInput from './ChatInput';
+import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 const PICKER_AUTOHIDE_MS = 2000;
@@ -8,11 +9,11 @@ const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 /*
-  [2.33.6] загрузка фото в личных сообщениях: 📎 + превью + лайтбокс
+  [2.35.0] Instagram-карточка, если в тексте есть IG-ссылка
+  [2.33.6] загрузка фото: 📎 + превью + лайтбокс
   [2.32.20] скролл вниз только при новом последнем сообщении
   [2.32.19] пикер реакций автоскрывается через 2 сек
   [2.26.1] ChatInput вместо <input>
-  [2.19.4] PrivateChat принимает sendMessage
 */
 const PrivateChat = ({
   userId,
@@ -82,7 +83,6 @@ const PrivateChat = ({
     });
   };
 
-  // [2.33.6] загрузка фото
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -138,6 +138,7 @@ const PrivateChat = ({
     if (e.target.closest('.private-reaction-picker')) return;
     if (e.target.closest('.private-msg-image')) return;
     if (e.target.closest('.private-attach-btn')) return;
+    if (e.target.closest('.ig-card')) return;
 
     if (pickerFor === id) {
       setPickerFor(null);
@@ -202,6 +203,8 @@ const PrivateChat = ({
             const reactions = m.reactions || {};
             const reactionEntries = Object.entries(reactions);
             const hasReactions = reactionEntries.length > 0;
+            const igUrl = extractInstagramUrl(m.text);
+
             return (
               <div
                 key={i}
@@ -228,6 +231,10 @@ const PrivateChat = ({
                   )}
                   {m.text && (
                     <span className="private-msg-text">{m.text}</span>
+                  )}
+
+                  {igUrl && (
+                    <InstagramCard url={igUrl} />
                   )}
 
                   {hasReactions && (
