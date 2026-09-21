@@ -44,6 +44,7 @@ import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 
+// [2.34.1] Мои диалоги: разделители, мини-пульс, long-press → профиль
 // [2.34.0] Диалоги — редизайн + avatarUrl с бэка
 // [2.33.9] InfoPanel: актуализация + анонимные плейсхолдеры
 // [2.33.8] Пульс комнаты — полоска-дыхание под шапкой
@@ -58,7 +59,7 @@ import '../styles/Chat.roompulse.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.34.0';
+const VERSION = '2.34.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1329,6 +1330,7 @@ const Chat = () => {
           myId={myId}
           onOpen={handleOpenFromDialogs}
           onClose={handleCloseDialogs}
+          onOpenProfile={handleOpenProfile}
         />
       )}
 

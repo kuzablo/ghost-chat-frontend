@@ -1,18 +1,22 @@
-import { forwardRef, useRef, useEffect, memo } from 'react';
+import { forwardRef, useRef, useEffect, useState, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 
 /*
-  [2.34.0] Редизайн: карточки, аватарки с картинкой, онлайн-точка, пульс непрочитанного.
+  [2.34.1] Убрана стрелка. Мини-пульс в шапке. Разделители между карточками.
+           Long-press на аватарке → профиль. Свайп в обе стороны — закрыть.
+  [2.34.0] Редизайн: карточки, аватарки, онлайн-точка, пульс непрочитанного.
   [2.33.7] React.memo
-  [2.32.37] Свайп вправо через DOM
-  [2.30.0] Секции по датам: Сегодня / Вчера / Раньше
 */
+const LONG_PRESS_MS = 500;
+const MOVE_CANCEL_PX = 8;
+
 const DialogsPanel = forwardRef(({
   dialogs,
   players,
   myId,
   onOpen,
   onClose,
+  onOpenProfile,
 }, ref) => {
   const isOnline = (userId) => players.some(p => p.userId === userId);
 
@@ -25,10 +29,64 @@ const DialogsPanel = forwardRef(({
     lastDx: 0,
   });
 
+  // Long-press на аватарке
+  const pressRef = useRef({
+    timer: null,
+    startX: 0,
+    startY: 0,
+    fired: false,
+    userId: null,
+  });
+  const [pressingUserId, setPressingUserId] = useState(null);
+
   useEffect(() => {
     if (typeof ref === 'function') ref(panelRef.current);
     else if (ref) ref.current = panelRef.current;
   }, [ref]);
+
+  useEffect(() => () => {
+    if (pressRef.current.timer) clearTimeout(pressRef.current.timer);
+  }, []);
+
+  const cancelPress = () => {
+    if (pressRef.current.timer) {
+      clearTimeout(pressRef.current.timer);
+      pressRef.current.timer = null;
+    }
+    setPressingUserId(null);
+  };
+
+  const startPress = (userId, e) => {
+    e.stopPropagation();
+    if (!onOpenProfile) return;
+    const t = e.touches ? e.touches[0] : e;
+    pressRef.current.startX = t.clientX;
+    pressRef.current.startY = t.clientY;
+    pressRef.current.userId = userId;
+    pressRef.current.fired = false;
+    setPressingUserId(userId);
+    pressRef.current.timer = setTimeout(() => {
+      pressRef.current.timer = null;
+      pressRef.current.fired = true;
+      setPressingUserId(null);
+      const d = dialogs.find(x => x.userId === userId);
+      if (d) onOpenProfile(d.userId, d.nickname);
+    }, LONG_PRESS_MS);
+  };
+
+  const movePress = (e) => {
+    if (!pressRef.current.timer) return;
+    const t = e.touches ? e.touches[0] : e;
+    const dx = t.clientX - pressRef.current.startX;
+    const dy = t.clientY - pressRef.current.startY;
+    if (Math.abs(dx) > MOVE_CANCEL_PX || Math.abs(dy) > MOVE_CANCEL_PX) {
+      cancelPress();
+    }
+  };
+
+  const endPress = () => {
+    cancelPress();
+  };
 
   const getSectionKey = (timestamp) => {
     if (!timestamp) return 'old';
@@ -84,6 +142,7 @@ const DialogsPanel = forwardRef(({
 
   const handleTouchStart = (e) => {
     if (e.touches.length !== 1) return;
+    if (pressRef.current.timer) return;
     const t = e.touches[0];
     const s = swipeRef.current;
     s.active = true;
@@ -111,14 +170,14 @@ const DialogsPanel = forwardRef(({
     }
     if (s.direction === 'vertical') return;
 
-    if (dx > 0) {
-      const off = Math.min(dx, SWIPE_MAX);
-      s.lastDx = off;
-      if (panelRef.current) {
-        panelRef.current.style.transform = `translateX(${off}px)`;
-      }
-      if (e.cancelable) e.preventDefault();
+    // Свайп в обе стороны — сдвигаем по модулю
+    const off = Math.min(Math.abs(dx), SWIPE_MAX);
+    s.lastDx = off;
+    if (panelRef.current) {
+      const sign = dx > 0 ? 1 : -1;
+      panelRef.current.style.transform = `translateX(${sign * off}px)`;
     }
+    if (e.cancelable) e.preventDefault();
   };
 
   const handleTouchEnd = (e) => {
@@ -135,12 +194,27 @@ const DialogsPanel = forwardRef(({
     s.lastDx = 0;
   };
 
+  // Мини-пульс: амплитуда = онлайн, частота = непрочитанное
+  const pulseAmp = 1 + Math.min(onlineCount, 6) * 0.5;
+  const pulseSpeed = 1.4 + Math.min(totalUnread, 8) * 0.35;
+
   const renderAvatar = (d) => {
     const online = isOnline(d.userId);
     const hasUnread = d.unread > 0;
+    const isPressing = pressingUserId === d.userId;
 
     return (
-      <div className="dialog-avatar-wrap">
+      <div
+        className="dialog-avatar-wrap"
+        onMouseDown={(e) => startPress(d.userId, e)}
+        onMouseMove={movePress}
+        onMouseUp={endPress}
+        onMouseLeave={endPress}
+        onTouchStart={(e) => startPress(d.userId, e)}
+        onTouchMove={movePress}
+        onTouchEnd={endPress}
+        onTouchCancel={endPress}
+      >
         <div
           className={`dialog-avatar ${hasUnread ? 'dialog-avatar--unread' : ''}`}
           style={d.avatarUrl
@@ -156,6 +230,24 @@ const DialogsPanel = forwardRef(({
         </div>
         {online && <span className="dialog-online-dot" aria-label="в сети" />}
         {hasUnread && <span className="dialog-unread-pulse" aria-hidden="true" />}
+        {isPressing && (
+          <svg
+            className="dialog-press-ring"
+            viewBox="0 0 100 100"
+            aria-hidden="true"
+          >
+            <circle
+              cx="50"
+              cy="50"
+              r="48"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              className="dialog-press-ring-path"
+            />
+          </svg>
+        )}
       </div>
     );
   };
@@ -176,21 +268,38 @@ const DialogsPanel = forwardRef(({
         onTouchCancel={handleTouchEnd}
       >
         <header className="dialogs-header">
-          <button
-            type="button"
-            className="dialogs-back"
-            onClick={onClose}
-            aria-label="Назад"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" strokeWidth="2.5"
-                 strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
+          <div className="dialogs-pulse" aria-hidden="true">
+            <svg
+              className="dialogs-pulse-svg"
+              viewBox="0 0 40 12"
+              preserveAspectRatio="none"
+              width="40"
+              height="12"
+            >
+              <defs>
+                <linearGradient id="dlg-pulse-grad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="var(--btn-bg)" stopOpacity="0.2" />
+                  <stop offset="50%" stopColor="var(--btn-bg)" stopOpacity="1" />
+                  <stop offset="100%" stopColor="var(--btn-bg)" stopOpacity="0.2" />
+                </linearGradient>
+              </defs>
+              <path
+                className="dialogs-pulse-path"
+                d="M 0 6 Q 10 1 20 6 T 40 6"
+                fill="none"
+                stroke="url(#dlg-pulse-grad)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                style={{
+                  animationDuration: `${pulseSpeed}s`,
+                  transformOrigin: 'center',
+                }}
+              />
             </svg>
-          </button>
+          </div>
 
           <div className="dialogs-header-text">
-            <h4 className="dialogs-title">Разговоры</h4>
+            <h4 className="dialogs-title">Мои диалоги</h4>
             <div className="dialogs-header-sub">
               {visibleDialogs.length === 0
                 ? 'тишина'
@@ -199,7 +308,7 @@ const DialogsPanel = forwardRef(({
             </div>
           </div>
 
-          <span className="dialogs-header-spacer" aria-hidden="true" />
+          <div className="dialogs-header-spacer" aria-hidden="true" />
         </header>
 
         <div className="dialogs-list">
@@ -229,33 +338,34 @@ const DialogsPanel = forwardRef(({
               {section.items.map(d => {
                 const hasUnread = d.unread > 0;
                 return (
-                  <button
-                    key={d.userId}
-                    type="button"
-                    className={`dialog-card ${hasUnread ? 'dialog-card--unread' : ''}`}
-                    onClick={() => onOpen(d.userId, d.nickname)}
-                  >
-                    {renderAvatar(d)}
+                  <div key={d.userId} className="dialog-card-wrap">
+                    <button
+                      type="button"
+                      className={`dialog-card ${hasUnread ? 'dialog-card--unread' : ''}`}
+                      onClick={() => onOpen(d.userId, d.nickname)}
+                    >
+                      {renderAvatar(d)}
 
-                    <div className="dialog-body">
-                      <div className="dialog-top">
-                        <span className="dialog-nick">{d.nickname}</span>
-                        <span className="dialog-time">
-                          {formatMessageDate(d.lastAt)}
-                        </span>
-                      </div>
-                      <div className="dialog-bottom">
-                        <span className="dialog-preview">
-                          {d.lastText || '· · ·'}
-                        </span>
-                        {hasUnread && (
-                          <span className="dialog-badge">
-                            {d.unread > 99 ? '99+' : d.unread}
+                      <div className="dialog-body">
+                        <div className="dialog-top">
+                          <span className="dialog-nick">{d.nickname}</span>
+                          <span className="dialog-time">
+                            {formatMessageDate(d.lastAt)}
                           </span>
-                        )}
+                        </div>
+                        <div className="dialog-bottom">
+                          <span className="dialog-preview">
+                            {d.lastText || '· · ·'}
+                          </span>
+                          {hasUnread && (
+                            <span className="dialog-badge">
+                              {d.unread > 99 ? '99+' : d.unread}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 );
               })}
             </div>

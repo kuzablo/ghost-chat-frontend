@@ -1,5 +1,5 @@
 /* ============================================================= */
-/* [2.34.0] Панель диалогов — редизайн: карточки, аватарки, пульс */
+/* [2.34.1] Мои диалоги — разделители, мини-пульс, кольцо press   */
 /* ============================================================= */
 
 .dialogs-overlay {
@@ -49,40 +49,48 @@ body.dark .dialogs-overlay {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 12px 12px 6px;
+  padding: 12px 14px;
   border-bottom: 2px solid var(--card-border);
   flex-shrink: 0;
   background: var(--card-bg);
 }
 
-.dialogs-back {
+.dialogs-pulse {
+  flex-shrink: 0;
   width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: transparent;
-  border: none;
-  color: var(--nick-color);
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  transition: background 0.15s, transform 0.1s;
-  touch-action: manipulation;
+  color: var(--btn-bg);
 }
 
-.dialogs-back:hover {
-  background: var(--messages-bg);
+.dialogs-pulse-svg {
+  display: block;
 }
 
-.dialogs-back:active {
-  transform: scale(0.9);
-  background: var(--messages-bg);
+.dialogs-pulse-path {
+  animation-name: dialogsPulseWave;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
 
-body.dark .dialogs-back {
-  color: #3BB5E8;
+@keyframes dialogsPulseWave {
+  0%, 100% {
+    transform: scaleY(0.6);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleY(1.4);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialogs-pulse-path {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 
 .dialogs-header-text {
@@ -114,7 +122,7 @@ body.dark .dialogs-back {
 
 .dialogs-header-spacer {
   width: 40px;
-  height: 40px;
+  height: 12px;
   flex-shrink: 0;
 }
 
@@ -142,14 +150,14 @@ body.dark .dialogs-back {
 .dialogs-section {
   display: flex;
   flex-direction: column;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .dialogs-section-label {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px 10px;
+  padding: 10px 8px 8px;
 }
 
 .dialogs-section-line {
@@ -162,7 +170,7 @@ body.dark .dialogs-back {
     var(--card-border) 60%,
     transparent
   );
-  opacity: 0.35;
+  opacity: 0.4;
 }
 
 .dialogs-section-text {
@@ -174,6 +182,34 @@ body.dark .dialogs-back {
   white-space: nowrap;
 }
 
+/* ===== Обёртка карточки + разделитель ===== */
+
+.dialog-card-wrap {
+  position: relative;
+}
+
+.dialog-card-wrap + .dialog-card-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 76px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--card-border) 15%,
+    var(--card-border) 85%,
+    transparent 100%
+  );
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+body.dark .dialog-card-wrap + .dialog-card-wrap::before {
+  opacity: 0.35;
+}
+
 /* ===== Карточка диалога ===== */
 
 .dialog-card {
@@ -181,8 +217,7 @@ body.dark .dialogs-back {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 4px;
+  padding: 12px 12px;
   background: transparent;
   border: 2px solid transparent;
   border-radius: var(--radius-md);
@@ -207,7 +242,6 @@ body.dark .dialogs-back {
 
 .dialog-card--unread {
   background: rgba(59, 181, 232, 0.06);
-  border-color: rgba(59, 181, 232, 0.25);
 }
 
 .dialog-card--unread:hover {
@@ -222,6 +256,9 @@ body.dark .dialogs-back {
   width: 52px;
   height: 52px;
   flex-shrink: 0;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .dialog-avatar {
@@ -250,10 +287,6 @@ body.dark .dialog-avatar {
 
 .dialog-avatar--unread {
   border-color: var(--btn-bg);
-  box-shadow:
-    0 0 0 2px var(--card-bg),
-    0 0 0 4px rgba(59, 181, 232, 0.35),
-    0 2px 0 rgba(0, 0, 0, 0.12);
 }
 
 /* Онлайн — точка в углу */
@@ -271,11 +304,7 @@ body.dark .dialog-avatar {
   pointer-events: none;
 }
 
-body.dark .dialog-online-dot {
-  border-color: var(--card-bg);
-}
-
-/* Пульс непрочитанного — кольцо вокруг аватарки */
+/* Пульс непрочитанного */
 .dialog-unread-pulse {
   position: absolute;
   inset: -4px;
@@ -299,6 +328,31 @@ body.dark .dialog-online-dot {
     transform: scale(1.15);
     opacity: 0;
   }
+}
+
+/* Кольцо long-press на аватарке */
+.dialog-press-ring {
+  position: absolute;
+  inset: -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 16px);
+  color: var(--btn-bg);
+  pointer-events: none;
+  z-index: 4;
+  filter: drop-shadow(0 0 6px rgba(59, 181, 232, 0.55));
+}
+
+.dialog-press-ring-path {
+  transform-origin: center;
+  transform: rotate(-90deg);
+  stroke-dasharray: 302;
+  stroke-dashoffset: 302;
+  animation: dialogPressRing 0.5s linear forwards;
+}
+
+@keyframes dialogPressRing {
+  from { stroke-dashoffset: 302; }
+  to   { stroke-dashoffset: 0; }
 }
 
 /* ===== Тело ===== */
@@ -486,14 +540,12 @@ body.dark .dialogs-empty-text b {
     font-size: 17px;
   }
 
-  .dialogs-back {
-    width: 44px;
-    height: 44px;
+  .dialogs-pulse {
+    width: 36px;
   }
 
   .dialogs-header-spacer {
-    width: 44px;
-    height: 44px;
+    width: 36px;
   }
 
   .dialogs-list {
@@ -501,7 +553,7 @@ body.dark .dialogs-empty-text b {
   }
 
   .dialog-card {
-    padding: 10px 10px;
+    padding: 12px 10px;
     gap: 10px;
   }
 
@@ -520,6 +572,10 @@ body.dark .dialogs-empty-text b {
 
   .dialog-preview {
     font-size: 13px;
+  }
+
+  .dialog-card-wrap + .dialog-card-wrap::before {
+    left: 68px;
   }
 
   .dialogs-empty {
