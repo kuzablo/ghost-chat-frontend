@@ -38,7 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.32.6] подсказка «зажми» — только после первого короткого тапа
+// [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
 // [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
 // [2.32.4] авто-скрытие мини-плеера 6s → 0.5s
 // [2.32.3] авто-скрытие мини-плеера через 6 секунд
@@ -55,7 +55,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.6';
+const VERSION = '2.32.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -132,7 +132,7 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
-  // [2.32.6] подсказка «зажми» появляется только после первого короткого тапа
+  // [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
   const [mascotHintVisible, setMascotHintVisible] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
@@ -762,9 +762,16 @@ const Chat = () => {
     ref.pointerId = e.pointerId;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
 
+    // [2.32.7] подсказка видна, пока палец нажат, если плеер ещё не запущен
+    if (!yt.hasStarted) {
+      setMascotHintVisible(true);
+    }
+
     ref.longPressTimer = setTimeout(() => {
       ref.longPressFired = true;
       ref.longPressTimer = null;
+      // долгий тап — плеер стартует, подсказку убираем
+      setMascotHintVisible(false);
     }, LONG_PRESS_MS);
   };
 
@@ -780,6 +787,7 @@ const Chat = () => {
           clearTimeout(ref.longPressTimer);
           ref.longPressTimer = null;
         }
+        setMascotHintVisible(false);
         setVolumeTipVisible(true);
       }
       const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
@@ -798,13 +806,16 @@ const Chat = () => {
       ref.longPressTimer = null;
     }
 
+    // [2.32.7] палец отпустили — подсказка исчезает
+    setMascotHintVisible(false);
+
     if (ref.inVolumeDrag) {
       ref.inVolumeDrag = false;
       setTimeout(() => setVolumeTipVisible(false), 600);
       return;
     }
 
-    // [2.32.5] долгий тап: переключить трек (и запустить, если не запущено)
+    // долгий тап: переключить трек (и запустить, если не запущено)
     if (ref.longPressFired) {
       ref.longPressFired = false;
       ref.lastTapTime = 0;
@@ -812,9 +823,8 @@ const Chat = () => {
       return;
     }
 
-    // [2.32.6] короткий тап, пока плеер не запущен — показываем подсказку
+    // короткий тап, пока плеер не запущен — ничего не делаем
     if (!yt.hasStarted) {
-      setMascotHintVisible(true);
       return;
     }
 
@@ -1076,7 +1086,7 @@ const Chat = () => {
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
-              {!yt.hasStarted && mascotHintVisible && (
+              {mascotHintVisible && !yt.hasStarted && (
                 <div className="mascot-start-hint">зажми</div>
               )}
               {volumeTipVisible && (
