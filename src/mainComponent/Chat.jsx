@@ -38,26 +38,13 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.13] мини-плеер прячется моментально после старта (было 0.5 сек)
+// [2.32.12] мини-плеер снова виден на первом запуске — iOS даёт play только по тапу
 // [2.32.11] откат радио к рабочей версии — YouTube popup приемлем
 // [2.32.8] фикс мигания/прыжков при первом входе в PWA
 // [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
 // [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
-// [2.32.4] авто-скрытие мини-плеера 6s → 0.5s
-// [2.32.3] авто-скрытие мини-плеера через 6 секунд
-// [2.32.2] fix: мини-плеер скрывается сразу после тапа play
-// [2.32.1] iOS: оверлей-кнопка над YouTube-iframe, без всплытия приложения
-// [2.32.0] InfoPanel: «О приложении», секции с иконками, мини-анимации жестов
-// [2.31.10] PWA: скролл к последним сообщениям через ResizeObserver
-// [2.31.8] баннер установки PWA для iOS Safari
-// [2.31.7] ring-thickness унифицирован в PlayersPanel
-// [2.31.6] реакции image-only — правый верхний угол, размер ×2
-// [2.31.5] fix: пикер реакций в fullscreen выше и крупнее (44×44)
-// [2.31.4] fix: бурст ❤️ в обычном сообщении привязывается к картинке
-// [2.31.3] кольцо long-press через CSS-переменные в :root
-// [2.31.2] кольцо long-press появляется через 1/3 удержания
-// [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
-// [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.11';
+const VERSION = '2.32.13';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -136,6 +123,8 @@ const Chat = () => {
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
   // [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
   const [mascotHintVisible, setMascotHintVisible] = useState(false);
+  // [2.32.12] мини-плеер — виден пока юзер не тапнет play (iOS)
+  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
@@ -190,6 +179,13 @@ const Chat = () => {
   const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
+
+  // [2.32.13] как только YouTube стартанул — прячем мини-плеер моментально
+  useEffect(() => {
+    if (!showMiniPlayer) return;
+    if (!yt.hasStarted) return;
+    setShowMiniPlayer(false);
+  }, [showMiniPlayer, yt.hasStarted]);
 
   useEffect(() => {
     if (!yt.hasStarted) return;
@@ -764,7 +760,6 @@ const Chat = () => {
     ref.pointerId = e.pointerId;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
 
-    // [2.32.7] подсказка видна, пока палец нажат, если плеер ещё не запущен
     if (!yt.hasStarted) {
       setMascotHintVisible(true);
     }
@@ -772,8 +767,15 @@ const Chat = () => {
     ref.longPressTimer = setTimeout(() => {
       ref.longPressFired = true;
       ref.longPressTimer = null;
-      // долгий тап — плеер стартует, подсказку убираем
       setMascotHintVisible(false);
+
+      // [2.32.12] первый запуск — показываем плеер, чтобы юзер тапнул play (iOS)
+      //           уже играет — листаем трек
+      if (!yt.hasStarted) {
+        setShowMiniPlayer(true);
+      } else {
+        yt.next();
+      }
     }, LONG_PRESS_MS);
   };
 
@@ -808,7 +810,6 @@ const Chat = () => {
       ref.longPressTimer = null;
     }
 
-    // [2.32.7] палец отпустили — подсказка исчезает
     setMascotHintVisible(false);
 
     if (ref.inVolumeDrag) {
@@ -817,15 +818,12 @@ const Chat = () => {
       return;
     }
 
-    // долгий тап: переключить трек (и запустить, если не запущено)
     if (ref.longPressFired) {
       ref.longPressFired = false;
       ref.lastTapTime = 0;
-      yt.next();
       return;
     }
 
-    // короткий тап, пока плеер не запущен — ничего не делаем
     if (!yt.hasStarted) {
       return;
     }
@@ -1482,8 +1480,12 @@ const Chat = () => {
         </div>
       )}
 
-      <div className="yt-hidden-host">
+      {/* [2.32.13] мини-плеер виден при showMiniPlayer — юзер тапает play, моментально прячется */}
+      <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
         <div id={yt.containerId} />
+        {showMiniPlayer && (
+          <div className="yt-mini-hint">▶ нажми play</div>
+        )}
       </div>
     </>
   );

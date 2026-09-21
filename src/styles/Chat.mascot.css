@@ -1,4 +1,6 @@
 /*
+  [2.32.13] без изменений по логике; правка только в Chat.jsx (моментальное скрытие)
+  [2.32.12] добавлен стиль .mascot-start-hint — подсказка «зажми» над маскотом
   [2.32.10] откат к рабочей версии — оверлей убран
   [2.15.23] Стили маскота-радио.
 */
@@ -114,6 +116,24 @@
   0%   { height: 3px; }
   50%  { height: 10px; }
   100% { height: 3px; }
+}
+
+/* [2.32.12] подсказка «зажми» — над маскотом, пока палец нажат и плеер не запущен */
+.mascot-start-hint {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #FFF;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: mascotTipFade 0.15s ease-out;
+  z-index: 10;
 }
 
 .mascot-volume-tip {
