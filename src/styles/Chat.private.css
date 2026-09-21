@@ -75,13 +75,12 @@
   flex-direction: column;
   margin-bottom: 10px;
   max-width: 80%;
+  min-width: 0;
   position: relative;
   cursor: pointer;
-  z-index: 1; /* [правка 2.14.24] базовый слой */
+  z-index: 1;
 }
 
-/* [правка 2.14.24] когда пикер открыт — сообщение уходит на верхний слой,
-   чтобы пикер не перекрывался следующей карточкой */
 .private-msg--picker-open {
   z-index: 100;
 }
@@ -108,13 +107,16 @@
 }
 
 .private-msg .private-msg-text {
+  display: inline-block;
+  max-width: 100%;
   color: var(--msg-text);
   background: var(--card-bg);
   border: 2px solid var(--msg-border);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
-  max-width: 100%;
+  overflow-wrap: anywhere;
   word-break: break-word;
+  text-align: left;
   font-size: 13px;
 }
 
@@ -146,6 +148,7 @@
   position: relative;
   display: inline-block;
   max-width: 100%;
+  min-width: 0;
 }
 
 .private-msg--has-reactions {
@@ -246,7 +249,6 @@ body.dark .private-reaction-count {
   z-index: 10;
 }
 
-/* [правка 2.14.24] пикер не влезает снизу — показываем сверху сообщения */
 .private-reaction-picker--top {
   top: auto;
   bottom: calc(100% + 4px);
