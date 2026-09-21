@@ -1,9 +1,7 @@
 import { forwardRef } from 'react';
 
 /*
-  [2.32.35] 8 визуальных демо: склейка, реакции, удаление, профиль,
-            push, радио, темы, fullscreen.
-  [2.32.28] Профиль, уведомления, склейка сообщений.
+  [2.32.38] InfoPanel с 8 визуальными демо.
 */
 const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
   return (
@@ -20,7 +18,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             />
             <div className="info-brand-text">
               <h2 className="info-brand-title">О приложении</h2>
-              <div className="info-brand-subtitle">banjoboy's crew · v2.32.35</div>
+              <div className="info-brand-subtitle">banjoboy's crew · v2.32.38</div>
             </div>
           </div>
           <button
@@ -55,7 +53,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <li>Пока печатаешь — другие видят «печатает…».</li>
             </ul>
 
-            {/* ДЕМО: склейка */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--merge">
                 <div className="info-merge-card">
@@ -83,7 +80,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               Тапнул по сообщению — открылся пикер с реакциями:
             </p>
 
-            {/* ДЕМО: пикер + палец */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--reactions">
                 <div className="info-reaction-card">
@@ -162,7 +158,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               При удалении карточка едет вправо — так:
             </p>
 
-            {/* ДЕМО: удаление */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--delete">
                 <div className="info-delete-glow" />
@@ -195,7 +190,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               и оформить: 7 шрифтов, свой цвет, поворот.
             </p>
 
-            {/* ДЕМО: мини-профиль */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--profile">
                 <div className="info-profile-card">
@@ -306,7 +300,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               в галерее.
             </p>
 
-            {/* ДЕМО: fullscreen */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--fullscreen">
                 <div className="info-fs-frame">
@@ -343,7 +336,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               придёт, даже если чат закрыт или телефон в кармане.
             </p>
 
-            {/* ДЕМО: push */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--push">
                 <div className="info-push-app">
@@ -378,7 +370,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               Маскот в шапке — это радио. Три трека по кругу, играют в фоне.
             </p>
 
-            {/* ДЕМО: радио */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--radio">
                 <div className="info-radio-mascot">
@@ -411,7 +402,6 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               растекается кругом из точки нажатия, иконка переворачивается.
             </p>
 
-            {/* ДЕМО: темы */}
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--theme">
                 <div className="info-theme-split">
@@ -482,6 +472,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </div>
             <ul className="info-list info-list--gestures">
               <li><span className="info-gesture">👈</span> Свайп от левого края — панель игроков.</li>
+              <li><span className="info-gesture">👉</span> Свайп от правого края — диалоги.</li>
               <li><span className="info-gesture">👈</span> Свайп влево по сообщению — ответ.</li>
               <li><span className="info-gesture">👉</span> Свайп вправо по своему — удалить.</li>
               <li><span className="info-gesture">👇</span> Долгий тап по своему — редактировать.</li>

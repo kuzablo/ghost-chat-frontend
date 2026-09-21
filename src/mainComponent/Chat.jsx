@@ -41,17 +41,11 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
-// [2.32.37] perf(dialogs): свайп вправо через DOM — без setState на каждом кадре
-// [2.32.36] perf(swipe): свайпы сообщений через DOM — без setState на каждом кадре
-// [2.32.35] fix(theme): очищен index.css от шаблона Vite; класс меняется внутри View Transition
-// [2.32.34] feat(profile): кастомизация bio — 7 шрифтов, цвет, поворот
-// [2.32.32] polish(theme): круг быстрее, Material-easing, старая тема мягко гаснет
-// [2.32.31] fix(css): вернуть transition background/border-color у .msg-content — тема
-// [2.32.30] fullscreen-свайп через refs — без setState на каждом кадре
-// [2.32.29] при смене темы глушим transition; 550ms → 320ms
-// [2.32.28] склейка по минуте; инфопанель
-// [2.32.27] склейка сообщений
-const VERSION = '2.32.37';
+// [2.32.38] свайп влево от правого края → диалоги
+// [2.32.37] свайп DialogsPanel через DOM
+// [2.32.36] свайпы сообщений через DOM
+// [2.32.35] 8 визуальных демо в InfoPanel
+const VERSION = '2.32.38';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -154,7 +148,6 @@ const Chat = () => {
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
 
-  // [2.32.30] прямые манипуляции fullscreen без ререндера
   const fsImgRef = useRef(null);
   const fsOverlayRef = useRef(null);
 
@@ -164,6 +157,7 @@ const Chat = () => {
   const swipeDirectionRef = useRef(null);
   const showPlayersRef = useRef(showPlayers);
   const showInfoRef = useRef(showInfo);
+  const showDialogsRef = useRef(showDialogs);
 
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
@@ -208,7 +202,6 @@ const Chat = () => {
     setShowMiniPlayer(false);
   }, [showMiniPlayer, yt.hasStarted]);
 
-  // [2.32.30] сброс inline-стилей при смене фото
   useEffect(() => {
     if (!fullscreenImage) return;
     const img = fsImgRef.current;
@@ -460,6 +453,10 @@ const Chat = () => {
     showInfoRef.current = showInfo;
   }, [showInfo]);
 
+  useEffect(() => {
+    showDialogsRef.current = showDialogs;
+  }, [showDialogs]);
+
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
@@ -625,6 +622,11 @@ const Chat = () => {
         swipeStartYRef.current = t.clientY;
         swipeActiveRef.current = false;
         swipeDirectionRef.current = 'open';
+      } else if (t.clientX >= window.innerWidth - EDGE_ZONE && !showDialogsRef.current) {
+        swipeStartXRef.current = t.clientX;
+        swipeStartYRef.current = t.clientY;
+        swipeActiveRef.current = false;
+        swipeDirectionRef.current = 'openDialogs';
       } else {
         swipeDirectionRef.current = null;
       }
@@ -658,6 +660,10 @@ const Chat = () => {
           swipeDirectionRef.current = null;
           return;
         }
+        if (swipeDirectionRef.current === 'openDialogs' && dx > 0) {
+          swipeDirectionRef.current = null;
+          return;
+        }
         swipeActiveRef.current = true;
       }
 
@@ -676,6 +682,10 @@ const Chat = () => {
           setShowPlayers(false);
         } else if (swipeDirectionRef.current === 'closeInfo' && dx >= THRESHOLD) {
           setShowInfo(false);
+        } else if (swipeDirectionRef.current === 'openDialogs' && dx <= -THRESHOLD) {
+          setShowPlayers(false);
+          setShowInfo(false);
+          setShowDialogs(true);
         }
       }
       swipeStartXRef.current = null;
@@ -709,6 +719,7 @@ const Chat = () => {
 
   const handleOpenDialogs = () => {
     setShowPlayers(false);
+    setShowInfo(false);
     setShowDialogs(true);
   };
 
@@ -786,7 +797,6 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  // [2.32.30] переход на соседнее фото (без изменений)
   const fsGoPrev = (e) => {
     if (e) e.stopPropagation();
     if (!hasPrevImage) return;
@@ -800,7 +810,6 @@ const Chat = () => {
     setFullscreenImage({ url: next.imageUrl, messageId: next.id });
   };
 
-  // [2.32.30] fullscreen-свайп — напрямую через DOM, без setState
   const handleFsTouchStart = (e) => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
