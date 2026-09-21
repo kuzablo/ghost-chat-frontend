@@ -41,10 +41,10 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.25] карта avatarUrl для отображения аватарок в чате
 // [2.32.24] Профиль: bio, аватар, удаление друга
 // [2.32.23] свайп-подсветка; textarea в редакторе
-// [2.32.22] счётчик N/M в fullscreen; автозакрытие
-const VERSION = '2.32.24';
+const VERSION = '2.32.25';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -140,7 +140,6 @@ const Chat = () => {
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [showDialogs, setShowDialogs] = useState(false);
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
-  // [2.32.24] цель открытого профиля
   const [profileTarget, setProfileTarget] = useState(null);
 
   const playersOverlayRef = useRef(null);
@@ -381,6 +380,15 @@ const Chat = () => {
     : null;
   const hasPrevImage = currentImageIndex > 0;
   const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
+
+  // [2.32.25] карта avatarUrl для отображения аватарок в чате
+  const avatarByUser = {};
+  for (const p of players) {
+    if (p.userId && p.avatarUrl) avatarByUser[p.userId] = p.avatarUrl;
+  }
+  for (const f of friends) {
+    if (f.userId && f.avatarUrl) avatarByUser[f.userId] = f.avatarUrl;
+  }
 
   const fullscreenMessage = currentImageMessage || null;
   const fullscreenReactions = fullscreenMessage?.reactions || {};
@@ -695,7 +703,6 @@ const Chat = () => {
     }
   };
 
-  // [2.32.24] открыть профиль
   const handleOpenProfile = (userId, nick) => {
     setShowPlayers(false);
     setProfileTarget({ userId, nickname: nick });
@@ -1304,6 +1311,7 @@ const Chat = () => {
               onEditMessage={handleEditMessage}
               containerRef={messagesContainerRef}
               onReply={handleReply}
+              avatarByUser={avatarByUser}
             />
 
             {notices.length > 0 && (

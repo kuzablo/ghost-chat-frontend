@@ -18,6 +18,7 @@ const MessageList = ({
   onEditMessage,
   containerRef,
   onReply,
+  avatarByUser = {},
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -330,6 +331,22 @@ const MessageList = ({
     return null;
   };
 
+  // [2.32.25] аватар в сообщении: картинка если есть, иначе инициал
+  const renderMsgAvatar = (userId, nick) => {
+    const url = avatarByUser[userId];
+    return (
+      <div
+        className="msg-avatar"
+        style={url
+          ? { backgroundImage: `url(${url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { background: getAvatarColor(nick) }
+        }
+      >
+        {!url && getInitial(nick)}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -379,9 +396,7 @@ const MessageList = ({
               <React.Fragment key={i}>
                 {dateDivider}
                 <div className="msg msg--image-only" data-msg-id={m.id}>
-                  <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
-                    {getInitial(m.nickname)}
-                  </div>
+                  {renderMsgAvatar(m.userId, m.nickname)}
 
                   {renderSwipeGlow(m)}
 
@@ -473,9 +488,7 @@ const MessageList = ({
             <React.Fragment key={i}>
               {dateDivider}
               <div className="msg" data-msg-id={m.id}>
-                <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
-                  {getInitial(m.nickname)}
-                </div>
+                {renderMsgAvatar(m.userId, m.nickname)}
 
                 {renderSwipeGlow(m)}
 
