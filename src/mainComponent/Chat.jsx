@@ -42,6 +42,7 @@ import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 
+// [2.33.4] блокировка пользователей: в меню, список в InfoPanel
 // [2.33.3] rejectCount в ритуале — нить тускнеет с отказами; тост при отказе
 // [2.33.1] лимит загрузки 25 МБ, клиентская проверка размера
 // [2.33.0] Ритуал дружбы — огонь и вода, компонент FriendshipRitual
@@ -53,7 +54,7 @@ import '../styles/Chat.friendship.css';
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.33.3';
+const VERSION = '2.33.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -351,6 +352,7 @@ const Chat = () => {
     bannedUsers,
     avatarCache,
     friendshipRitual,
+    blockedUsers,
     errorMessage,
     setErrorMessage,
     input,
@@ -376,6 +378,8 @@ const Chat = () => {
     handleDeclineRequest,
     togglePlayers: chatTogglePlayers,
     clearRitual,
+    blockUser,
+    unblockUser,
   } = chat;
 
   const priv = usePrivateChat({ sendMessage, myId, players });
@@ -1246,11 +1250,13 @@ const Chat = () => {
           setSearchQuery={setSearchQuery}
           unreadByUser={unreadByUser}
           isAdmin={isAdmin}
+          blockedIds={new Set(blockedUsers.map(u => u.userId))}
           onWatchChat={watchChat}
           onBanConfirm={(userId, nickname) => setBanConfirm({ userId, nickname })}
           onRequestDuel={duel.requestDuel}
           onOpenPrivateChat={openPrivateChat}
           onFriendRequest={handleFriendRequest}
+          onBlockUser={blockUser}
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
           onOpenInfo={handleOpenInfo}
@@ -1275,6 +1281,8 @@ const Chat = () => {
           ref={infoPanelRef}
           onClose={() => setShowInfo(false)}
           onMessageAdmin={handleMessageAdmin}
+          blockedUsers={blockedUsers}
+          onUnblockUser={unblockUser}
         />
       )}
 

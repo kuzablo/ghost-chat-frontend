@@ -3,6 +3,8 @@ import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 
 /*
+  [2.33.4] Пункт «Заблокировать» в long-press меню (если ещё не заблокирован).
+           Проп onBlockUser, Set blockedIds для проверки.
   [2.20.0] пункт «Профиль» в long-press меню; аватары из avatarUrl
   [2.29.0] свой профиль без заголовка «Вы»; подсказка «нажми и держи»
 */
@@ -15,11 +17,13 @@ const PlayersPanel = forwardRef(({
   setSearchQuery,
   unreadByUser,
   isAdmin,
+  blockedIds = new Set(),
   onWatchChat,
   onBanConfirm,
   onRequestDuel,
   onOpenPrivateChat,
   onFriendRequest,
+  onBlockUser,
   onAcceptRequest,
   onDeclineRequest,
   onOpenInfo,
@@ -103,6 +107,17 @@ const PlayersPanel = forwardRef(({
     items.push({ icon: '✉️', label: 'Написать', onClick: () => onOpenPrivateChat(p.userId, p.nickname) });
     items.push({ icon: '⚔️', label: 'Дуэль', onClick: () => onRequestDuel(p.id) });
     items.push({ icon: '🤝', label: 'В друзья', onClick: () => onFriendRequest(p.userId) });
+
+    // [2.33.4] блокировка
+    if (!blockedIds.has(p.userId) && onBlockUser) {
+      items.push({
+        icon: '🚫',
+        label: 'Заблокировать',
+        onClick: () => onBlockUser(p.userId, p.nickname),
+        danger: true,
+      });
+    }
+
     if (isAdmin) {
       items.push({ icon: '⛔', label: 'Забанить', onClick: () => onBanConfirm(p.userId, p.nickname), danger: true });
     }
@@ -115,6 +130,14 @@ const PlayersPanel = forwardRef(({
       { icon: '✉️', label: 'Написать', onClick: () => onOpenPrivateChat(f.userId, f.nickname) },
       { icon: '⚔️', label: 'Дуэль', onClick: () => onRequestDuel(f.userId) },
     ];
+    if (!blockedIds.has(f.userId) && onBlockUser) {
+      items.push({
+        icon: '🚫',
+        label: 'Заблокировать',
+        onClick: () => onBlockUser(f.userId, f.nickname),
+        danger: true,
+      });
+    }
     setMenuTarget({ title: f.nickname, subtitle: 'Друг', items });
   };
 
@@ -151,7 +174,6 @@ const PlayersPanel = forwardRef(({
 
   const isPressing = (id) => pressingId === id;
 
-  // [2.20.0] рендер аватара с учётом avatarUrl
   const renderAvatar = (nickname, avatarUrl) => (
     <div
       className="player-avatar"
@@ -365,5 +387,7 @@ const PlayersPanel = forwardRef(({
     </>
   );
 });
+
+PlayersPanel.displayName = 'PlayersPanel';
 
 export default PlayersPanel;

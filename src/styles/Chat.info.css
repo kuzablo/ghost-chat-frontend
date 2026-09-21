@@ -2436,3 +2436,87 @@ body.dark .info-section b {
   55%, 80% { clip-path: circle(150% at 70% 30%); }
   100% { clip-path: circle(0% at 70% 30%); }
 }
+
+/* ============================================================= */
+/* [2.33.4] Секция «Заблокированные» — список позора             */
+/* ============================================================= */
+
+.info-section--blocks {
+  margin-top: 4px;
+}
+
+.info-blocks-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.info-blocks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-block-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--messages-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+}
+
+.info-block-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFF;
+  border: 1.5px solid var(--card-border);
+  overflow: hidden;
+}
+
+.info-block-nick {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-block-unblock {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: transparent;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+}
+
+.info-block-unblock:active {
+  transform: scale(0.95);
+  background: var(--card-bg);
+}
+
+body.dark .info-block-unblock {
+  border-color: #3BB5E8;
+  color: #3BB5E8;
+}

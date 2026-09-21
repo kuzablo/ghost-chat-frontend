@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.33.3] rejectCount в friendshipRitual — цвет нити тускнеет с числом отказов.
-           Тост «Б отклонил запрос» после закрытия ритуала.
-  [2.33.1] клиентская проверка размера файла до загрузки — >25 МБ отбиваем сразу.
-  [2.33.0] friendshipRitual — state ритуала дружбы (огонь и вода).
+  [2.33.4] blockedUsers — список тех, кого я заблокировал.
+           blockUser / unblockUser — отправляют WS.
+  [2.33.3] rejectCount в friendshipRitual, тост при отказе.
+  [2.33.1] клиентская проверка размера файла до загрузки.
+  [2.33.0] friendshipRitual — state ритуала дружбы.
   [2.32.42] avatarCache — накапливающий кэш userId → avatarUrl.
   [2.32.41] bannedUsers — Set забаненных навсегда userId.
   [2.21.0] profile_changed отдаёт font/textColor/textRotation
@@ -42,6 +43,7 @@ export const useChat = ({
   const [bannedUsers, setBannedUsers] = useState(() => new Set());
   const [avatarCache, setAvatarCache] = useState({});
   const [friendshipRitual, setFriendshipRitual] = useState(null);
+  const [blockedUsers, setBlockedUsers] = useState([]);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -274,6 +276,19 @@ export const useChat = ({
     setFriendshipRitual(null);
   }, []);
 
+  // [2.33.4] блокировка
+  const blockUser = useCallback((userId) => {
+    if (sendMessageRef.current && userId) {
+      sendMessageRef.current({ type: 'block_user', data: { userId } });
+    }
+  }, []);
+
+  const unblockUser = useCallback((userId) => {
+    if (sendMessageRef.current && userId) {
+      sendMessageRef.current({ type: 'unblock_user', data: { userId } });
+    }
+  }, []);
+
   // ===== WS-фильтр =====
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
@@ -331,6 +346,11 @@ export const useChat = ({
         setBannedUsers(new Set(ids));
         return true;
       }
+
+      // [2.33.4] мой список заблокированных
+      case 'blocks_list':
+        setBlockedUsers(msg.data?.blocked || []);
+        return true;
 
       case 'admin_error':
         if (onNoticeRef.current) onNoticeRef.current(msg.data.message);
@@ -453,6 +473,7 @@ export const useChat = ({
     bannedUsers,
     avatarCache,
     friendshipRitual,
+    blockedUsers,
     errorMessage,
     setErrorMessage,
     input,
@@ -479,5 +500,7 @@ export const useChat = ({
     handleDeclineRequest,
     togglePlayers,
     clearRitual,
+    blockUser,
+    unblockUser,
   };
 };

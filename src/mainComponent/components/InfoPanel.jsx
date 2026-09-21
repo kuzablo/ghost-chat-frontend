@@ -1,9 +1,17 @@
 import { forwardRef } from 'react';
+import { getAvatarColor, getInitial } from '../utils';
 
 /*
+  [2.33.4] Секция «Заблокированные» в самом конце — список позора.
+           Пропы blockedUsers[], onUnblockUser.
   [2.32.38] InfoPanel с 8 визуальными демо.
 */
-const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
+const InfoPanel = forwardRef(({
+  onClose,
+  onMessageAdmin,
+  blockedUsers = [],
+  onUnblockUser,
+}, ref) => {
   return (
     <>
       <div className="info-overlay" onClick={onClose} />
@@ -18,7 +26,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             />
             <div className="info-brand-text">
               <h2 className="info-brand-title">О приложении</h2>
-              <div className="info-brand-subtitle">banjoboy's crew · v2.32.38</div>
+              <div className="info-brand-subtitle">banjoboy's crew · v2.33.4</div>
             </div>
           </div>
           <button
@@ -44,7 +52,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <h3>Общий чат</h3>
             </div>
             <p>
-              Пиши текст, отправляй фото до 10 МБ, ставь реакции. История
+              Пиши текст, отправляй фото до 25 МБ, ставь реакции. История
               сохраняется — зайдёшь завтра, всё на месте.
             </p>
             <ul className="info-list">
@@ -236,6 +244,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <li><b>✉️</b> — написать личное сообщение.</li>
               <li><b>⚔️</b> — вызвать на дуэль.</li>
               <li><b>🤝</b> — отправить запрос дружбы.</li>
+              <li><b>🚫</b> — заблокировать пользователя.</li>
               <li><b>Долгий тап</b> на игроке — меню действий.</li>
             </ul>
           </section>
@@ -481,6 +490,48 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <li><span className="info-gesture">👆</span> Свайп вверх по капсуле — открыть.</li>
               <li><span className="info-gesture">👆</span> Свайп вверх/вниз по маскоту — громкость.</li>
             </ul>
+          </section>
+
+          {/* ===== 17. Заблокированные (список позора) ===== */}
+          <section className="info-section info-section--blocks">
+            <div className="info-section-head">
+              <div className="info-section-icon">🚫</div>
+              <h3>Заблокированные</h3>
+            </div>
+            {blockedUsers.length === 0 ? (
+              <p className="info-blocks-empty">
+                Пока никого. Хорошо живёшь.
+              </p>
+            ) : (
+              <ul className="info-blocks-list">
+                {blockedUsers.map(u => (
+                  <li key={u.userId} className="info-block-item">
+                    <div
+                      className="info-block-avatar"
+                      style={u.avatarUrl
+                        ? {
+                            backgroundImage: `url(${u.avatarUrl})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }
+                        : { background: getAvatarColor(u.nickname) }
+                      }
+                    >
+                      {!u.avatarUrl && getInitial(u.nickname)}
+                    </div>
+                    <span className="info-block-nick">{u.nickname}</span>
+                    <button
+                      type="button"
+                      className="info-block-unblock"
+                      onClick={() => onUnblockUser && onUnblockUser(u.userId)}
+                      title="Разблокировать"
+                    >
+                      Вернуть
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="info-section info-section--outro">
