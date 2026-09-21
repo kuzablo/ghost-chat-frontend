@@ -40,8 +40,8 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
-// [2.32.40] ConfirmBanModal удалён — используется ConfirmModal с danger
-// [2.32.39] useMemo для avatarByUser/imageMessages — не пересобираем на каждом WS
+// [2.32.40] ConfirmBanModal удалён — бан идёт через ConfirmModal с danger.
+// [2.32.39] useMemo для avatarByUser/imageMessages — не пересобираем на каждом WS.
 // [2.32.38] свайп влево от правого края → диалоги
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
@@ -390,7 +390,6 @@ const Chat = () => {
   const totalNotifications = unreadCount + friendRequestsCount;
   const totalUnread = hiddenUnread + unreadCount + friendRequestsCount;
 
-  // [2.32.39] useMemo — imageMessages пересобирался на каждом WS-сообщении
   const imageMessages = useMemo(
     () => messages.filter(m => m.imageUrl),
     [messages]
@@ -405,7 +404,6 @@ const Chat = () => {
   const hasPrevImage = currentImageIndex > 0;
   const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
 
-  // [2.32.39] useMemo — avatarByUser пересобирался на каждом WS-сообщении
   const avatarByUser = useMemo(() => {
     const map = {};
     for (const p of players) {

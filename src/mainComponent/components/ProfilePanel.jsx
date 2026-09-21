@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
+import ConfirmModal from './ConfirmModal';
 
 /*
+  [2.32.40] bio: «Сохранено ✓» через локальный таймер, а не через data.
+            Кнопка гаснет после сохранения.
+            Удаление из друзей — через ConfirmModal (danger),
+            не через window.confirm.
   [2.21.0] Кастомизация bio: 7 шрифтов, цвет, поворот.
   [2.20.0] Профиль: bio, аватар, удаление друга.
 */
@@ -45,7 +50,8 @@ const ProfilePanel = ({
   const [textRotation, setTextRotation] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [savedAt, setSavedAt] = useState(0);
+  const [justSaved, setJustSaved] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState(false);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -56,7 +62,6 @@ const ProfilePanel = ({
     setTextColor(data.textColor || '#111111');
     setTextRotation(data.textRotation || 0);
     setError('');
-    setSavedAt(0);
   }, [data?.userId, data?.bio, data?.avatarUrl, data?.font, data?.textColor, data?.textRotation]);
 
   if (!data) {
@@ -109,13 +114,17 @@ const ProfilePanel = ({
   const handleSave = () => {
     if (!dirty) return;
     onSave(bio.slice(0, MAX_BIO), avatarUrl, font, textColor, textRotation);
-    setSavedAt(Date.now());
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 1500);
   };
 
   const handleRemoveFriend = () => {
-    if (window.confirm(`Удалить ${data.nickname} из друзей?`)) {
-      onRemoveFriend(data.userId);
-    }
+    setRemoveConfirm(true);
+  };
+
+  const confirmRemoveFriend = () => {
+    onRemoveFriend(data.userId);
+    setRemoveConfirm(false);
   };
 
   const avatarStyle = avatarUrl
@@ -259,7 +268,7 @@ const ProfilePanel = ({
                 onClick={handleSave}
                 disabled={!dirty || uploading}
               >
-                {savedAt && !dirty ? 'Сохранено ✓' : 'Сохранить'}
+                {justSaved ? 'Сохранено ✓' : 'Сохранить'}
               </button>
             </>
           )}
@@ -284,6 +293,17 @@ const ProfilePanel = ({
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={removeConfirm}
+        title={`Удалить ${data.nickname} из друзей?`}
+        description="Вы больше не будете видеть друг друга в списке друзей."
+        confirmText="Удалить"
+        danger
+        zIndex={1600}
+        onConfirm={confirmRemoveFriend}
+        onCancel={() => setRemoveConfirm(false)}
+      />
     </>
   );
 };

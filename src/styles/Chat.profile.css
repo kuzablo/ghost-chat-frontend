@@ -217,6 +217,13 @@ body.dark .profile-overlay { background: rgba(0, 0, 0, 0.7); }
   margin-top: 4px;
 }
 
+/* [2.32.40] кнопка сохранения — видно, что недоступна */
+.profile-save-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .profile-actions {
   display: flex;
   flex-direction: column;

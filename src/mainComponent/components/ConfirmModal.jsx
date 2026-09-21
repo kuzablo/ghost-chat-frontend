@@ -5,6 +5,8 @@ import React from 'react';
             danger      — красная кнопка подтверждения
             confirmText — текст кнопки подтверждения (по умолчанию «Да»)
             cancelText  — текст кнопки отмены (по умолчанию «Отмена»)
+            zIndex      — переопределить z-index (для модалей поверх панелей
+                          с большим z-index, например профиля)
             Заменил ConfirmBanModal — тот был с инлайн-стилями,
             не подхватывал тёмную тему.
 */
@@ -17,13 +19,17 @@ const ConfirmModal = ({
   confirmText = 'Да',
   cancelText = 'Отмена',
   danger = false,
+  zIndex = null,
 }) => {
   if (!open) return null;
 
+  const overlayStyle = zIndex != null ? { zIndex } : undefined;
+  const modalStyle = zIndex != null ? { zIndex: zIndex + 1 } : undefined;
+
   return (
     <>
-      <div className="blur-overlay" onClick={onCancel} />
-      <div className="confirm-modal">
+      <div className="blur-overlay" style={overlayStyle} onClick={onCancel} />
+      <div className="confirm-modal" style={modalStyle}>
         <div className="confirm-modal-content">
           <h3>{title || 'Подтверждение'}</h3>
           <p>{description || 'Вы уверены?'}</p>
