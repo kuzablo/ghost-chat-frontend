@@ -36,12 +36,14 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст, одинарный → fullscreen
-// [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️,
-//          тап по реакции → список. safe-area сверху/снизу.
+// [2.31.4] fix: бурст в обычном сообщении привязывается к картинке
+// [2.31.3] кольцо long-press через CSS-переменные в :root
+// [2.31.2] кольцо long-press появляется через 1/3 удержания
+// [2.31.1] двойной тап по картинке в карточке  бурст
+// [2.31.0] fullscreen: 
 // [2.30.1] кольцо long-press у image-only — по границам картинки
 // [2.30.0] DialogsPanel: кнопка «←», свайп вправо, секции по датам
-const VERSION = '2.31.1';
+const VERSION = '2.31.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -271,7 +273,6 @@ const Chat = () => {
   const totalNotifications = unreadCount + friendRequestsCount;
   const totalUnread = hiddenUnread + unreadCount + friendRequestsCount;
 
-  /* ===== fullscreen: список картинок для свайпа ===== */
   const imageMessages = messages.filter(m => m.imageUrl);
   const currentImageIndex = fullscreenImage
     ? imageMessages.findIndex(m => m.id === fullscreenImage.messageId)
@@ -605,8 +606,6 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  /* ===== [2.31.0] fullscreen: жесты, двойной тап, свайп между фото ===== */
-
   const fsOverlayOpacity = fullscreenImage
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
@@ -715,8 +714,6 @@ const Chat = () => {
       fsTapPosRef.current = { x, y };
     }
   };
-
-  /* ===== / fullscreen ===== */
 
   const INPUT_DRAG_THRESHOLD = 60;
 
@@ -858,8 +855,6 @@ const Chat = () => {
     forceLogout('');
   };
 
-  /* ===== Жесты по капсуле ===== */
-
   const CAPSULE_SWIPE_UP = 30;
   const CAPSULE_SWIPE_DOWN = 40;
   const CAPSULE_DIRECTION_LOCK = 8;
@@ -951,8 +946,6 @@ const Chat = () => {
       }, 250);
     }
   };
-
-  /* ===== / Жесты по капсуле ===== */
 
   return (
     <>
@@ -1331,7 +1324,6 @@ const Chat = () => {
           onClick={closeFullscreen}
           style={{ background: `rgba(0, 0, 0, ${fsOverlayOpacity})` }}
         >
-          {/* Верхняя панель: автор + закрыть */}
           <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
             <div className="fs-author">
               <div
@@ -1358,7 +1350,6 @@ const Chat = () => {
             </button>
           </div>
 
-          {/* Картинка */}
           <div className="fs-stage" onClick={closeFullscreen}>
             <img
               src={fullscreenImage.url}
@@ -1390,7 +1381,6 @@ const Chat = () => {
             )}
           </div>
 
-          {/* Нижняя панель: реакции + пикер */}
           <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
             {fullscreenReactionEntries.length > 0 && (
               <div className="fs-reactions-strip">
@@ -1419,7 +1409,6 @@ const Chat = () => {
             </button>
           </div>
 
-          {/* Пикер */}
           {showFullscreenReactions && (
             <div
               className="fs-reaction-picker"
@@ -1444,7 +1433,6 @@ const Chat = () => {
             </div>
           )}
 
-          {/* Список поставивших реакцию */}
           {fsReactionListEmoji &&
             fullscreenMessage?.reactions?.[fsReactionListEmoji] && (
               <div

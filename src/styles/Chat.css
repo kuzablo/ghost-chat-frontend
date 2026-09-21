@@ -34,6 +34,13 @@
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
+
+  /* [2.31.3] кольцо long-press — единый источник */
+  --ring-color: #3BB5E8;
+  --ring-color-faded: rgba(59, 181, 232, 0.15);
+  --ring-duration-msg: 1s;
+  --ring-duration-player: 0.5s;
+  --ring-thickness: 3px;
 }
 
 body.dark {
@@ -265,7 +272,9 @@ body {
   word-break: break-word;
 }
 
+/* [2.31.4] relative — чтобы бурст ❤️ привязывался к картинке */
 .msg-image-wrapper {
+  position: relative;
   display: flex;
   justify-content: flex-end;
   margin-top: 4px;
@@ -1130,13 +1139,13 @@ button:active {
   border-radius: calc(var(--radius-md) + 5px);
   pointer-events: none;
   z-index: 5;
-  padding: 3px;
+  padding: var(--ring-thickness);
   background: conic-gradient(
     from -90deg,
-    #3BB5E8 0deg,
-    #3BB5E8 var(--msg-edit-p),
-    rgba(59, 181, 232, 0.15) var(--msg-edit-p),
-    rgba(59, 181, 232, 0.15) 360deg
+    var(--ring-color) 0deg,
+    var(--ring-color) var(--msg-edit-p),
+    var(--ring-color-faded) var(--msg-edit-p),
+    var(--ring-color-faded) 360deg
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -1146,7 +1155,7 @@ button:active {
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   mask-composite: exclude;
-  animation: msgEditRingFill 1.5s linear forwards;
+  animation: msgEditRingFill var(--ring-duration-msg) linear forwards;
 }
 
 @keyframes msgEditRingFill {

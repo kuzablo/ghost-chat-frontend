@@ -34,12 +34,15 @@ const MessageList = ({
   const [editRingId, setEditRingId] = useState(null);
   const longPressRef = useRef({
     timer: null,
+    ringTimer: null,
     completedAt: 0,
   });
+  // ВАЖНО: LONG_PRESS_EDIT_MS − RING_START_DELAY === --ring-duration-msg (Chat.css)
   const LONG_PRESS_EDIT_MS = 1500;
   const LONG_PRESS_IGNORE_MS = 500;
+  // [2.31.2] кольцо появляется только на второй трети удержания
+  const RING_START_DELAY = 500;
 
-  // [2.31.1] обработка двойного тапа по картинке
   const tapTimerRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0, x: 0, y: 0 });
   const [heartBurst, setHeartBurst] = useState(null);
@@ -129,8 +132,6 @@ const MessageList = ({
 
   const canDelete = (m) => isAdmin || m.userId === myId;
 
-  /* ===== [2.31.1] тап по картинке: одинарный — fullscreen, двойной — ❤️ ===== */
-
   const handleImageTap = (e, m) => {
     e.stopPropagation();
     if (swipeState.id === m.id) return;
@@ -149,20 +150,17 @@ const MessageList = ({
       Math.abs(y - last.y) < 40;
 
     if (isDouble) {
-      // отменяем отложенное открытие
       if (tapTimerRef.current) {
         clearTimeout(tapTimerRef.current);
         tapTimerRef.current = null;
       }
       lastTapRef.current = { id: null, time: 0, x: 0, y: 0 };
 
-      // ставим ❤️, если ещё нет
       const alreadyHeart = m.reactions?.['❤️']?.includes(nickname);
       if (!alreadyHeart) {
         sendReaction(m.id, '❤️');
       }
 
-      // бурст
       setHeartBurst({ id: m.id, x, y, key: now });
       setTimeout(() => {
         setHeartBurst(prev => (prev && prev.key === now ? null : prev));
@@ -170,7 +168,6 @@ const MessageList = ({
       return;
     }
 
-    // одинарный тап — запоминаем и ждём второго
     lastTapRef.current = { id: m.id, time: now, x, y };
     if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
     tapTimerRef.current = setTimeout(() => {
@@ -178,8 +175,6 @@ const MessageList = ({
       setFullscreenImage({ url: m.imageUrl, messageId: m.id });
     }, DOUBLE_TAP_MS);
   };
-
-  /* ===== / тап по картинке ===== */
 
   const handleMessageTap = (messageId, e) => {
     if (activeMessageId === messageId) {
@@ -229,6 +224,10 @@ const MessageList = ({
       clearTimeout(longPressRef.current.timer);
       longPressRef.current.timer = null;
     }
+    if (longPressRef.current.ringTimer) {
+      clearTimeout(longPressRef.current.ringTimer);
+      longPressRef.current.ringTimer = null;
+    }
     setEditRingId(null);
   };
 
@@ -243,7 +242,11 @@ const MessageList = ({
     swipeActiveRef.current = false;
 
     if (m.userId === myId) {
-      setEditRingId(m.id);
+      longPressRef.current.ringTimer = setTimeout(() => {
+        longPressRef.current.ringTimer = null;
+        setEditRingId(m.id);
+      }, RING_START_DELAY);
+
       longPressRef.current.timer = setTimeout(() => {
         longPressRef.current.timer = null;
         longPressRef.current.completedAt = Date.now();
@@ -372,7 +375,6 @@ const MessageList = ({
             </span>
           ) : null;
 
-          // ==== Image-only ====
           if (isImageOnly) {
             return (
               <React.Fragment key={i}>
@@ -482,7 +484,6 @@ const MessageList = ({
             );
           }
 
-          // ==== Обычное сообщение ====
           return (
             <React.Fragment key={i}>
               {dateDivider}
