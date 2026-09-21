@@ -2,11 +2,10 @@ import { forwardRef, useRef, useEffect, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 
 /*
-  [2.33.7] обёрнут в React.memo — ввод в инпут не перерисовывает список диалогов
-  [2.32.37] Свайп вправо через DOM — без setState на каждом кадре.
-  [2.30.0] Свайп вправо — закрытие. Кнопка «←» вместо крестика.
-           Секции по датам: Сегодня / Вчера / Раньше.
-  [2.17.0] Панель диалогов.
+  [2.34.0] Редизайн: карточки, аватарки с картинкой, онлайн-точка, пульс непрочитанного.
+  [2.33.7] React.memo
+  [2.32.37] Свайп вправо через DOM
+  [2.30.0] Секции по датам: Сегодня / Вчера / Раньше
 */
 const DialogsPanel = forwardRef(({
   dialogs,
@@ -30,17 +29,6 @@ const DialogsPanel = forwardRef(({
     if (typeof ref === 'function') ref(panelRef.current);
     else if (ref) ref.current = panelRef.current;
   }, [ref]);
-
-  const isSameDay = (a, b) => {
-    if (!a || !b) return false;
-    const da = new Date(a);
-    const db = new Date(b);
-    return (
-      da.getFullYear() === db.getFullYear() &&
-      da.getMonth() === db.getMonth() &&
-      da.getDate() === db.getDate()
-    );
-  };
 
   const getSectionKey = (timestamp) => {
     if (!timestamp) return 'old';
@@ -72,6 +60,9 @@ const DialogsPanel = forwardRef(({
     }
     sections[sections.length - 1].items.push(d);
   });
+
+  const totalUnread = visibleDialogs.reduce((sum, d) => sum + (d.unread || 0), 0);
+  const onlineCount = visibleDialogs.filter(d => isOnline(d.userId)).length;
 
   const SWIPE_THRESHOLD = 80;
   const SWIPE_MAX = 200;
@@ -144,6 +135,31 @@ const DialogsPanel = forwardRef(({
     s.lastDx = 0;
   };
 
+  const renderAvatar = (d) => {
+    const online = isOnline(d.userId);
+    const hasUnread = d.unread > 0;
+
+    return (
+      <div className="dialog-avatar-wrap">
+        <div
+          className={`dialog-avatar ${hasUnread ? 'dialog-avatar--unread' : ''}`}
+          style={d.avatarUrl
+            ? {
+                backgroundImage: `url(${d.avatarUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : { background: getAvatarColor(d.nickname) }
+          }
+        >
+          {!d.avatarUrl && getInitial(d.nickname)}
+        </div>
+        {online && <span className="dialog-online-dot" aria-label="в сети" />}
+        {hasUnread && <span className="dialog-unread-pulse" aria-hidden="true" />}
+      </div>
+    );
+  };
+
   return (
     <>
       <div
@@ -172,41 +188,54 @@ const DialogsPanel = forwardRef(({
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
-          <h4 className="dialogs-title">Диалоги</h4>
+
+          <div className="dialogs-header-text">
+            <h4 className="dialogs-title">Разговоры</h4>
+            <div className="dialogs-header-sub">
+              {visibleDialogs.length === 0
+                ? 'тишина'
+                : `${onlineCount} в сети${totalUnread > 0 ? ` · ${totalUnread} новых` : ''}`
+              }
+            </div>
+          </div>
+
           <span className="dialogs-header-spacer" aria-hidden="true" />
         </header>
 
         <div className="dialogs-list">
           {visibleDialogs.length === 0 && (
             <div className="dialogs-empty">
-              <div className="dialogs-empty-icon">💬</div>
-              <div className="dialogs-empty-title">Пока пусто</div>
+              <div className="dialogs-empty-orbit">
+                <span className="dialogs-empty-dot" />
+                <span className="dialogs-empty-dot" />
+                <span className="dialogs-empty-dot" />
+              </div>
+              <div className="dialogs-empty-title">Здесь пока тихо</div>
               <div className="dialogs-empty-text">
-                Открой панель игроков <b>👥</b> и нажми <b>✉️</b> — начни первый диалог.
+                Открой панель игроков <b>👥</b>, найди кого-нибудь,
+                нажми <b>✉️</b> — и начнётся первый разговор.
               </div>
             </div>
           )}
 
           {sections.map(section => (
             <div key={section.key} className="dialogs-section">
-              <div className="dialogs-section-label">{section.label}</div>
+              <div className="dialogs-section-label">
+                <span className="dialogs-section-line" />
+                <span className="dialogs-section-text">{section.label}</span>
+                <span className="dialogs-section-line" />
+              </div>
+
               {section.items.map(d => {
-                const online = isOnline(d.userId);
                 const hasUnread = d.unread > 0;
                 return (
                   <button
                     key={d.userId}
                     type="button"
-                    className={`dialog-item ${hasUnread ? 'dialog-item--unread' : ''}`}
+                    className={`dialog-card ${hasUnread ? 'dialog-card--unread' : ''}`}
                     onClick={() => onOpen(d.userId, d.nickname)}
                   >
-                    <div
-                      className="dialog-avatar"
-                      style={{ background: getAvatarColor(d.nickname) }}
-                    >
-                      {getInitial(d.nickname)}
-                      {online && <span className="dialog-online" />}
-                    </div>
+                    {renderAvatar(d)}
 
                     <div className="dialog-body">
                       <div className="dialog-top">
@@ -216,8 +245,8 @@ const DialogsPanel = forwardRef(({
                         </span>
                       </div>
                       <div className="dialog-bottom">
-                        <span className="dialog-last">
-                          {d.lastText || '—'}
+                        <span className="dialog-preview">
+                          {d.lastText || '· · ·'}
                         </span>
                         {hasUnread && (
                           <span className="dialog-badge">
