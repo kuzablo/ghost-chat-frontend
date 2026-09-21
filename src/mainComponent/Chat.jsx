@@ -15,6 +15,7 @@ import { useWebSocket } from './useWebSocket';
 import {
   getAvatarColor,
   getInitial,
+  formatMessageDate,
 } from './utils';
 import { useAudio } from './hooks/useAudio';
 import { useChatUI } from './hooks/useChatUI';
@@ -35,18 +36,16 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️,
+//          тап по реакции → список. safe-area сверху/снизу.
 // [2.30.1] кольцо long-press у image-only — по границам картинки
 // [2.30.0] DialogsPanel: кнопка «←», свайп вправо, секции по датам
-// [2.29.2] закрытие лички из диалогов возвращает в диалоги
-// [2.29.0] PlayersPanel: свой профиль с обводкой и подсказкой, бейдж в меню
-// [2.28.5] wsError больше не дублируется, сброс при реконнекте
-// [2.28.4] фикс 4000 (не реконнектимся при Replaced)
-// [2.27.0] счётчик непрочитанных в заголовке вкладки + Badging API
-// [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
-// [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
-const VERSION = '2.30.1';
+const VERSION = '2.31.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
+const FS_SWIPE_THRESHOLD = 80;
+const FS_CLOSE_THRESHOLD = 120;
+const FS_DOUBLE_TAP_MS = 250;
 
 const ThemeIcon = () => (
   <span className="theme-icon" aria-hidden="true">
@@ -112,6 +111,9 @@ const Chat = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
   const [dragY, setDragY] = useState(0);
+  const [fsSwipeX, setFsSwipeX] = useState(0);
+  const [fsHeart, setFsHeart] = useState(null);
+  const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
@@ -120,7 +122,6 @@ const Chat = () => {
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [showDialogs, setShowDialogs] = useState(false);
-  // [2.29.2] если личку открыли из панели диалогов — закрытие вернёт туда
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
 
   const playersOverlayRef = useRef(null);
@@ -129,8 +130,6 @@ const Chat = () => {
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
-
-  const touchStartYRef = useRef(null);
 
   const swipeStartXRef = useRef(null);
   const swipeStartYRef = useRef(null);
@@ -149,6 +148,15 @@ const Chat = () => {
     didSwipe: false,
     direction: null,
   });
+
+  const fsGestureRef = useRef({
+    startX: 0,
+    startY: 0,
+    direction: null,
+    active: false,
+  });
+  const fsLastTapRef = useRef(0);
+  const fsTapPosRef = useRef({ x: 0, y: 0 });
 
   const mascotGestureRef = useRef({
     startY: 0,
@@ -262,7 +270,21 @@ const Chat = () => {
   const totalNotifications = unreadCount + friendRequestsCount;
   const totalUnread = hiddenUnread + unreadCount + friendRequestsCount;
 
-  // [2.27.0] заголовок вкладки + Badging API
+  /* ===== fullscreen: список картинок для свайпа ===== */
+  const imageMessages = messages.filter(m => m.imageUrl);
+  const currentImageIndex = fullscreenImage
+    ? imageMessages.findIndex(m => m.id === fullscreenImage.messageId)
+    : -1;
+  const currentImageMessage = currentImageIndex >= 0
+    ? imageMessages[currentImageIndex]
+    : null;
+  const hasPrevImage = currentImageIndex > 0;
+  const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
+
+  const fullscreenMessage = currentImageMessage || null;
+  const fullscreenReactions = fullscreenMessage?.reactions || {};
+  const fullscreenReactionEntries = Object.entries(fullscreenReactions);
+
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
 
@@ -324,7 +346,6 @@ const Chat = () => {
     setIsConnected(wsConnected);
   }, [wsConnected]);
 
-  // [2.28.5] ошибка WS — без дубля, с авт-сбросом
   useEffect(() => {
     if (wsError) {
       setErrorMessage(wsError);
@@ -358,7 +379,6 @@ const Chat = () => {
     };
   }, [showPlayers, setShowPlayers]);
 
-  /* ===== [2.23.3] visualViewport с двойным rAF и порогом ===== */
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
@@ -414,7 +434,6 @@ const Chat = () => {
     };
   }, []);
 
-  /* ===== [2.23.3] Фокус: одна попытка, без скроллов ===== */
   useEffect(() => {
     if (!showMobileInput) return;
     const t = setTimeout(() => {
@@ -553,14 +572,12 @@ const Chat = () => {
     setShowDialogs(false);
   };
 
-  // [2.29.2] открыли личку из панели диалогов
   const handleOpenFromDialogs = (userId, nick) => {
     setCameFromDialogs(true);
     setShowDialogs(false);
     openPrivateChat(userId, nick);
   };
 
-  // [2.29.2] закрытие лички: если пришли из диалогов — вернёмся туда
   const handleClosePrivate = () => {
     const wasFromDialogs = cameFromDialogs;
     closePrivateChat();
@@ -587,35 +604,118 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  const fullscreenMessage = fullscreenImage
-    ? messages.find(m => m.id === fullscreenImage.messageId)
-    : null;
-  const fullscreenReactions = fullscreenMessage?.reactions || {};
-  const fullscreenReactionEntries = Object.entries(fullscreenReactions);
-
-  const SWIPE_CLOSE_THRESHOLD = 120;
-
-  const handleFsTouchStart = (e) => {
-    const t = e.touches[0];
-    touchStartYRef.current = t.clientY;
-  };
-
-  const handleFsTouchMove = (e) => {
-    if (touchStartYRef.current == null) return;
-    const t = e.touches[0];
-    const dy = t.clientY - touchStartYRef.current;
-    if (dy > 0) setDragY(dy);
-  };
-
-  const handleFsTouchEnd = () => {
-    if (dragY > SWIPE_CLOSE_THRESHOLD) closeFullscreen();
-    setDragY(0);
-    touchStartYRef.current = null;
-  };
+  /* ===== [2.31.0] fullscreen: жесты, двойной тап, свайп между фото ===== */
 
   const fsOverlayOpacity = fullscreenImage
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
+
+  const handleFsTouchStart = (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    fsGestureRef.current = {
+      startX: t.clientX,
+      startY: t.clientY,
+      direction: null,
+      active: true,
+    };
+  };
+
+  const handleFsTouchMove = (e) => {
+    const g = fsGestureRef.current;
+    if (!g.active) return;
+    if (e.touches.length !== 1) return;
+
+    const t = e.touches[0];
+    const dx = t.clientX - g.startX;
+    const dy = t.clientY - g.startY;
+
+    if (!g.direction) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      g.direction = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+    }
+
+    if (g.direction === 'horizontal') {
+      if (
+        (dx > 0 && hasPrevImage) ||
+        (dx < 0 && hasNextImage)
+      ) {
+        setFsSwipeX(dx);
+        if (e.cancelable) e.preventDefault();
+      }
+    } else {
+      if (dy > 0) {
+        setDragY(dy);
+        if (e.cancelable) e.preventDefault();
+      }
+    }
+  };
+
+  const handleFsTouchEnd = (e) => {
+    const g = fsGestureRef.current;
+    g.active = false;
+
+    if (!g.direction) {
+      setFsSwipeX(0);
+      setDragY(0);
+      return;
+    }
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - g.startX;
+    const dy = t.clientY - g.startY;
+
+    if (g.direction === 'horizontal') {
+      if (dx <= -FS_SWIPE_THRESHOLD && hasNextImage) {
+        const next = imageMessages[currentImageIndex + 1];
+        setFullscreenImage({ url: next.imageUrl, messageId: next.id });
+      } else if (dx >= FS_SWIPE_THRESHOLD && hasPrevImage) {
+        const prev = imageMessages[currentImageIndex - 1];
+        setFullscreenImage({ url: prev.imageUrl, messageId: prev.id });
+      }
+      setFsSwipeX(0);
+    } else {
+      if (dy > FS_CLOSE_THRESHOLD) closeFullscreen();
+      setDragY(0);
+    }
+
+    g.direction = null;
+  };
+
+  const handleFsDoubleTap = (e) => {
+    if (!fullscreenImage) return;
+    const stage = e.currentTarget.closest('.fs-stage') || e.currentTarget;
+    const rect = stage.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const now = Date.now();
+    const last = fsLastTapRef.current;
+    const pos = fsTapPosRef.current;
+    const isDouble =
+      now - last < FS_DOUBLE_TAP_MS &&
+      Math.abs(x - pos.x) < 40 &&
+      Math.abs(y - pos.y) < 40;
+
+    if (isDouble) {
+      fsLastTapRef.current = 0;
+
+      const msgId = fullscreenImage.messageId;
+      const msg = messages.find(m => m.id === msgId);
+      const alreadyHeart = msg?.reactions?.['❤️']?.includes(nickname);
+      if (!alreadyHeart) {
+        sendReaction(msgId, '❤️');
+      }
+
+      setFsHeart({ x, y, key: now });
+      setTimeout(() => setFsHeart(null), 800);
+    } else {
+      fsLastTapRef.current = now;
+      fsTapPosRef.current = { x, y };
+    }
+  };
+
+  /* ===== / fullscreen ===== */
 
   const INPUT_DRAG_THRESHOLD = 60;
 
@@ -757,7 +857,7 @@ const Chat = () => {
     forceLogout('');
   };
 
-  /* ===== [2.22.1] Жесты по капсуле ===== */
+  /* ===== Жесты по капсуле ===== */
 
   const CAPSULE_SWIPE_UP = 30;
   const CAPSULE_SWIPE_DOWN = 40;
@@ -1228,62 +1328,150 @@ const Chat = () => {
         <div
           className="fullscreen-overlay"
           onClick={closeFullscreen}
-          onTouchStart={handleFsTouchStart}
-          onTouchMove={handleFsTouchMove}
-          onTouchEnd={handleFsTouchEnd}
           style={{ background: `rgba(0, 0, 0, ${fsOverlayOpacity})` }}
         >
-          <div className="fullscreen-reactions">
-            <button
-              className="fullscreen-reactions-toggle"
-              onClick={(e) => { e.stopPropagation(); setShowFullscreenReactions(v => !v); }}
-              title="Реакции"
-            >
-              😀
-            </button>
-            {showFullscreenReactions && (
-              <div className="fullscreen-reactions-picker" onClick={(e) => e.stopPropagation()}>
-                {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
-                  const isActive = fullscreenMessage?.reactions?.[emoji]?.includes(nickname);
-                  return (
-                    <button
-                      key={emoji}
-                      className={`fullscreen-reaction-btn ${isActive ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sendReaction(fullscreenImage.messageId, emoji);
-                        setShowFullscreenReactions(false);
-                      }}
-                    >
-                      {emoji}
-                    </button>
-                  );
-                })}
+          {/* Верхняя панель: автор + закрыть */}
+          <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
+            <div className="fs-author">
+              <div
+                className="fs-author-avatar"
+                style={{ background: getAvatarColor(fullscreenMessage?.nickname || '?') }}
+              >
+                {getInitial(fullscreenMessage?.nickname || '?')}
               </div>
+              <div className="fs-author-meta">
+                <div className="fs-author-nick">
+                  {fullscreenMessage?.nickname || '—'}
+                </div>
+                <div className="fs-author-date">
+                  {fullscreenMessage ? formatMessageDate(fullscreenMessage.time) : ''}
+                </div>
+              </div>
+            </div>
+            <button
+              className="fs-close"
+              onClick={closeFullscreen}
+              aria-label="Закрыть"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Картинка */}
+          <div className="fs-stage" onClick={closeFullscreen}>
+            <img
+              src={fullscreenImage.url}
+              alt=""
+              className="fs-image"
+              draggable={false}
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={handleFsTouchStart}
+              onTouchMove={handleFsTouchMove}
+              onTouchEnd={handleFsTouchEnd}
+              onTouchCancel={handleFsTouchEnd}
+              onDoubleClick={handleFsDoubleTap}
+              style={{
+                transform: `translate(${fsSwipeX}px, ${dragY}px) scale(${Math.max(0.85, 1 - dragY / 800)})`,
+                transition:
+                  fsSwipeX === 0 && dragY === 0
+                    ? 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
+                    : 'none',
+              }}
+            />
+            {fsHeart && (
+              <span
+                key={fsHeart.key}
+                className="fs-heart-burst"
+                style={{ left: fsHeart.x, top: fsHeart.y }}
+              >
+                ❤️
+              </span>
             )}
           </div>
 
-          {fullscreenReactionEntries.length > 0 && (
-            <div className="fullscreen-existing-reactions" onClick={(e) => e.stopPropagation()}>
-              {fullscreenReactionEntries.map(([emoji, users]) => (
-                <span
-                  key={emoji}
-                  className={`fullscreen-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
-                >
-                  {emoji} {users.length}
-                </span>
-              ))}
+          {/* Нижняя панель: реакции + пикер */}
+          <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
+            {fullscreenReactionEntries.length > 0 && (
+              <div className="fs-reactions-strip">
+                {fullscreenReactionEntries.map(([emoji, users]) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className={`fs-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
+                    onClick={() =>
+                      setFsReactionListEmoji(prev => (prev === emoji ? null : emoji))
+                    }
+                  >
+                    <span className="fs-reaction-badge-emoji">{emoji}</span>
+                    <span className="fs-reaction-badge-count">{users.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              className={`fs-reaction-toggle ${showFullscreenReactions ? 'active' : ''}`}
+              onClick={() => setShowFullscreenReactions(v => !v)}
+              aria-label="Реакции"
+            >
+              😀
+            </button>
+          </div>
+
+          {/* Пикер */}
+          {showFullscreenReactions && (
+            <div
+              className="fs-reaction-picker"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
+                const isActive = fullscreenMessage?.reactions?.[emoji]?.includes(nickname);
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className={`fs-reaction-picker-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      sendReaction(fullscreenImage.messageId, emoji);
+                      setShowFullscreenReactions(false);
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
             </div>
           )}
 
-          <img
-            src={fullscreenImage.url}
-            alt="fullscreen"
-            style={{
-              transform: `translateY(${dragY}px) scale(${Math.max(0.85, 1 - dragY / 800)})`,
-              transition: dragY === 0 ? 'transform 0.2s ease-out' : 'none',
-            }}
-          />
+          {/* Список поставивших реакцию */}
+          {fsReactionListEmoji &&
+            fullscreenMessage?.reactions?.[fsReactionListEmoji] && (
+              <div
+                className="fs-reaction-list"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="fs-reaction-list-header">
+                  <span className="fs-reaction-list-emoji">{fsReactionListEmoji}</span>
+                  <span className="fs-reaction-list-count">
+                    {fullscreenMessage.reactions[fsReactionListEmoji].length}
+                  </span>
+                </div>
+                <div className="fs-reaction-list-users">
+                  {fullscreenMessage.reactions[fsReactionListEmoji].map((user, i) => (
+                    <span key={i} className="fs-reaction-user">
+                      {user}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="fs-reaction-list-close"
+                  onClick={() => setFsReactionListEmoji(null)}
+                >
+                  Закрыть
+                </button>
+              </div>
+            )}
         </div>
       )}
 

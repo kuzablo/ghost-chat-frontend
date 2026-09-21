@@ -260,13 +260,6 @@
   .join-notice { padding: 3px 10px 3px 3px; font-size: 11px; border-width: 1.5px; max-width: 180px; }
   .join-notice-avatar { width: 20px; height: 20px; font-size: 9px; border-width: 1px; }
 
-  /* Fullscreen реакции */
-  .fullscreen-reactions { top: 12px; left: 12px; }
-  .fullscreen-reactions-toggle { width: 42px; height: 42px; font-size: 22px; }
-  .fullscreen-reaction-btn { font-size: 24px; padding: 2px; }
-  .fullscreen-existing-reactions { top: 62px; left: 12px; max-width: calc(100vw - 24px); }
-  .fullscreen-reaction-badge { padding: 3px 8px; font-size: 12px; border-width: 1.5px; }
-
   /* реакции в обычных сообщениях */
   .msg-reaction-badge { width: 18px; height: 18px; font-size: 11px; }
   .msg-reaction-count { min-width: 11px; height: 11px; font-size: 7px; }
