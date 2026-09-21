@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNewDay } from '../utils';
 import ConfirmModal from './ConfirmModal';
 
@@ -48,7 +48,6 @@ const MessageList = ({
     ringTimer: null,
     completedAt: 0,
   });
-  // ВАЖНО: LONG_PRESS_EDIT_MS − RING_START_DELAY === --ring-duration-msg (Chat.css)
   const LONG_PRESS_EDIT_MS = 1500;
   const LONG_PRESS_IGNORE_MS = 500;
   const RING_START_DELAY = 500;
@@ -65,7 +64,6 @@ const MessageList = ({
     };
   }, []);
 
-  // [2.32.23] авто-высота textarea
   useEffect(() => {
     const el = editTextareaRef.current;
     if (!el) return;
@@ -211,7 +209,6 @@ const MessageList = ({
     setEditRingId(null);
   };
 
-  // [2.32.36] свайп через DOM — без setState на каждый кадр
   const resetSwipeVisual = (cardEl, replyGlowEl, deleteGlowEl) => {
     if (cardEl) {
       cardEl.style.transition = 'transform 0.2s ease-out';
@@ -249,7 +246,6 @@ const MessageList = ({
     r.msg = m;
     swipeActiveRef.current = false;
 
-    // сбросить возможные остатки
     if (card) {
       card.style.transition = 'none';
       card.style.transform = '';
@@ -341,7 +337,6 @@ const MessageList = ({
 
     const r = swipeRef.current;
     if (!r.active && !r.cardEl) {
-      // не наш свайп
       return;
     }
 
@@ -380,8 +375,6 @@ const MessageList = ({
     handleMessageTap(m.id, e);
   };
 
-  // [2.32.25] аватар в сообщении: картинка если есть, иначе инициал
-  // [2.32.41] метка забаненного: красная обводка + бейдж 🚫
   const renderMsgAvatar = (userId, nick) => {
     const url = avatarByUser[userId];
     const isBanned = bannedUsers.has(userId);
@@ -401,7 +394,6 @@ const MessageList = ({
     );
   };
 
-  // [2.32.28] склейка по одной минуте циферблата
   const sameMinute = (t1, t2) => {
     const d1 = new Date(t1);
     const d2 = new Date(t2);
@@ -743,4 +735,4 @@ const MessageList = ({
   );
 };
 
-export default MessageList;
+export default memo(MessageList);

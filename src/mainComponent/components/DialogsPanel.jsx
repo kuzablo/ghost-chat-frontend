@@ -1,7 +1,8 @@
-import { forwardRef, useRef, useEffect } from 'react';
+import { forwardRef, useRef, useEffect, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 
 /*
+  [2.33.7] обёрнут в React.memo — ввод в инпут не перерисовывает список диалогов
   [2.32.37] Свайп вправо через DOM — без setState на каждом кадре.
   [2.30.0] Свайп вправо — закрытие. Кнопка «←» вместо крестика.
            Секции по датам: Сегодня / Вчера / Раньше.
@@ -25,7 +26,6 @@ const DialogsPanel = forwardRef(({
     lastDx: 0,
   });
 
-  // связываем внешний ref с внутренним
   useEffect(() => {
     if (typeof ref === 'function') ref(panelRef.current);
     else if (ref) ref.current = panelRef.current;
@@ -72,8 +72,6 @@ const DialogsPanel = forwardRef(({
     }
     sections[sections.length - 1].items.push(d);
   });
-
-  /* ===== Свайп вправо — через DOM, без setState ===== */
 
   const SWIPE_THRESHOLD = 80;
   const SWIPE_MAX = 200;
@@ -241,4 +239,4 @@ const DialogsPanel = forwardRef(({
 
 DialogsPanel.displayName = 'DialogsPanel';
 
-export default DialogsPanel;
+export default memo(DialogsPanel);

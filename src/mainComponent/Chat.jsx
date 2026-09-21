@@ -42,20 +42,18 @@ import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 
-// [2.33.5] avatars_map — аватарки офлайн-юзеров в истории
-// [2.33.4] блокировка пользователей: в меню, список в InfoPanel
-// [2.33.3] rejectCount в ритуале — нить тускнеет с отказами; тост при отказе
-// [2.33.1] лимит загрузки 25 МБ, клиентская проверка размера
-// [2.33.0] Ритуал дружбы — огонь и вода, компонент FriendshipRitual
-// [2.32.42] avatarCache от useChat — аватарки не пропадают при офлайне
-// [2.32.41] bannedUsers прокинут в MessageList — метка на аватарках
-// [2.32.40] ConfirmBanModal удалён — бан идёт через ConfirmModal с danger.
-// [2.32.39] useMemo для imageMessages — не пересобираем на каждом WS.
-// [2.32.38] свайп влево от правого края → диалоги
-// [2.32.37] свайп DialogsPanel через DOM
-// [2.32.36] свайпы сообщений через DOM
-// [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.33.6';
+// [2.33.7] React.memo + useCallback: ввод в инпут не перерисовывает историю
+// [2.33.6] фото из файлов + фото в личке
+// [2.33.5] avatars_map — аватарки офлайн-юзеров
+// [2.33.4] блокировка: 🚫 в меню, список в InfoPanel
+// [2.33.3] rejectCount в ритуале; тост при отказе
+// [2.33.1] лимит загрузки 25 МБ
+// [2.33.0] Ритуал дружбы — огонь и вода
+// [2.32.42] avatarCache от useChat
+// [2.32.41] bannedUsers прокинут в MessageList
+// [2.32.40] ConfirmBanModal → ConfirmModal с danger
+// [2.32.39] useMemo для imageMessages
+const VERSION = '2.33.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -411,6 +409,12 @@ const Chat = () => {
     [messages]
   );
 
+  // [2.33.7] стабильный Set блокированных для memo PlayersPanel
+  const blockedIds = useMemo(
+    () => new Set(blockedUsers.map(u => u.userId)),
+    [blockedUsers]
+  );
+
   const currentImageIndex = fullscreenImage
     ? imageMessages.findIndex(m => m.id === fullscreenImage.messageId)
     : -1;
@@ -725,63 +729,68 @@ const Chat = () => {
     setShowPlayers(prev => !prev);
   };
 
-  const handleOpenInfo = () => {
+  // [2.33.7] useCallback на все функции, передаваемые в memo-компоненты
+  const handleOpenInfo = useCallback(() => {
     setShowPlayers(false);
     setShowInfo(true);
-  };
+  }, []);
 
-  const handleOpenDialogs = () => {
+  const handleCloseInfo = useCallback(() => {
+    setShowInfo(false);
+  }, []);
+
+  const handleOpenDialogs = useCallback(() => {
     setShowPlayers(false);
     setShowInfo(false);
     setShowDialogs(true);
-  };
+  }, []);
 
-  const handleCloseDialogs = () => {
+  const handleCloseDialogs = useCallback(() => {
     setShowDialogs(false);
-  };
+  }, []);
 
-  const handleOpenFromDialogs = (userId, nick) => {
+  const handleOpenFromDialogs = useCallback((userId, nick) => {
     setCameFromDialogs(true);
     setShowDialogs(false);
     openPrivateChat(userId, nick);
-  };
+  }, [openPrivateChat]);
 
-  const handleClosePrivate = () => {
+  const handleClosePrivate = useCallback(() => {
     const wasFromDialogs = cameFromDialogs;
     closePrivateChat();
     setCameFromDialogs(false);
     if (wasFromDialogs) {
       setShowDialogs(true);
     }
-  };
+  }, [cameFromDialogs, closePrivateChat]);
 
-  const handleOpenProfile = (userId, nick) => {
+  const handleOpenProfile = useCallback((userId, nick) => {
     setShowPlayers(false);
     setProfileTarget({ userId, nickname: nick });
     sendMessage({ type: 'profile_get', data: { userId } });
-  };
+  }, [sendMessage]);
 
-  const handleCloseProfile = () => {
+  const handleCloseProfile = useCallback(() => {
     setProfileTarget(null);
-  };
+  }, []);
 
-  const handleProfileSave = (bio, avatarUrl, font, textColor, textRotation) => {
+  const handleProfileSave = useCallback((bio, avatarUrl, font, textColor, textRotation) => {
     sendMessage({
       type: 'profile_update',
       data: { bio, avatarUrl, font, textColor, textRotation },
     });
-  };
+  }, [sendMessage]);
 
-  const handleProfileRemoveFriend = (friendId) => {
+  const handleProfileRemoveFriend = useCallback((friendId) => {
     sendMessage({ type: 'friend_remove', data: { friendId } });
-  };
+  }, [sendMessage]);
 
-  const handleProfilePrivateChat = (userId, nick) => {
+  const handleProfilePrivateChat = useCallback((userId, nick) => {
     setProfileTarget(null);
     openPrivateChat(userId, nick);
-  };
+  }, [openPrivateChat]);
 
-  const handleProfileDuel = () => {
+  const handleProfileDuel = useCallback(() => {
     if (!profileTarget) return;
     const online = players.find(p => p.userId === profileTarget.userId);
     if (online) {
@@ -791,7 +800,7 @@ const Chat = () => {
       setDuelNotice('Игрок офлайн');
       setTimeout(() => setDuelNotice(''), 3000);
     }
-  };
+  }, [profileTarget, players, duel]);
 
   const compareVersions = (v1, v2) => {
     const p1 = v1.split('.').map(Number);
@@ -1082,7 +1091,7 @@ const Chat = () => {
     setShowNotifModal(false);
   };
 
-  const handleReply = (m) => {
+  const handleReply = useCallback((m) => {
     setReplyTo({
       id: m.id,
       nickname: m.nickname,
@@ -1090,7 +1099,7 @@ const Chat = () => {
       imageUrl: m.imageUrl || null,
     });
     setShowMobileInput(true);
-  };
+  }, []);
 
   const handleMessageAdmin = () => {
     setShowInfo(false);
@@ -1104,9 +1113,9 @@ const Chat = () => {
     openPrivateChat(adminUserId, nick);
   };
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = useCallback(() => {
     setLogoutConfirm(true);
-  };
+  }, []);
 
   const handleLogoutConfirm = () => {
     setLogoutConfirm(false);
@@ -1206,6 +1215,47 @@ const Chat = () => {
     }
   };
 
+  // [2.33.7] стабильный колбэк для ConfirmModal бана
+  const handleBanConfirm = useCallback((userId, nickname) => {
+    setBanConfirm({ userId, nickname });
+  }, []);
+
+  // [2.33.7] стабильные колбэки для ритуала
+  const handleRitualAccept = useCallback(() => {
+    if (friendshipRitual && friendshipRitual.requestId) {
+      handleAcceptRequest(friendshipRitual.requestId);
+    }
+  }, [friendshipRitual, handleAcceptRequest]);
+
+  const handleRitualDecline = useCallback(() => {
+    if (friendshipRitual && friendshipRitual.requestId) {
+      handleDeclineRequest(friendshipRitual.requestId);
+    }
+  }, [friendshipRitual, handleDeclineRequest]);
+
+  // [2.33.7] стабильный колбэк закрытия уведомления о дуэли
+  const handleCloseDuelNotice = useCallback(() => {
+    setDuelNotice('');
+  }, []);
+
+  // [2.33.7] стабильный колбэк закрытия окна бана
+  const handleBanCancel = useCallback(() => {
+    setBanConfirm(null);
+  }, []);
+
+  // [2.33.7] стабильный колбэк подтверждения бана
+  const handleBanDo = useCallback(() => {
+    if (banConfirm) {
+      banForever(banConfirm.userId);
+      setBanConfirm(null);
+    }
+  }, [banConfirm, banForever]);
+
+  // [2.33.7] стабильный колбэк отмены логаута
+  const handleLogoutCancel = useCallback(() => {
+    setLogoutConfirm(false);
+  }, []);
+
   return (
     <>
       <button
@@ -1251,9 +1301,9 @@ const Chat = () => {
           setSearchQuery={setSearchQuery}
           unreadByUser={unreadByUser}
           isAdmin={isAdmin}
-          blockedIds={new Set(blockedUsers.map(u => u.userId))}
+          blockedIds={blockedIds}
           onWatchChat={watchChat}
-          onBanConfirm={(userId, nickname) => setBanConfirm({ userId, nickname })}
+          onBanConfirm={handleBanConfirm}
           onRequestDuel={duel.requestDuel}
           onOpenPrivateChat={openPrivateChat}
           onFriendRequest={handleFriendRequest}
@@ -1280,7 +1330,7 @@ const Chat = () => {
       {showInfo && (
         <InfoPanel
           ref={infoPanelRef}
-          onClose={() => setShowInfo(false)}
+          onClose={handleCloseInfo}
           onMessageAdmin={handleMessageAdmin}
           blockedUsers={blockedUsers}
           onUnblockUser={unblockUser}
@@ -1333,16 +1383,8 @@ const Chat = () => {
           }
           phase={friendshipRitual.phase}
           rejectCount={friendshipRitual.rejectCount || 0}
-          onAccept={() => {
-            if (friendshipRitual.requestId) {
-              handleAcceptRequest(friendshipRitual.requestId);
-            }
-          }}
-          onDecline={() => {
-            if (friendshipRitual.requestId) {
-              handleDeclineRequest(friendshipRitual.requestId);
-            }
-          }}
+          onAccept={handleRitualAccept}
+          onDecline={handleRitualDecline}
           onCancel={clearRitual}
           onDone={clearRitual}
         />
@@ -1354,13 +1396,8 @@ const Chat = () => {
         description="Пользователь больше не сможет войти в чат."
         confirmText="Да, забанить"
         danger
-        onConfirm={() => {
-          if (banConfirm) {
-            banForever(banConfirm.userId);
-            setBanConfirm(null);
-          }
-        }}
-        onCancel={() => setBanConfirm(null)}
+        onConfirm={handleBanDo}
+        onCancel={handleBanCancel}
       />
 
       <ConfirmModal
@@ -1368,7 +1405,7 @@ const Chat = () => {
         title="Выйти из аккаунта?"
         description="Вы выйдете из banjoboy's crew. Зайти снова можно в любой момент."
         onConfirm={handleLogoutConfirm}
-        onCancel={() => setLogoutConfirm(false)}
+        onCancel={handleLogoutCancel}
       />
 
       <NotificationPermissionModal
@@ -1617,7 +1654,7 @@ const Chat = () => {
             onAcceptDuel={duel.acceptDuel}
             onDeclineDuel={duel.clearInvite}
             onChoose={duel.choose}
-            onCloseDuelNotice={() => setDuelNotice('')}
+            onCloseDuelNotice={handleCloseDuelNotice}
           />
         </div>
       </div>

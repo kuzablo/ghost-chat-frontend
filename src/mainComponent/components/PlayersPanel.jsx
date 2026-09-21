@@ -1,10 +1,10 @@
-import { forwardRef, useState, useRef, useEffect } from 'react';
+import { forwardRef, useState, useRef, useEffect, memo } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 
 /*
-  [2.33.4] Пункт «Заблокировать» в long-press меню (если ещё не заблокирован).
-           Проп onBlockUser, Set blockedIds для проверки.
+  [2.33.7] обёрнут в React.memo — ввод в инпут не перерисовывает список
+  [2.33.4] Пункт «Заблокировать» в long-press меню (если ещё не заблокирован)
   [2.20.0] пункт «Профиль» в long-press меню; аватары из avatarUrl
   [2.29.0] свой профиль без заголовка «Вы»; подсказка «нажми и держи»
 */
@@ -108,7 +108,6 @@ const PlayersPanel = forwardRef(({
     items.push({ icon: '⚔️', label: 'Дуэль', onClick: () => onRequestDuel(p.id) });
     items.push({ icon: '🤝', label: 'В друзья', onClick: () => onFriendRequest(p.userId) });
 
-    // [2.33.4] блокировка
     if (!blockedIds.has(p.userId) && onBlockUser) {
       items.push({
         icon: '🚫',
@@ -390,4 +389,4 @@ const PlayersPanel = forwardRef(({
 
 PlayersPanel.displayName = 'PlayersPanel';
 
-export default PlayersPanel;
+export default memo(PlayersPanel);
