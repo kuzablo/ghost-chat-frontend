@@ -27,7 +27,7 @@
   "screenshots": [
     {
       "src": "/screenshots/mobile.png",
-      "sizes": "1170x2532",
+      "sizes": "1183x2560",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Чат на телефоне"
