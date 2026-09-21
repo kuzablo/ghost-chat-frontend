@@ -11,6 +11,7 @@ import DialogsPanel from './components/DialogsPanel';
 import ConfirmModal from './components/ConfirmModal';
 import ChatInput from './components/ChatInput';
 import NotificationPermissionModal from './components/NotificationPermissionModal';
+import ProfilePanel from './components/ProfilePanel';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -38,13 +39,12 @@ import '../styles/Chat.mascot.css';
 import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
+import '../styles/Chat.profile.css';
 
-// [2.32.23] feat(swipe): подсветка вместо иконок; textarea в редакторе с авто-высотой
-// [2.32.22] счётчик N/M в fullscreen, автозакрытие если фото удалили
-// [2.32.21] скролл держится у низа при resize; убрано body.transform
-// [2.32.20] длинные сообщения в ЛС не вылезают за карточку
-// [2.32.19] автоскрытие пикера 2с; бурст ❤️ в точке клика; модалка только на мобильных
-const VERSION = '2.32.23';
+// [2.32.24] Профиль: bio, аватар, удаление друга
+// [2.32.23] свайп-подсветка; textarea в редакторе
+// [2.32.22] счётчик N/M в fullscreen; автозакрытие
+const VERSION = '2.32.24';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -140,6 +140,8 @@ const Chat = () => {
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [showDialogs, setShowDialogs] = useState(false);
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
+  // [2.32.24] цель открытого профиля
+  const [profileTarget, setProfileTarget] = useState(null);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -331,6 +333,7 @@ const Chat = () => {
     setHiddenUnread,
     replyTo,
     setReplyTo,
+    profileData,
     handleWs: handleChatWs,
     handleSendMessage,
     handleEditMessage,
@@ -383,7 +386,6 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
-  // [2.32.22] если фото удалили, пока смотрим — закрываем fullscreen
   useEffect(() => {
     if (!fullscreenImage) return;
     if (currentImageIndex === -1) {
@@ -690,6 +692,42 @@ const Chat = () => {
     setCameFromDialogs(false);
     if (wasFromDialogs) {
       setShowDialogs(true);
+    }
+  };
+
+  // [2.32.24] открыть профиль
+  const handleOpenProfile = (userId, nick) => {
+    setShowPlayers(false);
+    setProfileTarget({ userId, nickname: nick });
+    sendMessage({ type: 'profile_get', data: { userId } });
+  };
+
+  const handleCloseProfile = () => {
+    setProfileTarget(null);
+  };
+
+  const handleProfileSave = (bio, avatarUrl) => {
+    sendMessage({ type: 'profile_update', data: { bio, avatarUrl } });
+  };
+
+  const handleProfileRemoveFriend = (friendId) => {
+    sendMessage({ type: 'friend_remove', data: { friendId } });
+  };
+
+  const handleProfilePrivateChat = (userId, nick) => {
+    setProfileTarget(null);
+    openPrivateChat(userId, nick);
+  };
+
+  const handleProfileDuel = () => {
+    if (!profileTarget) return;
+    const online = players.find(p => p.userId === profileTarget.userId);
+    if (online) {
+      duel.requestDuel(online.id);
+      setProfileTarget(null);
+    } else {
+      setDuelNotice('Игрок офлайн');
+      setTimeout(() => setDuelNotice(''), 3000);
     }
   };
 
@@ -1121,6 +1159,7 @@ const Chat = () => {
           onOpenInfo={handleOpenInfo}
           onLogout={handleLogoutClick}
           onOpenDialogs={handleOpenDialogs}
+          onOpenProfile={handleOpenProfile}
         />
       )}
 
@@ -1139,6 +1178,19 @@ const Chat = () => {
           ref={infoPanelRef}
           onClose={() => setShowInfo(false)}
           onMessageAdmin={handleMessageAdmin}
+        />
+      )}
+
+      {profileTarget && (
+        <ProfilePanel
+          data={profileData?.userId === profileTarget.userId ? profileData : null}
+          onClose={handleCloseProfile}
+          onSave={handleProfileSave}
+          onRemoveFriend={handleProfileRemoveFriend}
+          onOpenPrivateChat={handleProfilePrivateChat}
+          onRequestDuel={handleProfileDuel}
+          token={token}
+          apiUrl={API_URL}
         />
       )}
 
@@ -1468,7 +1520,6 @@ const Chat = () => {
               </div>
             </div>
 
-            {/* [2.32.22] счётчик N / M */}
             {currentImageIndex >= 0 && imageMessages.length > 0 && (
               <div className="fs-counter">
                 {currentImageIndex + 1} / {imageMessages.length}

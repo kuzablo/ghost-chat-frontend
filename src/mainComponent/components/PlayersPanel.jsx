@@ -3,11 +3,8 @@ import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 
 /*
-  [2.29.0] Убран заголовок «Вы» — свой профиль идёт первым без секции.
-           Обводка + подсказка «👆 нажми и держи». Подсказка гаснет
-           после первого long-press. Бейдж непрочитанных на пункте «Диалоги».
-  [2.20.4] long-press 0.5с на элементе → меню стикеров по центру.
-           «Мои диалоги» — в long-press меню.
+  [2.20.0] пункт «Профиль» в long-press меню; аватары из avatarUrl
+  [2.29.0] свой профиль без заголовка «Вы»; подсказка «нажми и держи»
 */
 const PlayersPanel = forwardRef(({
   players,
@@ -28,6 +25,7 @@ const PlayersPanel = forwardRef(({
   onOpenInfo,
   onLogout,
   onOpenDialogs,
+  onOpenProfile,
 }, ref) => {
   const isFriendOnline = (friendId) => players.some(p => p.userId === friendId);
 
@@ -48,7 +46,6 @@ const PlayersPanel = forwardRef(({
   const [menuTarget, setMenuTarget] = useState(null);
   const pressRef = useRef({ timer: null, startX: 0, startY: 0, fired: false, id: null });
 
-  // [2.29.0] подсказка «нажми и держи» гаснет после первого long-press
   const [selfHintDismissed, setSelfHintDismissed] = useState(() => {
     try { return localStorage.getItem('ghost-chat-self-hint-seen') === '1'; }
     catch { return false; }
@@ -68,13 +65,17 @@ const PlayersPanel = forwardRef(({
   useEffect(() => () => cancelPress(), []);
 
   const openMenuForSelf = () => {
-    // [2.29.0] после первого long-press подсказку больше не показываем
     if (!selfHintDismissed) {
       setSelfHintDismissed(true);
       try { localStorage.setItem('ghost-chat-self-hint-seen', '1'); } catch { /* noop */ }
     }
 
     const items = [];
+    items.push({
+      icon: '👤',
+      label: 'Профиль',
+      onClick: () => onOpenProfile(myId, myself?.nickname),
+    });
     if (onOpenDialogs) {
       items.push({
         icon: '💬',
@@ -91,6 +92,11 @@ const PlayersPanel = forwardRef(({
 
   const openMenuForPlayer = (p) => {
     const items = [];
+    items.push({
+      icon: '👤',
+      label: 'Профиль',
+      onClick: () => onOpenProfile(p.userId, p.nickname),
+    });
     if (isAdmin) {
       items.push({ icon: 'ℹ️', label: 'Инфо', onClick: () => onWatchChat(p.userId) });
     }
@@ -105,6 +111,7 @@ const PlayersPanel = forwardRef(({
 
   const openMenuForFriend = (f) => {
     const items = [
+      { icon: '👤', label: 'Профиль', onClick: () => onOpenProfile(f.userId, f.nickname) },
       { icon: '✉️', label: 'Написать', onClick: () => onOpenPrivateChat(f.userId, f.nickname) },
       { icon: '⚔️', label: 'Дуэль', onClick: () => onRequestDuel(f.userId) },
     ];
@@ -144,6 +151,20 @@ const PlayersPanel = forwardRef(({
 
   const isPressing = (id) => pressingId === id;
 
+  // [2.20.0] рендер аватара с учётом avatarUrl
+  const renderAvatar = (nickname, avatarUrl) => (
+    <div
+      className="player-avatar"
+      style={{
+        background: avatarUrl
+          ? `url(${avatarUrl}) center/cover no-repeat`
+          : getAvatarColor(nickname),
+      }}
+    >
+      {!avatarUrl && getInitial(nickname)}
+    </div>
+  );
+
   return (
     <>
       <div className="players-overlay" ref={ref}>
@@ -157,7 +178,6 @@ const PlayersPanel = forwardRef(({
         />
         <div className="players-list">
 
-          {/* [2.29.0] Свой профиль — первым, без заголовка секции */}
           {myself && (
             <div
               className={`player-item player-item--self ${isPressing(`self-${myself.userId}`) ? 'player-item--pressing' : ''}`}
@@ -170,12 +190,7 @@ const PlayersPanel = forwardRef(({
               onMouseUp={endPress}
               onMouseLeave={endPress}
             >
-              <div
-                className="player-avatar"
-                style={{ background: getAvatarColor(myself.nickname) }}
-              >
-                {getInitial(myself.nickname)}
-              </div>
+              {renderAvatar(myself.nickname, myself.avatarUrl)}
               <span className="player-name">
                 {myself.nickname}
                 <small className="player-stats">W:{myself.wins} L:{myself.losses}</small>
@@ -199,7 +214,6 @@ const PlayersPanel = forwardRef(({
             </div>
           )}
 
-          {/* Секция: Онлайн */}
           {nonFriends.length > 0 && (
             <div className="friends-header">Онлайн ({nonFriends.length})</div>
           )}
@@ -219,12 +233,7 @@ const PlayersPanel = forwardRef(({
                 onMouseUp={endPress}
                 onMouseLeave={endPress}
               >
-                <div
-                  className="player-avatar"
-                  style={{ background: getAvatarColor(p.nickname) }}
-                >
-                  {getInitial(p.nickname)}
-                </div>
+                {renderAvatar(p.nickname, p.avatarUrl)}
                 <span className="player-name">
                   {p.nickname}
                   <small className="player-stats">W:{p.wins} L:{p.losses}</small>
@@ -276,7 +285,6 @@ const PlayersPanel = forwardRef(({
             );
           })}
 
-          {/* Секция: Друзья */}
           {filteredFriends.length > 0 && (
             <div className="friends-header">Друзья ({filteredFriends.length})</div>
           )}
@@ -295,12 +303,7 @@ const PlayersPanel = forwardRef(({
                 onMouseUp={endPress}
                 onMouseLeave={endPress}
               >
-                <div
-                  className="player-avatar"
-                  style={{ background: getAvatarColor(f.nickname) }}
-                >
-                  {getInitial(f.nickname)}
-                </div>
+                {renderAvatar(f.nickname, f.avatarUrl)}
                 <span className="player-name">
                   {f.nickname}
                   {isFriendOnline(f.userId) && <span className="online-status" title="В сети" />}
@@ -325,7 +328,6 @@ const PlayersPanel = forwardRef(({
             );
           })}
 
-          {/* Входящие запросы */}
           {friendRequests.length > 0 && (
             <>
               <div className="friends-header">Входящие запросы ({friendRequests.length})</div>

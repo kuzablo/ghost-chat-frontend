@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.27.0] hiddenUnread — счётчик сообщений, пришедших в скрытую вкладку.
-  [2.26.0] чистка черновика после отправки.
-  [2.16.0] Добавлен replyTo — цитата для следующего сообщения.
-  handleSendMessage шлёт replyTo и сбрасывает.
+  [2.20.0] profileData + обработка profile_changed / friend_removed
+  [2.27.0] hiddenUnread
+  [2.26.0] черновик
+  [2.16.0] replyTo
 */
 export const useChat = ({
   sendMessage,
@@ -26,11 +26,9 @@ export const useChat = ({
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  // [2.27.0] сообщения, пришедшие в скрытую вкладку
   const [hiddenUnread, setHiddenUnread] = useState(0);
-
-  // [2.16.0] активная цитата для ответа
   const [replyTo, setReplyTo] = useState(null);
+  const [profileData, setProfileData] = useState(null);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -52,7 +50,6 @@ export const useChat = ({
   useEffect(() => { onNoticeRef.current = onNotice; }, [onNotice]);
   useEffect(() => { replyToRef.current = replyTo; }, [replyTo]);
 
-  // [2.27.0] сбрасываем счётчик, когда вкладка стала видимой
   useEffect(() => {
     const onVis = () => {
       if (!document.hidden) setHiddenUnread(0);
@@ -117,7 +114,6 @@ export const useChat = ({
     sendMessageRef.current({ type: 'typing', data: { isTyping: false } });
     setTimeout(() => setSending(false), 800);
 
-    // [2.26.0] чистим черновик после успешной отправки
     try { localStorage.removeItem('ghost-chat-draft'); } catch { /* noop */ }
   }, [input, sending]);
 
@@ -244,7 +240,6 @@ export const useChat = ({
       case 'message':
         setMessages(prev => [...prev, msg.data]);
         if (audioRef.current) audioRef.current.playNotification();
-        // [2.27.0] если вкладка скрыта и сообщение не моё — считаем
         if (
           document.hidden &&
           msg.data.nickname !== nicknameRef.current
@@ -313,6 +308,34 @@ export const useChat = ({
         setFriendRequests(msg.data);
         return true;
 
+      // [2.20.0] профиль
+      case 'profile_data':
+        setProfileData(msg.data);
+        return true;
+
+      case 'profile_changed': {
+        const { userId, avatarUrl, bio } = msg.data;
+        setFriends(prev => prev.map(f => f.userId === userId ? { ...f, avatarUrl } : f));
+        setPlayers(prev => prev.map(p => p.userId === userId ? { ...p, avatarUrl } : p));
+        setProfileData(prev => (
+          prev && prev.userId === userId ? { ...prev, avatarUrl, bio } : prev
+        ));
+        return true;
+      }
+
+      case 'profile_error':
+        if (onNoticeRef.current) onNoticeRef.current(msg.data.message || 'Ошибка профиля');
+        return true;
+
+      case 'friend_removed': {
+        const { userId } = msg.data;
+        setFriends(prev => prev.filter(f => f.userId !== userId));
+        setProfileData(prev => (
+          prev && prev.userId === userId ? { ...prev, isFriend: false } : prev
+        ));
+        return true;
+      }
+
       default:
         return false;
     }
@@ -332,12 +355,12 @@ export const useChat = ({
     setInput,
     sending,
     isUploading,
-    // [2.27.0]
     hiddenUnread,
     setHiddenUnread,
-    // [2.16.0]
     replyTo,
     setReplyTo,
+    profileData,
+    setProfileData,
     handleWs,
     handleSendMessage,
     handleEditMessage,
