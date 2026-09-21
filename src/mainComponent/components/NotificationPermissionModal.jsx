@@ -1,5 +1,5 @@
 import React from 'react';
-import Mascot from './Mascot';
+import Mascot from '../Mascot';
 
 /*
   [2.32.16] Модалка запроса разрешения на уведомления.
