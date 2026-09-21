@@ -5,7 +5,11 @@ const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 
 /*
-  [2.28.2] диагностика: sendLog() перекидывает клиентские события на сервер.
+  [2.28.5] onerror больше не ставит setError/setIsConnected.
+           iOS рвёт WS при сворачивании — это норма, onclose + reconnect
+           сами поднимут соединение.
+  [2.28.4] 4000 (Replaced by new connection) — не реконнектим.
+  [2.28.2] sendLog() — диагностика на сервер.
   [2.28.1] heartbeat + переподключение из фона.
 */
 export const useWebSocket = (url, token, onMessage) => {
@@ -125,9 +129,10 @@ export const useWebSocket = (url, token, onMessage) => {
 
     socket.onerror = () => {
       console.error('[useWebSocket] Error');
-      setError('WebSocket error');
-      setIsConnected(false);
       sendLog('onerror');
+      // [2.28.5] Не показываем ошибку и не дёргаем isConnected.
+      // iOS рвёт WS при сворачивании — это норма, onclose отработает,
+      // а scheduleReconnect сам поднимет соединение.
     };
 
     socket.onclose = (e) => {
@@ -141,8 +146,10 @@ export const useWebSocket = (url, token, onMessage) => {
 
       if (unmountedRef.current) return;
       if (e.code === 1000) return;
+
+      // [2.28.4] 4000 — Replaced by new connection. Не реконнектим.
       if (
-        e.code === 4000 ||  // [2.28.4] Replaced by new connection — не реконнектим
+        e.code === 4000 ||
         e.code === 4001 ||
         e.code === 4002 ||
         e.code === 4003 ||

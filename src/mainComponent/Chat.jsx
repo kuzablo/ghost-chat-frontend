@@ -35,20 +35,12 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.28.5] wsError больше не дублируется, сброс при реконнекте
+// [2.28.4] фикс 4000 (не реконнектимся при Replaced)
 // [2.27.0] счётчик непрочитанных в заголовке вкладки + Badging API
 // [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
 // [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
-// [2.23.4] откат contentEditable → <input type="search">
-// [2.23.3] iOS-фикс: сглажен visualViewport, убран «подлёт» панели
-// [2.23.2] инпут в потоке — плавный подъём через padding-bottom контейнера
-// [2.23.1] type="search" — Chrome не предлагает автозаполнение контактов
-// [2.23.0] панель ввода прилипает к клавиатуре
-// [2.22.2] клавиатура на мобилке: visualViewport, мягкий фокус
-// [2.22.1] свайп по капсуле: лок направления, чёткие пороги
-// [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
-// [2.21.0] radial reveal + морфинг иконки темы
-// [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.28.4';
+const VERSION = '2.28.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 
@@ -262,8 +254,6 @@ const Chat = () => {
   const unreadCount = Object.values(unreadByUser).filter(Boolean).length;
   const friendRequestsCount = friendRequests.length;
   const totalNotifications = unreadCount + friendRequestsCount;
-
-  // [2.27.0] общий счётчик непрочитанного
   const totalUnread = hiddenUnread + unreadCount + friendRequestsCount;
 
   // [2.27.0] заголовок вкладки + Badging API
@@ -281,7 +271,6 @@ const Chat = () => {
     }
   }, [totalUnread]);
 
-  // [2.27.0] при размонтировании возвращаем базовый заголовок
   useEffect(() => {
     return () => {
       document.title = BASE_TITLE;
@@ -329,11 +318,14 @@ const Chat = () => {
     setIsConnected(wsConnected);
   }, [wsConnected]);
 
+  // [2.28.5] ошибка WS — без дубля, с авт-сбросом
   useEffect(() => {
     if (wsError) {
-      setErrorMessage('WebSocket error: ' + wsError);
-      const timer = setTimeout(() => setErrorMessage(''), 3000);
+      setErrorMessage(wsError);
+      const timer = setTimeout(() => setErrorMessage(''), 5000);
       return () => clearTimeout(timer);
+    } else {
+      setErrorMessage('');
     }
   }, [wsError, setErrorMessage]);
 
