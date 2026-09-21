@@ -39,9 +39,10 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.19] на ПК модалка не нужна — там и так всё видно
 // [2.32.18] SW push → postMessage → бейдж на иконке (iOS не даёт из SW)
 // [2.32.17] Web Push: подписка после разрешения уведомлений; убрана подсказка «зажми»
-const VERSION = '2.32.18';
+const VERSION = '2.32.19';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -235,6 +236,10 @@ const Chat = () => {
     if (!isAuth) return;
     if (typeof window === 'undefined') return;
     if (!('Notification' in window)) return;
+
+    // [2.32.19] на ПК модалка не нужна — там и так всё видно
+    const isMobile = /Android|iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isMobile) return;
 
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isStandalone =
