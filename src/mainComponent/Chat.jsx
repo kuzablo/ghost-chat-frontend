@@ -38,6 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.11] откат радио к рабочей версии — YouTube popup приемлем
 // [2.32.8] фикс мигания/прыжков при первом входе в PWA
 // [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
 // [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
@@ -56,7 +57,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.10';
+const VERSION = '2.32.11';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -1481,8 +1482,11 @@ const Chat = () => {
         </div>
       )}
 
-      <div className="yt-hidden-host">
+      <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
         <div id={yt.containerId} />
+        {showMiniPlayer && (
+          <div className="yt-mini-hint">▶ нажми play</div>
+        )}
       </div>
     </>
   );

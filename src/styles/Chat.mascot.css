@@ -1,5 +1,5 @@
 /*
-  [2.32.8] вернул оверлей-кнопку и 200×120 — 1×1px не работал.
+  [2.32.10] откат к рабочей версии — оверлей убран
   [2.15.23] Стили маскота-радио.
 */
 
@@ -152,23 +152,4 @@
 @keyframes trackTitleFade {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-.yt-overlay-play {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  z-index: 10;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.yt-overlay-play:focus {
-  outline: none;
 }

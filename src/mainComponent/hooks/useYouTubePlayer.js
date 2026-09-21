@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-/*
-  [2.32.8] откат 1×1px — iOS всё равно не играет. Вернули 200×120.
-  [2.32.1] iOS: убраны controls и disablekb — иначе тап по встроенному
-           плееру открывает приложение YouTube.
-*/
-
 const PLAYLIST = [
   '6VGePXh16l0',
   'rY8drrmx4k4',
@@ -64,14 +58,14 @@ export const useYouTubePlayer = () => {
         videoId: PLAYLIST[0],
         playerVars: {
           autoplay: 0,
-          controls: 0,
-          disablekb: 1,
+          controls: 1,
+          disablekb: 0,
           fs: 0,
           modestbranding: 1,
           playsinline: 1,
           iv_load_policy: 3,
           rel: 0,
-          origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+          host: 'https://www.youtube-nocookie.com',
         },
         events: {
           onReady: (e) => {
