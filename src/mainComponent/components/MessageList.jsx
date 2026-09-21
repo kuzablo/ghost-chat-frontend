@@ -40,7 +40,6 @@ const MessageList = ({
   // ВАЖНО: LONG_PRESS_EDIT_MS − RING_START_DELAY === --ring-duration-msg (Chat.css)
   const LONG_PRESS_EDIT_MS = 1500;
   const LONG_PRESS_IGNORE_MS = 500;
-  // [2.31.2] кольцо появляется только на второй трети удержания
   const RING_START_DELAY = 500;
 
   const tapTimerRef = useRef(null);
@@ -52,10 +51,6 @@ const MessageList = ({
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
     };
   }, []);
-
-  // [2.32.21] блок с манипуляцией body удалён:
-  // html/body уже fixed+overflow:hidden в Chat.css, user-scalable=no в index.html,
-  // а body.style.transform ломал position:fixed на iOS.
 
   const startEdit = (message) => {
     setEditingMessageId(message.id);
@@ -70,9 +65,16 @@ const MessageList = ({
     setIsEditing(false);
   };
 
+  // [2.32.22] пустой текст можно сохранить, если у сообщения есть картинка —
+  //           так imageOnly → текст → imageOnly работает в обе стороны
   const saveEdit = (messageId) => {
-    if (editText.trim() && editText !== messages.find(m => m.id === messageId)?.text) {
-      onEditMessage(messageId, editText.trim());
+    const original = messages.find(m => m.id === messageId);
+    const nextText = editText.trim();
+    const changed = nextText !== (original?.text || '');
+    const allowed = nextText.length > 0 || !!original?.imageUrl;
+
+    if (changed && allowed) {
+      onEditMessage(messageId, nextText);
     }
     cancelEdit();
   };

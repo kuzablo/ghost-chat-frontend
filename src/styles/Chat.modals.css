@@ -1,6 +1,5 @@
 /* ===== Модальные окна и оверлеи ===== */
 
-/* Blur overlay */
 .blur-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -246,6 +245,7 @@ body.dark .blur-overlay {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1;
 }
 
 .fs-author-avatar {
@@ -285,6 +285,22 @@ body.dark .blur-overlay {
   color: rgba(255, 255, 255, 0.7);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   margin-top: 2px;
+}
+
+/* [2.32.22] счётчик N / M */
+.fs-counter {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  user-select: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .fs-close {

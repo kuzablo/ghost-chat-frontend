@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
+  [2.32.22] скролл вниз только при новом последнем сообщении —
+            реакции и редактирование больше не дёргают
   [2.32.21] постоянный ResizeObserver: если юзер у низа — держим у низа
-            при изменении размера контейнера (клавиатура, редактирование)
   [2.32.8] первый скролл — мгновенный
   [2.31.9] ResizeObserver на 2 секунды после mount для PWA
   [2.18.6] подстраховка для картинок
@@ -13,10 +14,14 @@ export const useAutoScroll = ({ messages, resetKey }) => {
 
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const lastMsgIdRef = useRef(null);
 
-  // Автоскролл: всегда мгновенно в низ при новых сообщениях
+  // Автоскролл: только при новом последнем сообщении
   useEffect(() => {
     if (messages.length === 0) return;
+    const lastId = messages[messages.length - 1]?.id ?? null;
+    if (lastId === lastMsgIdRef.current) return;
+    lastMsgIdRef.current = lastId;
 
     let raf1 = null;
     let raf2 = null;
@@ -64,8 +69,7 @@ export const useAutoScroll = ({ messages, resetKey }) => {
   }, [resetKey]);
 
   /* [2.32.21] постоянный ResizeObserver — держим скролл у низа,
-     если юзер не ушёл вверх. Срабатывает при открытии/закрытии
-     клавиатуры и при входе/выходе из режима редактирования. */
+     если юзер не ушёл вверх */
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;

@@ -39,12 +39,11 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.32.21] скролл держится у низа при resize; убрано body.transform из редактирования
-// [2.32.20] скролл вниз только при новом последнем сообщении, не при реакции/редактировании
-// [2.32.19] на ПК модалка не нужна — там и так всё видно
-// [2.32.18] SW push → postMessage → бейдж на иконке (iOS не даёт из SW)
-// [2.32.17] Web Push: подписка после разрешения уведомлений; убрана подсказка «зажми»
-const VERSION = '2.32.21';
+// [2.32.22] счётчик N/M в fullscreen, автозакрытие если фото удалили
+// [2.32.21] скролл держится у низа при resize; убрано body.transform
+// [2.32.20] длинные сообщения в ЛС не вылезают за карточку
+// [2.32.19] автоскрытие пикера 2с; бурст ❤️ в точке клика; модалка только на мобильных
+const VERSION = '2.32.22';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -196,7 +195,6 @@ const Chat = () => {
     setShowMiniPlayer(false);
   }, [showMiniPlayer, yt.hasStarted]);
 
-  // [2.32.17] подписка на push
   const subscribeToPush = useCallback(async () => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -233,13 +231,11 @@ const Chat = () => {
     }
   }, [tokenRef]);
 
-  // [2.32.17] проверка разрешения + тихая подписка если уже разрешено
   useEffect(() => {
     if (!isAuth) return;
     if (typeof window === 'undefined') return;
     if (!('Notification' in window)) return;
 
-    // [2.32.19] на ПК модалка не нужна — там и так всё видно
     const isMobile = /Android|iPad|iPhone|iPod/.test(navigator.userAgent);
     if (!isMobile) return;
 
@@ -264,8 +260,6 @@ const Chat = () => {
     return () => clearTimeout(t);
   }, [isAuth, subscribeToPush]);
 
-  // [2.32.18] SW получил push → увеличиваем счётчик «непрочитано»
-  //           → пересчитывается totalUnread → встаёт бейдж
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator)) return;
@@ -387,6 +381,14 @@ const Chat = () => {
   const fullscreenMessage = currentImageMessage || null;
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
+
+  // [2.32.22] если фото удалили, пока смотрим — закрываем fullscreen
+  useEffect(() => {
+    if (!fullscreenImage) return;
+    if (currentImageIndex === -1) {
+      closeFullscreen();
+    }
+  }, [fullscreenImage, currentImageIndex, closeFullscreen]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -1464,6 +1466,14 @@ const Chat = () => {
                 </div>
               </div>
             </div>
+
+            {/* [2.32.22] счётчик N / M */}
+            {currentImageIndex >= 0 && imageMessages.length > 0 && (
+              <div className="fs-counter">
+                {currentImageIndex + 1} / {imageMessages.length}
+              </div>
+            )}
+
             <button
               className="fs-close"
               onClick={closeFullscreen}
