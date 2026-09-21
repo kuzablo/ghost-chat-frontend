@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.33.3] rejectCount в friendshipRitual — цвет нити тускнеет с числом отказов.
+           Тост «Б отклонил запрос» после закрытия ритуала.
   [2.33.1] клиентская проверка размера файла до загрузки — >25 МБ отбиваем сразу.
   [2.33.0] friendshipRitual — state ритуала дружбы (огонь и вода).
   [2.32.42] avatarCache — накапливающий кэш userId → avatarUrl.
@@ -109,7 +111,6 @@ export const useChat = ({
     });
   }, [players, nicknameRef]);
 
-  // [2.32.42] накопление аватарок — merge в кэш
   const mergeAvatars = useCallback((items) => {
     setAvatarCache(prev => {
       let changed = false;
@@ -159,7 +160,6 @@ export const useChat = ({
       return;
     }
 
-    // [2.33.1] клиентская проверка размера — не тратим трафик
     if (file.size > MAX_UPLOAD_BYTES) {
       setErrorMessage(`Файл больше ${MAX_UPLOAD_MB} МБ`);
       e.target.value = '';
@@ -346,6 +346,7 @@ export const useChat = ({
           targetId: msg.data.receiverId,
           targetNick: msg.data.receiverNickname,
           targetAvatar: msg.data.receiverAvatar || null,
+          rejectCount: msg.data.rejectCount || 0,
           phase: 'pull',
         });
         return true;
@@ -362,6 +363,7 @@ export const useChat = ({
           targetId: myIdRef.current,
           targetNick: nicknameRef.current,
           targetAvatar: null,
+          rejectCount: 0,
           phase: 'appear',
         });
         return true;
@@ -380,13 +382,19 @@ export const useChat = ({
         });
         return true;
 
-      case 'friend_request_declined':
+      // [2.33.3] тост инициатору + фаза reject
+      case 'friend_request_declined': {
+        const nick = msg.data?.nickname || 'Пользователь';
+        if (onNoticeRef.current) {
+          onNoticeRef.current(`${nick} отклонил(а) запрос на дружбу`);
+        }
         setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
         setFriendshipRitual(prev => {
           if (!prev) return prev;
           return { ...prev, phase: 'reject' };
         });
         return true;
+      }
 
       case 'friend_request_accepted':
         setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));

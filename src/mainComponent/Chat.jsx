@@ -42,6 +42,7 @@ import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 
+// [2.33.3] rejectCount в ритуале — нить тускнеет с отказами; тост при отказе
 // [2.33.1] лимит загрузки 25 МБ, клиентская проверка размера
 // [2.33.0] Ритуал дружбы — огонь и вода, компонент FriendshipRitual
 // [2.32.42] avatarCache от useChat — аватарки не пропадают при офлайне
@@ -52,7 +53,7 @@ import '../styles/Chat.friendship.css';
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.33.1';
+const VERSION = '2.33.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1322,6 +1323,7 @@ const Chat = () => {
             null
           }
           phase={friendshipRitual.phase}
+          rejectCount={friendshipRitual.rejectCount || 0}
           onAccept={() => {
             if (friendshipRitual.requestId) {
               handleAcceptRequest(friendshipRitual.requestId);
@@ -1332,6 +1334,7 @@ const Chat = () => {
               handleDeclineRequest(friendshipRitual.requestId);
             }
           }}
+          onCancel={clearRitual}
           onDone={clearRitual}
         />
       )}

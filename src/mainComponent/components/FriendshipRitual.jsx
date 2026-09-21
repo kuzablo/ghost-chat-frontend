@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
+  [2.33.3] rejectCount — цвет нити тускнеет с числом отказов.
+           Подпись reject: «X отклонил(а) запрос».
+  [2.33.2] Переходы фаз — через useEffect по текущей phase.
   [2.33.0] Ритуал дружбы. Огонь и вода.
-           Два круга видят друг друга. Один тянется — другой отвечает.
-           Согласие → слияние. Отказ → нить гаснет.
 */
 
 const PHASE_DURATIONS = {
@@ -12,9 +13,26 @@ const PHASE_DURATIONS = {
   pull: 700,
   accept: 550,
   merge: 900,
-  reject: 650,
+  reject: 900,
+  timeout: 900,
   done: 250,
 };
+
+const WAIT_TIMEOUT_MS = 90 * 1000;
+
+// [2.33.3] смешивание двух hex-цветов
+function mixHex(a, b, t) {
+  const pa = a.replace('#', '');
+  const pb = b.replace('#', '');
+  const na = parseInt(pa, 16);
+  const nb = parseInt(pb, 16);
+  const ar = (na >> 16) & 0xff, ag = (na >> 8) & 0xff, ab = na & 0xff;
+  const br = (nb >> 16) & 0xff, bg = (nb >> 8) & 0xff, bb = nb & 0xff;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
+}
 
 const FriendshipRitual = ({
   open,
@@ -26,45 +44,62 @@ const FriendshipRitual = ({
   targetAvatar,
   myId,
   phase: incomingPhase = 'appear',
+  rejectCount = 0,
   onAccept,
   onDecline,
+  onCancel,
   onDone,
 }) => {
   const [phase, setPhase] = useState(incomingPhase);
-  const timersRef = useRef([]);
+  const waitTimeoutRef = useRef(null);
 
   const isInitiator = myId === initiatorId;
   const isTarget = myId === targetId;
 
-  const clearTimers = () => {
-    timersRef.current.forEach(t => clearTimeout(t));
-    timersRef.current = [];
-  };
-
   useEffect(() => {
     if (!open) return;
     setPhase(incomingPhase);
-    clearTimers();
+  }, [open, incomingPhase]);
 
-    const advance = (next, delay) => {
-      const t = setTimeout(() => setPhase(next), delay);
-      timersRef.current.push(t);
-    };
+  useEffect(() => {
+    if (!open) return;
+    let timer = null;
 
-    if (incomingPhase === 'appear') {
-      advance('wait', PHASE_DURATIONS.appear);
-    } else if (incomingPhase === 'pull') {
-      advance('wait', PHASE_DURATIONS.pull);
-    } else if (incomingPhase === 'accept') {
-      advance('merge', PHASE_DURATIONS.accept);
-    } else if (incomingPhase === 'merge') {
-      advance('done', PHASE_DURATIONS.merge);
-    } else if (incomingPhase === 'reject') {
-      advance('done', PHASE_DURATIONS.reject);
+    if (phase === 'appear') {
+      timer = setTimeout(() => setPhase('wait'), PHASE_DURATIONS.appear);
+    } else if (phase === 'pull') {
+      timer = setTimeout(() => setPhase('wait'), PHASE_DURATIONS.pull);
+    } else if (phase === 'accept') {
+      timer = setTimeout(() => setPhase('merge'), PHASE_DURATIONS.accept);
+    } else if (phase === 'merge') {
+      timer = setTimeout(() => setPhase('done'), PHASE_DURATIONS.merge);
+    } else if (phase === 'reject') {
+      timer = setTimeout(() => setPhase('done'), PHASE_DURATIONS.reject);
+    } else if (phase === 'timeout') {
+      timer = setTimeout(() => setPhase('done'), PHASE_DURATIONS.timeout);
     }
 
-    return clearTimers;
-  }, [open, incomingPhase]);
+    return () => { if (timer) clearTimeout(timer); };
+  }, [open, phase]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (phase !== 'wait') return;
+    if (!isInitiator) return;
+
+    if (waitTimeoutRef.current) clearTimeout(waitTimeoutRef.current);
+    waitTimeoutRef.current = setTimeout(() => {
+      waitTimeoutRef.current = null;
+      setPhase('timeout');
+    }, WAIT_TIMEOUT_MS);
+
+    return () => {
+      if (waitTimeoutRef.current) {
+        clearTimeout(waitTimeoutRef.current);
+        waitTimeoutRef.current = null;
+      }
+    };
+  }, [open, phase, isInitiator]);
 
   useEffect(() => {
     if (!open) return;
@@ -76,8 +111,14 @@ const FriendshipRitual = ({
   if (!open) return null;
 
   const showButtons = phase === 'wait' && isTarget;
-  const showSkip = phase === 'wait';
-  const skipLabel = isInitiator ? 'Свернуть' : 'Позже';
+  const showCancel = phase === 'wait' && isInitiator;
+  const showClose = phase === 'wait' && !isInitiator && !isTarget;
+
+  // [2.33.3] цвет нити: холоднее с каждым отказом
+  const t = Math.min(rejectCount / 5, 1);
+  const fireColor = mixHex('#FF7A45', '#7A8A9A', t);
+  const waterColor = mixHex('#3BB5E8', '#7A8A9A', t);
+  const gradId = `fr-thread-grad-${rejectCount}`;
 
   const renderOrbContent = (nick, avatar) => (
     <div
@@ -99,14 +140,12 @@ const FriendshipRitual = ({
     <div className={`fr-overlay fr-overlay--${phase}`} role="dialog" aria-modal="true">
       <div className="fr-stage">
 
-        {/* Левый круг — всегда инициатор (огонь) */}
         <div className={`fr-orb fr-orb--fire fr-orb--${phase}`}>
           <div className="fr-orb-halo" />
           {renderOrbContent(initiatorNick, initiatorAvatar)}
           <div className="fr-orb-nick">{initiatorNick}</div>
         </div>
 
-        {/* Нить между ними — SVG */}
         <svg
           className={`fr-thread fr-thread--${phase}`}
           viewBox="0 0 320 120"
@@ -114,22 +153,21 @@ const FriendshipRitual = ({
           aria-hidden="true"
         >
           <defs>
-            <linearGradient id="fr-thread-grad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#FF7A45" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#3BB5E8" stopOpacity="0.9" />
+            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor={fireColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={waterColor} stopOpacity="0.9" />
             </linearGradient>
           </defs>
           <path
             className="fr-thread-path"
             d="M 20 60 C 100 15, 220 105, 300 60"
             fill="none"
-            stroke="url(#fr-thread-grad)"
+            stroke={`url(#${gradId})`}
             strokeWidth="2"
             strokeLinecap="round"
           />
         </svg>
 
-        {/* Правый круг — всегда получатель (вода) */}
         <div className={`fr-orb fr-orb--water fr-orb--${phase}`}>
           <div className="fr-orb-halo" />
           {renderOrbContent(targetNick, targetAvatar)}
@@ -146,7 +184,9 @@ const FriendshipRitual = ({
         {phase === 'wait' && isTarget && `${initiatorNick} предлагает дружбу`}
         {phase === 'accept' && 'Согласие…'}
         {phase === 'merge' && 'Теперь вы — одно'}
-        {phase === 'reject' && 'Нить растворилась'}
+        {phase === 'reject' && isInitiator && `${targetNick} отклонил(а) запрос`}
+        {phase === 'reject' && !isInitiator && 'Нить растворилась'}
+        {phase === 'timeout' && 'Ответа не было'}
       </div>
 
       {showButtons && (
@@ -168,13 +208,28 @@ const FriendshipRitual = ({
         </div>
       )}
 
-      {showSkip && (
+      {showCancel && (
+        <div className="fr-actions">
+          <button
+            type="button"
+            className="fr-btn fr-btn--decline"
+            onClick={() => {
+              if (onCancel) onCancel();
+              else if (onDone) onDone();
+            }}
+          >
+            Отменить запрос
+          </button>
+        </div>
+      )}
+
+      {showClose && (
         <button
           type="button"
           className="fr-skip"
           onClick={onDone}
-          aria-label={skipLabel}
-          title={skipLabel}
+          aria-label="Закрыть"
+          title="Закрыть"
         >
           ✕
         </button>
