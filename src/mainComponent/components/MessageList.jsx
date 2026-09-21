@@ -47,56 +47,15 @@ const MessageList = ({
   const lastTapRef = useRef({ id: null, time: 0, x: 0, y: 0 });
   const [heartBurst, setHeartBurst] = useState(null);
 
-  // [2.32.20] храним исходный viewport, чтобы восстановить его же
-  const originalViewportRef = useRef(null);
-
   useEffect(() => {
     return () => {
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
     };
   }, []);
 
-  useEffect(() => {
-    if (isEditing) {
-      const html = document.documentElement;
-      const body = document.body;
-      const scrollY = window.scrollY;
-      html.style.overflow = 'hidden';
-      body.style.overflow = 'hidden';
-      body.style.position = 'fixed';
-      body.style.top = `-${scrollY}px`;
-      body.style.left = '0';
-      body.style.width = '100%';
-      body.style.height = '100%';
-      body.style.transform = 'scale(1)';
-
-      // [2.32.20] сохраняем исходный viewport и восстанавливаем его же
-      const metaViewport = document.querySelector('meta[name=viewport]');
-      if (metaViewport && originalViewportRef.current === null) {
-        originalViewportRef.current = metaViewport.content;
-        metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-      }
-
-      window.scrollTo(0, 0);
-
-      return () => {
-        const savedScrollY = parseInt(body.style.top) || 0;
-        html.style.overflow = '';
-        body.style.overflow = '';
-        body.style.position = '';
-        body.style.top = '';
-        body.style.left = '';
-        body.style.width = '';
-        body.style.height = '';
-        body.style.transform = '';
-        window.scrollTo(0, Math.abs(savedScrollY));
-
-        if (metaViewport && originalViewportRef.current !== null) {
-          metaViewport.content = originalViewportRef.current;
-        }
-      };
-    }
-  }, [isEditing]);
+  // [2.32.21] блок с манипуляцией body удалён:
+  // html/body уже fixed+overflow:hidden в Chat.css, user-scalable=no в index.html,
+  // а body.style.transform ломал position:fixed на iOS.
 
   const startEdit = (message) => {
     setEditingMessageId(message.id);
@@ -563,7 +522,6 @@ const MessageList = ({
                         inputMode="text"
                         enterKeyHint="done"
                         style={{ touchAction: 'manipulation', fontSize: '16px' }}
-                        onFocus={() => setTimeout(() => window.scrollTo(0, 0), 10)}
                       />
                       <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
                         Сохранить

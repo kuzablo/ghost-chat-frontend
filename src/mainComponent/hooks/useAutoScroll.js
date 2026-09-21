@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
-  [2.32.8] первый скролл — мгновенный. Убраны late-timer 300/900 —
-           в PWA они давали микро-рывки. Оставлен только ResizeObserver.
-  [2.31.9] ResizeObserver на 2 секунды после mount для PWA.
-  [2.18.6] подстраховка для картинок.
+  [2.32.21] постоянный ResizeObserver: если юзер у низа — держим у низа
+            при изменении размера контейнера (клавиатура, редактирование)
+  [2.32.8] первый скролл — мгновенный
+  [2.31.9] ResizeObserver на 2 секунды после mount для PWA
+  [2.18.6] подстраховка для картинок
 */
 
 export const useAutoScroll = ({ messages, resetKey }) => {
@@ -13,7 +14,7 @@ export const useAutoScroll = ({ messages, resetKey }) => {
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Автоскролл: всегда мгновенно в низ
+  // Автоскролл: всегда мгновенно в низ при новых сообщениях
   useEffect(() => {
     if (messages.length === 0) return;
 
@@ -34,7 +35,7 @@ export const useAutoScroll = ({ messages, resetKey }) => {
     };
   }, [messages]);
 
-  /* ResizeObserver — первые 2 секунды после mount */
+  /* ResizeObserver — первые 2 секунды после mount (PWA) */
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -62,6 +63,28 @@ export const useAutoScroll = ({ messages, resetKey }) => {
     };
   }, [resetKey]);
 
+  /* [2.32.21] постоянный ResizeObserver — держим скролл у низа,
+     если юзер не ушёл вверх. Срабатывает при открытии/закрытии
+     клавиатуры и при входе/выходе из режима редактирования. */
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const KEEP_BOTTOM_PX = 80;
+
+    const ro = new ResizeObserver(() => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (distanceFromBottom < KEEP_BOTTOM_PX) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
+
   // Индикатор «вниз»
   useEffect(() => {
     const el = messagesContainerRef.current;
@@ -84,7 +107,6 @@ export const useAutoScroll = ({ messages, resetKey }) => {
     };
   }, [resetKey]);
 
-  // Плавный скролл оставлен только для кнопки «Вниз»
   const scrollToBottom = () => {
     const el = messagesContainerRef.current;
     if (!el) return;

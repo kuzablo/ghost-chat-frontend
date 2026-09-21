@@ -39,11 +39,12 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.21] скролл держится у низа при resize; убрано body.transform из редактирования
 // [2.32.20] скролл вниз только при новом последнем сообщении, не при реакции/редактировании
 // [2.32.19] на ПК модалка не нужна — там и так всё видно
 // [2.32.18] SW push → postMessage → бейдж на иконке (iOS не даёт из SW)
 // [2.32.17] Web Push: подписка после разрешения уведомлений; убрана подсказка «зажми»
-const VERSION = '2.32.20';
+const VERSION = '2.32.21';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
