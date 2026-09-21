@@ -38,6 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.1] iOS: оверлей-кнопка над YouTube-iframe, без всплытия приложения
 // [2.32.0] InfoPanel: «О приложении», секции с иконками, мини-анимации жестов
 // [2.31.10] PWA: скролл к последним сообщениям через ResizeObserver
 // [2.31.8] баннер установки PWA для iOS Safari
@@ -49,7 +50,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.0';
+const VERSION = '2.32.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -1474,7 +1475,15 @@ const Chat = () => {
       <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
         <div id={yt.containerId} />
         {showMiniPlayer && (
-          <div className="yt-mini-hint">▼ нажми play</div>
+          <>
+            <button
+              type="button"
+              className="yt-overlay-play"
+              onClick={yt.toggle}
+              aria-label="Воспроизвести"
+            />
+            <div className="yt-mini-hint">▶ нажми play</div>
+          </>
         )}
       </div>
     </>

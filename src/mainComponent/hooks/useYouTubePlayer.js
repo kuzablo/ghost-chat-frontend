@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [правка 2.15.23 → 2.15.24]
-  Первый трек заменён: dn_HJ0G3JXI → 6VGePXh16l0
+  [2.32.1] iOS: убраны controls и disablekb — иначе тап по встроенному
+           плееру открывает приложение YouTube. Управление — через
+           оверлей-кнопку в Chat.jsx.
 */
 
 const PLAYLIST = [
@@ -63,14 +64,14 @@ export const useYouTubePlayer = () => {
         videoId: PLAYLIST[0],
         playerVars: {
           autoplay: 0,
-          controls: 1,
-          disablekb: 0,
+          controls: 0,
+          disablekb: 1,
           fs: 0,
           modestbranding: 1,
           playsinline: 1,
           iv_load_policy: 3,
           rel: 0,
-          host: 'https://www.youtube-nocookie.com',
+          origin: typeof window !== 'undefined' ? window.location.origin : undefined,
         },
         events: {
           onReady: (e) => {
