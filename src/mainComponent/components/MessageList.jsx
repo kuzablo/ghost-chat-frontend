@@ -139,7 +139,8 @@ const MessageList = ({
 
     const now = Date.now();
     const last = lastTapRef.current;
-    const rect = e.currentTarget.getBoundingClientRect();
+    const parent = e.currentTarget.parentElement;
+    const rect = (parent || e.currentTarget).getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 

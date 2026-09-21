@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
+  [2.32.19] активная реакция-пикер автоскрывается через 2 сек
   [2.21.0] toggleTheme(event) — плавное переключение темы
-          через View Transitions API (radial reveal из точки клика).
-          Фолбэк: если API нет — мгновенное переключение.
-  [2.17.0] showInfo — состояние инфо-панели «Что умеет чат».
+  [2.17.0] showInfo
 */
+const PICKER_AUTOHIDE_MS = 2000;
+
 export const useChatUI = () => {
   const storedTheme = localStorage.getItem('ghost-chat-theme') || 'light';
 
@@ -24,26 +25,27 @@ export const useChatUI = () => {
     localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  // [2.32.19] автоскрытие пикера реакций
+  useEffect(() => {
+    if (!activeMessageId) return;
+    const t = setTimeout(() => setActiveMessageId(null), PICKER_AUTOHIDE_MS);
+    return () => clearTimeout(t);
+  }, [activeMessageId]);
+
   const toggleTheme = useCallback((event) => {
     const next = !isDark;
-
-    // Точка старта: место клика, либо правый-верхний угол
     const x = event?.clientX ?? window.innerWidth - 30;
     const y = event?.clientY ?? 30;
 
-    // Фолбэк — если API не поддерживается
     if (typeof document.startViewTransition !== 'function') {
       setIsDark(next);
       return;
     }
 
-    // Синхронно переключаем класс, чтобы снапшот "нового" состояния был корректным
     document.body.classList.toggle('dark', next);
     setIsDark(next);
 
-    const transition = document.startViewTransition(() => {
-      // пусто — DOM уже переключён выше
-    });
+    const transition = document.startViewTransition(() => {});
 
     transition.ready
       .then(() => {
@@ -65,9 +67,9 @@ export const useChatUI = () => {
           }
         );
       })
-      .catch(() => { /* transition отменён — молча */ });
+      .catch(() => { /* noop */ });
 
-    transition.finished.catch(() => { /* то же */ });
+    transition.finished.catch(() => { /* noop */ });
   }, [isDark]);
 
   const toggleReactions = (messageId) => {

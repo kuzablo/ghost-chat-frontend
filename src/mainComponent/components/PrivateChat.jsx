@@ -3,13 +3,13 @@ import { formatTime } from '../utils';
 import ChatInput from './ChatInput';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
+const PICKER_AUTOHIDE_MS = 2000;
 
 /*
-  [2.29.3] Без плавного скролла при открытии: сразу показываем низ
-           списка через scrollTop у контейнера, а не scrollIntoView
-           (тот прокручивал весь документ на iOS).
-  [2.26.1] <input> заменён на ChatInput.
-  [2.19.4] PrivateChat принимает sendMessage (из useWebSocket).
+  [2.32.19] пикер реакций автоскрывается через 2 сек
+  [2.29.3] без плавного скролла при открытии
+  [2.26.1] <input> заменён на ChatInput
+  [2.19.4] PrivateChat принимает sendMessage
 */
 const PrivateChat = ({
   userId,
@@ -34,13 +34,17 @@ const PrivateChat = ({
     setLocalTypingUser(typingUser);
   }, [typingUser]);
 
-  // [2.29.3] мгновенный скролл к низу контейнера
+  // [2.32.19] автоскрытие пикера
+  useEffect(() => {
+    if (!pickerFor) return;
+    const t = setTimeout(() => setPickerFor(null), PICKER_AUTOHIDE_MS);
+    return () => clearTimeout(t);
+  }, [pickerFor]);
+
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const el = messagesContainerRef.current;
-      if (el) {
-        el.scrollTop = el.scrollHeight;
-      }
+      if (el) el.scrollTop = el.scrollHeight;
     });
     return () => cancelAnimationFrame(id);
   }, [initialMessages]);
