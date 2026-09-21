@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.33.5] case 'avatars_map' — карта всех аватарок из БД при логине.
+           Аватарки офлайн-юзеров видны в истории чата.
   [2.33.4] blockedUsers — список тех, кого я заблокировал.
-           blockUser / unblockUser — отправляют WS.
   [2.33.3] rejectCount в friendshipRitual, тост при отказе.
   [2.33.1] клиентская проверка размера файла до загрузки.
   [2.33.0] friendshipRitual — state ритуала дружбы.
@@ -276,7 +277,6 @@ export const useChat = ({
     setFriendshipRitual(null);
   }, []);
 
-  // [2.33.4] блокировка
   const blockUser = useCallback((userId) => {
     if (sendMessageRef.current && userId) {
       sendMessageRef.current({ type: 'block_user', data: { userId } });
@@ -347,7 +347,11 @@ export const useChat = ({
         return true;
       }
 
-      // [2.33.4] мой список заблокированных
+      // [2.33.5] карта всех аватарок из БД — офлайн-юзеры в истории
+      case 'avatars_map':
+        mergeAvatars(msg.data?.avatars || []);
+        return true;
+
       case 'blocks_list':
         setBlockedUsers(msg.data?.blocked || []);
         return true;
@@ -356,7 +360,6 @@ export const useChat = ({
         if (onNoticeRef.current) onNoticeRef.current(msg.data.message);
         return true;
 
-      // ===== Ритуал: я отправил запрос =====
       case 'friend_request_sent': {
         setFriendshipRitual({
           requestId: msg.data.requestId,
@@ -372,7 +375,6 @@ export const useChat = ({
         return true;
       }
 
-      // ===== Ритуал: мне пришёл запрос =====
       case 'new_friend_request': {
         setFriendRequests(prev => [...prev, msg.data]);
         setFriendshipRitual({
@@ -402,7 +404,6 @@ export const useChat = ({
         });
         return true;
 
-      // [2.33.3] тост инициатору + фаза reject
       case 'friend_request_declined': {
         const nick = msg.data?.nickname || 'Пользователь';
         if (onNoticeRef.current) {
