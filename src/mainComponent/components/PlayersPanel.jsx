@@ -3,12 +3,11 @@ import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 
 /*
-  [2.20.4] Изменения:
-    - long-press 0.5с на элементе → меню стикеров по центру;
-    - убрана нижняя кнопка «Мои диалоги» — доступна через long-press
-      на секции «Вы»;
-    - ссылка «Что умеет чат?» осталась;
-    - на ПК обычные кнопки действий остаются (мобилка скрывает через CSS).
+  [2.29.0] Убран заголовок «Вы» — свой профиль идёт первым без секции.
+           Обводка + подсказка «👆 нажми и держи». Подсказка гаснет
+           после первого long-press. Бейдж непрочитанных на пункте «Диалоги».
+  [2.20.4] long-press 0.5с на элементе → меню стикеров по центру.
+           «Мои диалоги» — в long-press меню.
 */
 const PlayersPanel = forwardRef(({
   players,
@@ -43,9 +42,17 @@ const PlayersPanel = forwardRef(({
   );
   const myself = players.find(p => p.userId === myId);
 
+  const unreadDialogs = Object.values(unreadByUser || {}).filter(Boolean).length;
+
   const [pressingId, setPressingId] = useState(null);
   const [menuTarget, setMenuTarget] = useState(null);
   const pressRef = useRef({ timer: null, startX: 0, startY: 0, fired: false, id: null });
+
+  // [2.29.0] подсказка «нажми и держи» гаснет после первого long-press
+  const [selfHintDismissed, setSelfHintDismissed] = useState(() => {
+    try { return localStorage.getItem('ghost-chat-self-hint-seen') === '1'; }
+    catch { return false; }
+  });
 
   const LONG_PRESS_MS = 500;
   const MOVE_CANCEL_PX = 8;
@@ -61,9 +68,20 @@ const PlayersPanel = forwardRef(({
   useEffect(() => () => cancelPress(), []);
 
   const openMenuForSelf = () => {
+    // [2.29.0] после первого long-press подсказку больше не показываем
+    if (!selfHintDismissed) {
+      setSelfHintDismissed(true);
+      try { localStorage.setItem('ghost-chat-self-hint-seen', '1'); } catch { /* noop */ }
+    }
+
     const items = [];
     if (onOpenDialogs) {
-      items.push({ icon: '💬', label: 'Диалоги', onClick: onOpenDialogs });
+      items.push({
+        icon: '💬',
+        label: 'Диалоги',
+        onClick: onOpenDialogs,
+        badge: unreadDialogs > 0 ? unreadDialogs : null,
+      });
     }
     if (onLogout) {
       items.push({ icon: '🚪', label: 'Выйти', onClick: onLogout, danger: true });
@@ -139,44 +157,46 @@ const PlayersPanel = forwardRef(({
         />
         <div className="players-list">
 
-          {/* Секция: Вы */}
+          {/* [2.29.0] Свой профиль — первым, без заголовка секции */}
           {myself && (
-            <>
-              <div className="friends-header">Вы</div>
+            <div
+              className={`player-item player-item--self ${isPressing(`self-${myself.userId}`) ? 'player-item--pressing' : ''}`}
+              onTouchStart={(e) => startPress(`self-${myself.userId}`, e, openMenuForSelf)}
+              onTouchMove={movePress}
+              onTouchEnd={endPress}
+              onTouchCancel={endPress}
+              onMouseDown={(e) => startPress(`self-${myself.userId}`, e, openMenuForSelf)}
+              onMouseMove={movePress}
+              onMouseUp={endPress}
+              onMouseLeave={endPress}
+            >
               <div
-                className={`player-item ${isPressing(`self-${myself.userId}`) ? 'player-item--pressing' : ''}`}
-                onTouchStart={(e) => startPress(`self-${myself.userId}`, e, openMenuForSelf)}
-                onTouchMove={movePress}
-                onTouchEnd={endPress}
-                onTouchCancel={endPress}
-                onMouseDown={(e) => startPress(`self-${myself.userId}`, e, openMenuForSelf)}
-                onMouseMove={movePress}
-                onMouseUp={endPress}
-                onMouseLeave={endPress}
+                className="player-avatar"
+                style={{ background: getAvatarColor(myself.nickname) }}
               >
-                <div
-                  className="player-avatar"
-                  style={{ background: getAvatarColor(myself.nickname) }}
-                >
-                  {getInitial(myself.nickname)}
-                </div>
-                <span className="player-name">
-                  {myself.nickname}
-                  <small className="player-stats">W:{myself.wins} L:{myself.losses}</small>
-                </span>
-                {onLogout && (
-                  <div className="player-actions">
-                    <button
-                      className="player-action-btn player-action-btn--danger"
-                      onClick={(e) => { e.stopPropagation(); onLogout(); }}
-                      title="Выйти из аккаунта"
-                    >
-                      🚪
-                    </button>
-                  </div>
-                )}
+                {getInitial(myself.nickname)}
               </div>
-            </>
+              <span className="player-name">
+                {myself.nickname}
+                <small className="player-stats">W:{myself.wins} L:{myself.losses}</small>
+              </span>
+              {!selfHintDismissed && (
+                <span className="player-hint" aria-hidden="true">
+                  👆 нажми и держи
+                </span>
+              )}
+              {onLogout && (
+                <div className="player-actions">
+                  <button
+                    className="player-action-btn player-action-btn--danger"
+                    onClick={(e) => { e.stopPropagation(); onLogout(); }}
+                    title="Выйти из аккаунта"
+                  >
+                    🚪
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Секция: Онлайн */}
@@ -321,8 +341,6 @@ const PlayersPanel = forwardRef(({
             </>
           )}
 
-          {/* [2.20.4] Нижняя ссылка — только «Что умеет чат?».
-              «Мои диалоги» — в long-press меню по секции «Вы». */}
           {onOpenInfo && (
             <button
               type="button"
