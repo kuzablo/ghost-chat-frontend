@@ -44,7 +44,7 @@ import '../styles/Chat.stickers.css';
 // [2.32.8] фикс мигания/прыжков при первом входе в PWA
 // [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
 // [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
-const VERSION = '2.32.13';
+const VERSION = '2.32.14';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
