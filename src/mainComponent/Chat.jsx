@@ -38,6 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.6] подсказка «зажми» — только после первого короткого тапа
 // [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
 // [2.32.4] авто-скрытие мини-плеера 6s → 0.5s
 // [2.32.3] авто-скрытие мини-плеера через 6 секунд
@@ -54,7 +55,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.5';
+const VERSION = '2.32.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -131,6 +132,8 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
+  // [2.32.6] подсказка «зажми» появляется только после первого короткого тапа
+  const [mascotHintVisible, setMascotHintVisible] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
@@ -809,9 +812,9 @@ const Chat = () => {
       return;
     }
 
-    // [2.32.5] короткий тап: работает только как пауза/плей,
-    // и только если плеер уже запущен
+    // [2.32.6] короткий тап, пока плеер не запущен — показываем подсказку
     if (!yt.hasStarted) {
+      setMascotHintVisible(true);
       return;
     }
 
@@ -1073,7 +1076,7 @@ const Chat = () => {
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
-              {!yt.hasStarted && (
+              {!yt.hasStarted && mascotHintVisible && (
                 <div className="mascot-start-hint">зажми</div>
               )}
               {volumeTipVisible && (
