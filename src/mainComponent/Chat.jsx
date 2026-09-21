@@ -38,6 +38,8 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.4] авто-скрытие мини-плеера 6s → 0.5s
+// [2.32.3] авто-скрытие мини-плеера через 6 секунд
 // [2.32.2] fix: мини-плеер скрывается сразу после тапа play
 // [2.32.1] iOS: оверлей-кнопка над YouTube-iframe, без всплытия приложения
 // [2.32.0] InfoPanel: «О приложении», секции с иконками, мини-анимации жестов
@@ -51,7 +53,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.2';
+const VERSION = '2.32.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -187,6 +189,14 @@ const Chat = () => {
   useEffect(() => {
     if (yt.hasStarted) setShowMiniPlayer(false);
   }, [yt.hasStarted]);
+
+  // [2.32.4] мини-плеер живёт 0.5 сек — этого достаточно, чтобы iframe
+  // получил play-команду, дальше он в фоне играет, а окно скрыто
+  useEffect(() => {
+    if (!showMiniPlayer) return;
+    const t = setTimeout(() => setShowMiniPlayer(false), 500);
+    return () => clearTimeout(t);
+  }, [showMiniPlayer]);
 
   useEffect(() => {
     if (!yt.hasStarted) return;
@@ -1482,8 +1492,6 @@ const Chat = () => {
               className="yt-overlay-play"
               onClick={() => {
                 yt.toggle();
-                // [2.32.2] сразу скрываем — иначе мини-плеер висит
-                // поверх чата до следующего тапа
                 setShowMiniPlayer(false);
               }}
               aria-label="Воспроизвести"
