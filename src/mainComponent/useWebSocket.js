@@ -141,7 +141,14 @@ export const useWebSocket = (url, token, onMessage) => {
 
       if (unmountedRef.current) return;
       if (e.code === 1000) return;
-      if (e.code === 4001 || e.code === 4002 || e.code === 4003 || e.code === 4005 || e.code === 4006) {
+      if (
+        e.code === 4000 ||  // [2.28.4] Replaced by new connection — не реконнектим
+        e.code === 4001 ||
+        e.code === 4002 ||
+        e.code === 4003 ||
+        e.code === 4005 ||
+        e.code === 4006
+      ) {
         return;
       }
 
