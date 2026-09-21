@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
+  [2.31.9] PWA: первый запуск медленнее вкладки Safari — шрифты,
+           safe-area, картинки меняют scrollHeight позже последнего RAF.
+           Добавлен ResizeObserver на 2 секунды после mount.
   [2.18.6] Автоскролл при загрузке.
-  Причина бага на ПК: mobile-capsule рендерилась пустым блоком и съедала
-  место, из-за чего scrollHeight в момент двойного RAF был меньше финального.
-  Теперь:
-    - capsule на десктопе скрыт через CSS (Chat.css);
-    - в хуке добавляем подстраховку: ещё один скролл через 300мс.
 */
 
 const cubicBezier = (p1x, p1y, p2x, p2y) => {
@@ -77,7 +75,8 @@ export const useAutoScroll = ({ messages, resetKey }) => {
 
     let raf1 = null;
     let raf2 = null;
-    let lateTimer = null;
+    let lateTimer1 = null;
+    let lateTimer2 = null;
 
     raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
@@ -91,23 +90,62 @@ export const useAutoScroll = ({ messages, resetKey }) => {
           el.scrollTop = el.scrollHeight;
         }
 
-        // [2.18.6] подстраховка: если картинки/лейаут догрузились —
-        // добиваем в самый низ через 300мс
-        clearTimeout(lateTimer);
-        lateTimer = setTimeout(() => {
+        // [2.18.6] подстраховка: картинки/лейаут догрузились
+        clearTimeout(lateTimer1);
+        lateTimer1 = setTimeout(() => {
           const el2 = messagesContainerRef.current;
           if (!el2) return;
           el2.scrollTop = el2.scrollHeight;
         }, 300);
+
+        // [2.31.9] вторая подстраховка — для PWA, где всё медленнее
+        clearTimeout(lateTimer2);
+        lateTimer2 = setTimeout(() => {
+          const el3 = messagesContainerRef.current;
+          if (!el3) return;
+          el3.scrollTop = el3.scrollHeight;
+        }, 900);
       });
     });
 
     return () => {
       if (raf1) cancelAnimationFrame(raf1);
       if (raf2) cancelAnimationFrame(raf2);
-      clearTimeout(lateTimer);
+      clearTimeout(lateTimer1);
+      clearTimeout(lateTimer2);
     };
   }, [messages]);
+
+  /* ===== [2.31.9] ResizeObserver — первые 2 секунды после mount ===== */
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    if (typeof ResizeObserver === 'undefined') return;
+
+    let alive = true;
+    const start = Date.now();
+
+    const ro = new ResizeObserver(() => {
+      if (!alive) return;
+      if (Date.now() - start > 2000) {
+        ro.disconnect();
+        return;
+      }
+      // только если это первый вход, не трогаем при чтении старого
+      if (!hasAutoScrolledRef.current) return;
+      el.scrollTop = el.scrollHeight;
+    });
+
+    ro.observe(el);
+    // также следим за внутренним контейнером (scrollHeight)
+    const inner = el.firstElementChild;
+    if (inner) ro.observe(inner);
+
+    return () => {
+      alive = false;
+      ro.disconnect();
+    };
+  }, [resetKey]);
 
   // Индикатор «вниз»
   useEffect(() => {
