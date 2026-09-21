@@ -1482,11 +1482,8 @@ const Chat = () => {
         </div>
       )}
 
-      <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
+      <div className="yt-hidden-host">
         <div id={yt.containerId} />
-        {showMiniPlayer && (
-          <div className="yt-mini-hint">▶ нажми play</div>
-        )}
       </div>
     </>
   );
