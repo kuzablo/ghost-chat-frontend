@@ -12,6 +12,7 @@ import ChatInput from './components/ChatInput';
 import NotificationPermissionModal from './components/NotificationPermissionModal';
 import ProfilePanel from './components/ProfilePanel';
 import FriendshipRitual from './components/FriendshipRitual';
+import RoomPulse from './components/RoomPulse';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -41,7 +42,9 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
+import '../styles/Chat.roompulse.css';
 
+// [2.33.8] Пульс комнаты — полоска-дыхание под шапкой
 // [2.33.7] React.memo + useCallback: ввод в инпут не перерисовывает историю
 // [2.33.6] фото из файлов + фото в личке
 // [2.33.5] avatars_map — аватарки офлайн-юзеров
@@ -53,7 +56,7 @@ import '../styles/Chat.friendship.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.33.7';
+const VERSION = '2.33.8';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1464,6 +1467,12 @@ const Chat = () => {
               <ThemeIcon />
             </button>
           </div>
+
+          <RoomPulse
+            playersCount={players.length}
+            typingCount={typingUsers.length}
+            isConnected={isConnected}
+          />
 
           <div className="qr-wrap">
             <QRCodeSVG value={window.location.href} size={100} />
