@@ -6,6 +6,8 @@ const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 const PICKER_AUTOHIDE_MS = 2000;
 
 /*
+  [2.32.20] скролл вниз только при новом последнем сообщении,
+            не при реакции/редактировании
   [2.32.19] пикер реакций автоскрывается через 2 сек
   [2.29.3] без плавного скролла при открытии
   [2.26.1] <input> заменён на ChatInput
@@ -29,6 +31,7 @@ const PrivateChat = ({
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const lastMsgIdRef = useRef(null);
 
   useEffect(() => {
     setLocalTypingUser(typingUser);
@@ -41,7 +44,13 @@ const PrivateChat = ({
     return () => clearTimeout(t);
   }, [pickerFor]);
 
+  // [2.32.20] скролл только при новом последнем сообщении
   useEffect(() => {
+    const last = initialMessages[initialMessages.length - 1];
+    const lastId = last?.id ?? null;
+    if (lastId === lastMsgIdRef.current) return;
+    lastMsgIdRef.current = lastId;
+
     const id = requestAnimationFrame(() => {
       const el = messagesContainerRef.current;
       if (el) el.scrollTop = el.scrollHeight;
