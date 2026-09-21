@@ -1,0 +1,32 @@
+{
+  "name": "banjoboy's crew",
+  "short_name": "crew",
+  "description": "Чат banjoboy's crew",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5A9C0",
+  "theme_color": "#F5A9C0",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
