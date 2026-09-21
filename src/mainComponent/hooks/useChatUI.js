@@ -59,8 +59,8 @@ export const useChatUI = () => {
             ],
           },
           {
-            duration: 550,
-            easing: 'ease-in-out',
+            duration: 380,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
             pseudoElement: '::view-transition-new(root)',
           }
         );

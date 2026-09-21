@@ -1158,14 +1158,22 @@ button:active {
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: none;
   mix-blend-mode: normal;
 }
+
 ::view-transition-old(root) {
   z-index: 1;
+  animation: fsOldFade 0.26s ease-out forwards;
 }
+
 ::view-transition-new(root) {
   z-index: 2;
+  animation: none;
+}
+
+@keyframes fsOldFade {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 .theme-toggle,
