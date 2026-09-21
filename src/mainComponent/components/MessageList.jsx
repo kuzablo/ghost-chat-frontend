@@ -155,7 +155,6 @@ const MessageList = ({
     }, 1600);
   };
 
-  // ===== Свайпы + long press =====
   const SWIPE_THRESHOLD = 60;
   const SWIPE_MAX = 80;
   const DIRECTION_LOCK = 8;
@@ -324,7 +323,8 @@ const MessageList = ({
                         🗑
                       </div>
                     )}
-                    {editRingId === m.id && <div className="msg-edit-ring" />}
+
+                    {/* [2.30.1] кольцо long-press внутри image-wrap — по границам картинки */}
                     <div
                       className="msg-image-only-wrap"
                       style={getSwipeStyle(m)}
@@ -332,6 +332,8 @@ const MessageList = ({
                       onTouchMove={(e) => handleMsgTouchMove(e, m)}
                       onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                     >
+                      {editRingId === m.id && <div className="msg-edit-ring" />}
+
                       {replyBlock && (
                         <div className="msg-image-only-reply-wrap">{replyBlock}</div>
                       )}
@@ -382,27 +384,27 @@ const MessageList = ({
                           {formatMessageDate(m.time)}
                         </span>
                       </div>
-
-                      {hasReactions(m) && (
-                        <div
-                          className={`msg-image-only-reactions ${
-                            activeMessageId === m.id ? 'msg-image-only-reactions--above-picker' : ''
-                          }`}
-                        >
-                          {Object.entries(m.reactions).map(([emoji, users]) => (
-                            <span
-                              key={emoji}
-                              className={`image-only-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
-                            >
-                              {emoji}
-                              {users.length > 1 && (
-                                <span className="image-only-reaction-count">{users.length}</span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
+
+                    {hasReactions(m) && (
+                      <div
+                        className={`msg-image-only-reactions ${
+                          activeMessageId === m.id ? 'msg-image-only-reactions--above-picker' : ''
+                        }`}
+                      >
+                        {Object.entries(m.reactions).map(([emoji, users]) => (
+                          <span
+                            key={emoji}
+                            className={`image-only-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
+                          >
+                            {emoji}
+                            {users.length > 1 && (
+                              <span className="image-only-reaction-count">{users.length}</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </React.Fragment>

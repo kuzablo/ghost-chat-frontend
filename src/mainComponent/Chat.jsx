@@ -35,6 +35,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.30.1] кольцо long-press у image-only — по границам картинки
 // [2.30.0] DialogsPanel: кнопка «←», свайп вправо, секции по датам
 // [2.29.2] закрытие лички из диалогов возвращает в диалоги
 // [2.29.0] PlayersPanel: свой профиль с обводкой и подсказкой, бейдж в меню
@@ -43,7 +44,7 @@ import '../styles/Chat.stickers.css';
 // [2.27.0] счётчик непрочитанных в заголовке вкладки + Badging API
 // [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
 // [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
-const VERSION = '2.30.0';
+const VERSION = '2.30.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 
