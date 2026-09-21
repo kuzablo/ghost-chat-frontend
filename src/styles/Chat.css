@@ -1314,7 +1314,7 @@ body.dark .theme-icon-moon {
 }
 
 /* ============================================================= */
-/* [2.32.27] Склейка подряд от одного автора                     */
+/* [2.32.28] Склейка подряд от одного автора                     */
 /* ============================================================= */
 
 /* placeholder под аватар у не-first сообщений */
@@ -1322,35 +1322,37 @@ body.dark .theme-icon-moon {
   visibility: hidden;
 }
 
-/* уменьшенный gap между склеенными */
+/* между склеенными — 0 отступ, бордеры накладываются */
 .msg--in-group {
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
-/* углы карточки внутри группы — сплющены сверху или снизу */
-.msg--group-start:not(.msg--group-end) .msg-content {
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
+.msg--in-group:not(.msg--group-start) {
+  margin-top: -2px;
 }
 
-.msg--group-end:not(.msg--group-start) .msg-content {
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
+/* внутренние (смежные) углы — плоские */
+.msg--in-group:not(.msg--group-start) .msg-content {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
-.msg--in-group:not(.msg--group-start):not(.msg--group-end) .msg-content {
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
+.msg--in-group:not(.msg--group-end) .msg-content {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
-/* плавный переход при редактировании (когда группа распадается) */
+/* последний в группе отбит от следующей карточки */
+.msg--group-end {
+  margin-bottom: 10px;
+}
+
+/* плавный переход при распаде группы во время редактирования */
 .msg-content {
   transition: border-radius 0.18s ease, margin 0.18s ease;
 }
 
-/* в image-only склейка не работает — отступы как раньше */
+/* в image-only склейки нет */
 .msg--image-only {
   margin-bottom: 10px;
 }
