@@ -1,56 +1,27 @@
 /*
+  [2.32.8] iframe YouTube видимый 1×1px в правом нижнем углу.
+           Раньше был за экраном — iOS не играл звук.
   [2.15.23] Стили маскота-радио.
-  - минии-плеер для первого play (iOS)
-  - дребезжание маскота и мини-эквалайзер когда играет
-  - подсказка громкости, зелёной точки больше нет
-  - название трека в шапке
 */
 
 .yt-hidden-host {
   position: fixed;
-  top: -9999px;
-  left: -9999px;
-  width: 200px;
-  height: 120px;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
   opacity: 0.01;
   pointer-events: none;
-  z-index: -1;
-  transition: opacity 0.2s ease-out;
+  z-index: 1;
 }
 
-.yt-hidden-host--visible {
-  top: auto;
-  left: auto;
-  bottom: 20px;
-  right: 20px;
-  opacity: 1;
-  pointer-events: auto;
-  z-index: 9999;
-  background: #000;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-}
-
-.yt-hidden-host--visible iframe {
-  width: 200px;
-  height: 120px;
+.yt-hidden-host iframe {
+  width: 1px;
+  height: 1px;
   display: block;
   border: 0;
-}
-
-.yt-mini-hint {
-  position: absolute;
-  top: -24px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: #FFF;
-  font-size: 12px;
-  font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
-  animation: mascotTipFade 0.2s ease-out;
 }
 
 .chat-header-mascot-wrap {
@@ -158,69 +129,4 @@
 @keyframes trackTitleFade {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ============================================================= */
-/* [2.32.1] Прозрачный оверлей над iframe YouTube                */
-/* ============================================================= */
-
-.yt-overlay-play {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  z-index: 10;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.yt-overlay-play:focus {
-  outline: none;
-}
-
-/* ============================================================= */
-/* [2.32.5] Подсказка «зажми» над маскотом, пока плеер не запущен */
-/* ============================================================= */
-
-.mascot-start-hint {
-  position: absolute;
-  top: -28px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.85);
-  color: #FFF;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 12px;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 12;
-  animation: mascotHintBob 2.4s ease-in-out infinite;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.mascot-start-hint::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid rgba(0, 0, 0, 0.85);
-}
-
-@keyframes mascotHintBob {
-  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.85; }
-  50%      { transform: translateX(-50%) translateY(-3px); opacity: 1; }
 }
