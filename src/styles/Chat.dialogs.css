@@ -1,4 +1,4 @@
-/* ===== [2.17.0] Панель диалогов ===== */
+/* ===== [2.17.0 → 2.30.0] Панель диалогов ===== */
 
 .dialogs-overlay {
   position: fixed;
@@ -21,7 +21,7 @@ body.dark .dialogs-overlay {
   position: fixed;
   top: 60px;
   left: 10px;
-  width: 320px;
+  width: 340px;
   max-width: 92vw;
   max-height: 72vh;
   background: var(--card-bg);
@@ -33,6 +33,7 @@ body.dark .dialogs-overlay {
   overflow: hidden;
   animation: dialogsPanelIn 0.22s cubic-bezier(0.34, 1.2, 0.64, 1);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  will-change: transform;
 }
 
 @keyframes dialogsPanelIn {
@@ -40,42 +41,69 @@ body.dark .dialogs-overlay {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ===== Шапка ===== */
+
 .dialogs-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 10px 10px 10px 6px;
   border-bottom: 2px solid var(--card-border);
   flex-shrink: 0;
 }
 
-.dialogs-header h4 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: 0.3px;
-}
-
-.dialogs-close {
+.dialogs-back {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   background: transparent;
   border: none;
-  color: var(--text);
-  font-size: 22px;
-  line-height: 1;
-  padding: 0 4px;
+  color: var(--nick-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
   touch-action: manipulation;
 }
 
-.dialogs-close:active {
-  transform: scale(0.9);
+.dialogs-back:hover {
+  background: var(--messages-bg);
 }
+
+.dialogs-back:active {
+  transform: scale(0.9);
+  background: var(--messages-bg);
+}
+
+body.dark .dialogs-back {
+  color: #3BB5E8;
+}
+
+.dialogs-title {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.dialogs-header-spacer {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+/* ===== Список ===== */
 
 .dialogs-list {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 4px 0 10px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
@@ -89,12 +117,59 @@ body.dark .dialogs-overlay {
   border-radius: 8px;
 }
 
-.dialogs-empty {
-  padding: 24px 16px;
-  font-size: 13px;
+/* ===== Секции по датам ===== */
+
+.dialogs-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialogs-section-label {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card-bg);
+  padding: 8px 18px 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* ===== Пустое состояние ===== */
+
+.dialogs-empty {
+  padding: 40px 24px;
   text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dialogs-empty-icon {
+  font-size: 42px;
+  line-height: 1;
+  opacity: 0.55;
+  margin-bottom: 4px;
+}
+
+.dialogs-empty-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.dialogs-empty-text {
+  font-size: 13px;
   line-height: 1.5;
+  max-width: 240px;
+}
+
+.dialogs-empty-text b {
+  color: var(--nick-color);
 }
 
 /* ===== Строка диалога ===== */
@@ -102,9 +177,9 @@ body.dark .dialogs-overlay {
 .dialog-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 16px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -125,37 +200,36 @@ body.dark .dialogs-overlay {
 }
 
 .dialog-item--unread {
-  background: rgba(59, 181, 232, 0.08);
+  background: rgba(59, 181, 232, 0.06);
 }
 
 .dialog-item--unread:hover {
-  background: rgba(59, 181, 232, 0.14);
+  background: rgba(59, 181, 232, 0.12);
 }
 
 /* аватар */
 
 .dialog-avatar {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   color: #FFF;
   border: 2px solid var(--card-border);
   flex-shrink: 0;
 }
 
-/* зелёная точка онлайна */
 .dialog-online {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 11px;
-  height: 11px;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #22C55E;
   border: 2px solid var(--card-bg);
@@ -169,7 +243,7 @@ body.dark .dialogs-overlay {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .dialog-top {
@@ -180,7 +254,7 @@ body.dark .dialogs-overlay {
 }
 
 .dialog-nick {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--text);
   white-space: nowrap;
@@ -190,7 +264,7 @@ body.dark .dialogs-overlay {
 }
 
 .dialog-time {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--time-color);
   flex-shrink: 0;
 }
@@ -204,7 +278,7 @@ body.dark .dialogs-overlay {
 }
 
 .dialog-last {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -220,18 +294,18 @@ body.dark .dialogs-overlay {
 /* счётчик непрочитанных */
 .dialog-badge {
   flex-shrink: 0;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
   background: var(--btn-bg);
   color: var(--btn-text);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--card-border);
+  border: 2px solid var(--card-border);
   animation: dialogBadgePulse 1.6s ease-in-out infinite;
 }
 
@@ -274,6 +348,10 @@ body.dark .dialogs-overlay {
     display: none !important;
   }
 
+  .dialogs-overlay {
+    background: transparent;
+  }
+
   .dialogs-panel {
     top: 0;
     left: 0;
@@ -284,27 +362,47 @@ body.dark .dialogs-overlay {
     max-height: 100vh;
     border-radius: 0;
     border-width: 0;
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   .dialogs-header {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-bottom-width: 2px;
   }
 
-  .dialogs-header h4 {
-    font-size: 16px;
+  .dialogs-title {
+    font-size: 17px;
+  }
+
+  .dialogs-back {
+    width: 44px;
+    height: 44px;
+  }
+
+  .dialogs-header-spacer {
+    width: 44px;
+    height: 44px;
+  }
+
+  .dialogs-section-label {
+    padding: 10px 20px 4px;
   }
 
   .dialog-item {
-    padding: 12px 16px;
+    padding: 12px 18px;
   }
 
   .dialog-avatar {
-    width: 44px;
-    height: 44px;
-    font-size: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
   }
 
-  .dialog-nick { font-size: 14px; }
-  .dialog-last { font-size: 13px; }
+  .dialog-nick { font-size: 15px; }
+  .dialog-last { font-size: 13.5px; }
+  .dialog-time { font-size: 11px; }
+
+  .dialogs-empty {
+    padding: 60px 24px;
+  }
 }
