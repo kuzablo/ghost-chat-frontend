@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.21.0] profile_changed отдаёт font/textColor/textRotation
   [2.20.0] profileData + обработка profile_changed / friend_removed
   [2.27.0] hiddenUnread
   [2.26.0] черновик
@@ -313,12 +314,15 @@ export const useChat = ({
         setProfileData(msg.data);
         return true;
 
+      // [2.21.0] font/textColor/textRotation добавлены
       case 'profile_changed': {
-        const { userId, avatarUrl, bio } = msg.data;
+        const { userId, avatarUrl, bio, font, textColor, textRotation } = msg.data;
         setFriends(prev => prev.map(f => f.userId === userId ? { ...f, avatarUrl } : f));
         setPlayers(prev => prev.map(p => p.userId === userId ? { ...p, avatarUrl } : p));
         setProfileData(prev => (
-          prev && prev.userId === userId ? { ...prev, avatarUrl, bio } : prev
+          prev && prev.userId === userId
+            ? { ...prev, avatarUrl, bio, font, textColor, textRotation }
+            : prev
         ));
         return true;
       }

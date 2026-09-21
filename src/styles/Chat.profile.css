@@ -260,3 +260,189 @@ body.dark .profile-overlay { background: rgba(0, 0, 0, 0.7); }
     right: 12px;
   }
 }
+
+/* ============================================================= */
+/* [2.21.0] Кастомизация bio — шрифт, цвет, поворот              */
+/* ============================================================= */
+
+.profile-bio-stage {
+  position: relative;
+  padding: 4px 2px;
+}
+
+.profile-bio-styled {
+  transition: transform 0.2s ease, color 0.15s ease, font-family 0.15s ease;
+}
+
+/* ===== Шрифты ===== */
+
+.profile-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.profile-font-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.profile-font-row::-webkit-scrollbar { display: none; }
+
+.profile-font-tile {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--input-bg);
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  transition: transform 0.12s, border-color 0.15s, background 0.15s;
+}
+
+.profile-font-tile:active { transform: scale(0.94); }
+
+.profile-font-tile.active {
+  border-color: var(--btn-bg);
+  background: rgba(59, 181, 232, 0.12);
+  box-shadow: 0 0 0 2px rgba(59, 181, 232, 0.25);
+}
+
+/* ===== Цвета ===== */
+
+.profile-color-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 2px 8px;
+}
+
+.profile-color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--card-border);
+  cursor: pointer;
+  padding: 0;
+  touch-action: manipulation;
+  transition: transform 0.12s, box-shadow 0.15s;
+}
+
+.profile-color-swatch:active { transform: scale(0.9); }
+
+.profile-color-swatch.active {
+  box-shadow: 0 0 0 3px var(--btn-bg);
+  transform: scale(1.08);
+}
+
+.profile-color-custom {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--input-bg);
+  border: 2px dashed var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-color-custom input[type="color"] {
+  position: absolute;
+  inset: -8px;
+  width: 60px;
+  height: 60px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+/* ===== Поворот ===== */
+
+.profile-rotation-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px 8px;
+}
+
+.profile-rotation-slider {
+  flex: 1;
+  height: 28px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  outline: none;
+  touch-action: manipulation;
+}
+
+.profile-rotation-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--messages-bg);
+  border: 1.5px solid var(--card-border);
+}
+
+.profile-rotation-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--messages-bg);
+  border: 1.5px solid var(--card-border);
+}
+
+.profile-rotation-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  border: 2px solid var(--card-border);
+  cursor: pointer;
+  margin-top: -10px;
+}
+
+.profile-rotation-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  border: 2px solid var(--card-border);
+  cursor: pointer;
+}
+
+.profile-rotation-reset {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--input-bg);
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+.profile-rotation-reset:active { transform: scale(0.9); }

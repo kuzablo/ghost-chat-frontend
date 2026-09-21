@@ -2,13 +2,31 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
+  [2.21.0] Кастомизация bio: 7 шрифтов, цвет, поворот.
   [2.20.0] Профиль: bio, аватар, удаление друга.
-           Self — редактирование. Other — просмотр + действия.
-           Открывается из long-press меню PlayerPanel.
 */
 
 const MAX_BIO = 200;
 const MAX_AVATAR_MB = 2;
+const MAX_ROTATION = 15;
+
+const FONTS = [
+  { id: 'default',   name: 'Обычный',   css: 'inherit' },
+  { id: 'unbounded', name: 'Unbounded', css: "'Unbounded', sans-serif" },
+  { id: 'caveat',    name: 'Caveat',    css: "'Caveat', cursive" },
+  { id: 'pacifico',  name: 'Pacifico',  css: "'Pacifico', cursive" },
+  { id: 'cormorant', name: 'Cormorant', css: "'Cormorant Garamond', serif" },
+  { id: 'amatic',    name: 'Amatic',    css: "'Amatic SC', cursive" },
+  { id: 'marck',     name: 'Marck',     css: "'Marck Script', cursive" },
+  { id: 'neucha',    name: 'Neucha',    css: "'Neucha', cursive" },
+];
+
+const TEXT_COLORS = [
+  '#111111', '#FFFFFF', '#3BB5E8', '#E11D48',
+  '#F5A9C0', '#22C55E', '#A855F7', '#F59E0B',
+];
+
+const getFontCss = (id) => FONTS.find(f => f.id === id)?.css || 'inherit';
 
 const ProfilePanel = ({
   data,
@@ -22,19 +40,24 @@ const ProfilePanel = ({
 }) => {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [font, setFont] = useState('default');
+  const [textColor, setTextColor] = useState('#111111');
+  const [textRotation, setTextRotation] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [savedAt, setSavedAt] = useState(0);
   const fileRef = useRef(null);
 
-  // синхронизация при смене data
   useEffect(() => {
     if (!data) return;
     setBio(data.bio || '');
     setAvatarUrl(data.avatarUrl || null);
+    setFont(data.font || 'default');
+    setTextColor(data.textColor || '#111111');
+    setTextRotation(data.textRotation || 0);
     setError('');
     setSavedAt(0);
-  }, [data?.userId, data?.bio, data?.avatarUrl]);
+  }, [data?.userId, data?.bio, data?.avatarUrl, data?.font, data?.textColor, data?.textRotation]);
 
   if (!data) {
     return (
@@ -50,21 +73,20 @@ const ProfilePanel = ({
 
   const isSelf = !!data.isSelf;
   const isAdmin = data.role === 'admin';
-  const dirty = bio !== (data.bio || '') || (avatarUrl || null) !== (data.avatarUrl || null);
+  const dirty =
+    bio !== (data.bio || '') ||
+    (avatarUrl || null) !== (data.avatarUrl || null) ||
+    font !== (data.font || 'default') ||
+    textColor !== (data.textColor || '#111111') ||
+    textRotation !== (data.textRotation || 0);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Только изображения');
-      return;
-    }
-    if (file.size > MAX_AVATAR_MB * 1024 * 1024) {
-      setError(`Файл больше ${MAX_AVATAR_MB} МБ`);
-      return;
-    }
+    if (!file.type.startsWith('image/')) { setError('Только изображения'); return; }
+    if (file.size > MAX_AVATAR_MB * 1024 * 1024) { setError(`Файл больше ${MAX_AVATAR_MB} МБ`); return; }
 
     setUploading(true);
     setError('');
@@ -76,8 +98,7 @@ const ProfilePanel = ({
       const resp = await res.json();
       if (!res.ok) throw new Error(resp.error || 'Upload failed');
       setAvatarUrl(resp.avatarUrl);
-      // авто-сохраняем аватар сразу
-      onSave(bio.slice(0, MAX_BIO), resp.avatarUrl);
+      onSave(bio.slice(0, MAX_BIO), resp.avatarUrl, font, textColor, textRotation);
     } catch (err) {
       setError('Не удалось загрузить: ' + (err?.message || ''));
     } finally {
@@ -87,7 +108,7 @@ const ProfilePanel = ({
 
   const handleSave = () => {
     if (!dirty) return;
-    onSave(bio.slice(0, MAX_BIO), avatarUrl);
+    onSave(bio.slice(0, MAX_BIO), avatarUrl, font, textColor, textRotation);
     setSavedAt(Date.now());
   };
 
@@ -100,6 +121,13 @@ const ProfilePanel = ({
   const avatarStyle = avatarUrl
     ? { backgroundImage: `url(${avatarUrl})` }
     : { background: getAvatarColor(data.nickname) };
+
+  const bioStyle = {
+    fontFamily: getFontCss(font),
+    color: textColor,
+    transform: `rotate(${textRotation}deg)`,
+    transformOrigin: 'left center',
+  };
 
   return (
     <>
@@ -140,16 +168,91 @@ const ProfilePanel = ({
 
         <div className="profile-body">
           <div className="profile-section-label">О себе</div>
-          {isSelf ? (
-            <>
+
+          <div className="profile-bio-stage">
+            {isSelf ? (
               <textarea
-                className="profile-bio-input"
+                className="profile-bio-input profile-bio-styled"
                 value={bio}
                 onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO))}
                 placeholder="Пара слов о себе…"
                 rows={3}
+                style={bioStyle}
               />
+            ) : (
+              <div className="profile-bio-read profile-bio-styled" style={bioStyle}>
+                {data.bio ? data.bio : <i>Пока ничего не рассказал</i>}
+              </div>
+            )}
+          </div>
+
+          {isSelf && (
+            <>
               <div className="profile-bio-count">{bio.length} / {MAX_BIO}</div>
+
+              <div className="profile-custom">
+                <div className="profile-section-label">Шрифт</div>
+                <div className="profile-font-row">
+                  {FONTS.map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className={`profile-font-tile ${font === f.id ? 'active' : ''}`}
+                      style={{ fontFamily: f.css }}
+                      onClick={() => setFont(f.id)}
+                      title={f.name}
+                    >
+                      Аa
+                    </button>
+                  ))}
+                </div>
+
+                <div className="profile-section-label">Цвет текста</div>
+                <div className="profile-color-row">
+                  {TEXT_COLORS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`profile-color-swatch ${textColor.toLowerCase() === c.toLowerCase() ? 'active' : ''}`}
+                      style={{ background: c }}
+                      onClick={() => setTextColor(c)}
+                      aria-label={c}
+                    />
+                  ))}
+                  <label className="profile-color-custom" title="Свой цвет">
+                    <input
+                      type="color"
+                      value={textColor}
+                      onChange={(e) => setTextColor(e.target.value)}
+                    />
+                    <span>🎨</span>
+                  </label>
+                </div>
+
+                <div className="profile-section-label">
+                  Поворот: {textRotation > 0 ? '+' : ''}{textRotation}°
+                </div>
+                <div className="profile-rotation-row">
+                  <input
+                    type="range"
+                    min={-MAX_ROTATION}
+                    max={MAX_ROTATION}
+                    step={1}
+                    value={textRotation}
+                    onChange={(e) => setTextRotation(Number(e.target.value))}
+                    className="profile-rotation-slider"
+                  />
+                  <button
+                    type="button"
+                    className="profile-rotation-reset"
+                    onClick={() => setTextRotation(0)}
+                    title="Сбросить"
+                  >
+                    ↺
+                  </button>
+                </div>
+              </div>
+
               {error && <div className="profile-error">{error}</div>}
               <button
                 className="btn profile-save-btn"
@@ -159,25 +262,15 @@ const ProfilePanel = ({
                 {savedAt && !dirty ? 'Сохранено ✓' : 'Сохранить'}
               </button>
             </>
-          ) : (
-            <div className="profile-bio-read">
-              {data.bio ? data.bio : <i>Пока ничего не рассказал</i>}
-            </div>
           )}
         </div>
 
         {!isSelf && (
           <div className="profile-actions">
-            <button
-              className="btn profile-action-btn"
-              onClick={() => onOpenPrivateChat(data.userId, data.nickname)}
-            >
+            <button className="btn profile-action-btn" onClick={() => onOpenPrivateChat(data.userId, data.nickname)}>
               ✉️ Написать
             </button>
-            <button
-              className="btn profile-action-btn"
-              onClick={() => onRequestDuel()}
-            >
+            <button className="btn profile-action-btn" onClick={() => onRequestDuel()}>
               ⚔️ Дуэль
             </button>
             {data.isFriend && (
