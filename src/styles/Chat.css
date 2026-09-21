@@ -803,7 +803,7 @@ body.dark .status { color: var(--text-muted); }
   z-index: 999;
 }
 
-.theme-toggle, .players-toggle {
+.theme-toggle, .players-toggle, .dialogs-toggle {
   position: fixed;
   z-index: 2200;
   background: var(--card-bg);
@@ -823,12 +823,13 @@ body.dark .status { color: var(--text-muted); }
   transition: transform 0.15s, background 0.2s;
 }
 
-.theme-toggle:active, .players-toggle:active {
+.theme-toggle:active, .players-toggle:active, .dialogs-toggle:active {
   transform: scale(0.92);
 }
 
 .theme-toggle { top: 10px; right: 10px; }
 .players-toggle { top: 10px; left: 10px; }
+.dialogs-toggle { top: 10px; left: 62px; }
 
 .unread-badge {
   position: absolute;
