@@ -119,6 +119,13 @@ body.dark .blur-overlay {
 
 .confirm-btn { background: var(--btn-bg); }
 
+/* [2.32.40] danger-вариант confirm-кнопки — для бана/удаления */
+.confirm-btn--danger {
+  background: var(--danger);
+  border-color: var(--card-border);
+  color: #FFF;
+}
+
 .cancel-btn {
   background: transparent;
   border: 3px solid var(--card-border);

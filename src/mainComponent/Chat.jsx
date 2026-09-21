@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
 import PlayersPanel from './components/PlayersPanel';
@@ -41,12 +40,13 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.40] ConfirmBanModal удалён — используется ConfirmModal с danger
 // [2.32.39] useMemo для avatarByUser/imageMessages — не пересобираем на каждом WS
 // [2.32.38] свайп влево от правого края → диалоги
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.32.39';
+const VERSION = '2.32.40';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1306,9 +1306,12 @@ const Chat = () => {
         />
       )}
 
-      <ConfirmBanModal
+      <ConfirmModal
         open={!!banConfirm}
-        nickname={banConfirm?.nickname}
+        title={`Забанить ${banConfirm?.nickname || 'пользователя'} навсегда?`}
+        description="Пользователь больше не сможет войти в чат."
+        confirmText="Да, забанить"
+        danger
         onConfirm={() => {
           if (banConfirm) {
             banForever(banConfirm.userId);
