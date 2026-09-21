@@ -5,10 +5,11 @@ import ChatInput from './ChatInput';
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 
 /*
-  [2.26.1] <input> заменён на ChatInput (тот же contentEditable).
-           Нет InputAssistant на iOS, единое поведение с общим чатом.
-  [2.19.4] PrivateChat принимает sendMessage (из useWebSocket)
-           вместо сырого ws.
+  [2.29.3] Без плавного скролла при открытии: сразу показываем низ
+           списка через scrollTop у контейнера, а не scrollIntoView
+           (тот прокручивал весь документ на iOS).
+  [2.26.1] <input> заменён на ChatInput.
+  [2.19.4] PrivateChat принимает sendMessage (из useWebSocket).
 */
 const PrivateChat = ({
   userId,
@@ -33,10 +34,15 @@ const PrivateChat = ({
     setLocalTypingUser(typingUser);
   }, [typingUser]);
 
+  // [2.29.3] мгновенный скролл к низу контейнера
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    const id = requestAnimationFrame(() => {
+      const el = messagesContainerRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+    return () => cancelAnimationFrame(id);
   }, [initialMessages]);
 
   const handleSend = () => {
@@ -95,7 +101,6 @@ const PrivateChat = ({
     setPickerFor(id);
   };
 
-  /* [2.26.1] адаптировано под ChatInput: text вместо event */
   const handlePrivateInput = (text) => {
     setInput(text);
     if (!sendMessage) return;
