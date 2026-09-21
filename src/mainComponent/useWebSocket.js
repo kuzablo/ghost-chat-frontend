@@ -5,9 +5,8 @@ const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 
 /*
-  [2.28.1] Фикс iOS PWA: heartbeat + переподключение при возврате
-           из фона (visibilitychange / pageshow / online).
-  [правка 2.14.23] ws отдаётся как state.
+  [2.28.2] диагностика: sendLog() перекидывает клиентские события на сервер.
+  [2.28.1] heartbeat + переподключение из фона.
 */
 export const useWebSocket = (url, token, onMessage) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -25,6 +24,15 @@ export const useWebSocket = (url, token, onMessage) => {
 
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
   useEffect(() => { tokenRef.current = token; }, [token]);
+
+  const sendLog = (text) => {
+    try {
+      const socket = wsRef.current;
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'client_log', data: { text } }));
+      }
+    } catch { /* noop */ }
+  };
 
   const clearHeartbeat = () => {
     if (heartbeatTimerRef.current) {
@@ -78,14 +86,21 @@ export const useWebSocket = (url, token, onMessage) => {
     wsRef.current = socket;
     setWs(socket);
 
+    const hasToken = !!tokenRef.current;
+    sendLog(`new WebSocket, hasToken=${hasToken}`);
+
     socket.onopen = () => {
       reconnectAttemptRef.current = 0;
       setIsConnected(true);
       setError(null);
       console.log('[useWebSocket] Connected');
+      sendLog('onopen');
 
       if (tokenRef.current) {
         socket.send(JSON.stringify({ type: 'auth', token: tokenRef.current }));
+        sendLog('auth sent');
+      } else {
+        sendLog('auth NOT sent — token empty');
       }
 
       clearHeartbeat();
@@ -108,10 +123,11 @@ export const useWebSocket = (url, token, onMessage) => {
       }
     };
 
-    socket.onerror = (e) => {
-      console.error('[useWebSocket] Error:', e);
+    socket.onerror = () => {
+      console.error('[useWebSocket] Error');
       setError('WebSocket error');
       setIsConnected(false);
+      sendLog('onerror');
     };
 
     socket.onclose = (e) => {
@@ -121,6 +137,7 @@ export const useWebSocket = (url, token, onMessage) => {
       wsRef.current = null;
 
       console.warn('[useWebSocket] Closed:', e.code, e.reason);
+      sendLog(`onclose code=${e.code} reason=${e.reason || ''} clean=${e.wasClean}`);
 
       if (unmountedRef.current) return;
       if (e.code === 1000) return;
@@ -150,7 +167,6 @@ export const useWebSocket = (url, token, onMessage) => {
     };
   }, [connect, token]);
 
-  /* [2.28.1] Возврат из фона / сети / bfcache */
   useEffect(() => {
     const ensureAlive = () => {
       if (unmountedRef.current) return;
