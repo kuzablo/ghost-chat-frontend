@@ -1,19 +1,9 @@
 /* ===== Image-only сообщения (только изображение) ===== */
 
 /*
-  [правка 2.14.18]
-  Что было:
-    - время в верхнем оверлее — обрезалось на узких карточках;
-    - реакции — в верхнем оверлее, обрезались вместе с временем;
-    - overflow: hidden на wrap мешал реакциям вылезать.
-
-  Что стало:
-    - карточка пропорциональна картинке, ограничена max-width/max-height;
-    - верхний оверлей: ник + действия (без времени и реакций);
-    - нижний оверлей: время справа с градиентом;
-    - реакции — под карточкой, вылезают за нижнюю границу,
-      визуал 1-в-1 с private-reaction-badge (круглые 15×15, счётчик при >1);
-    - overflow: visible на wrap, чтобы реакции не обрезались.
+  [2.31.6] Реакции переехали в правый верхний угол, выступая за границу.
+           Размер ×2 для наглядности.
+  [правка 2.14.18] история про реакция и wrap.
 */
 
 .msg--image-only {
@@ -25,8 +15,9 @@
   gap: 8px;
   width: fit-content;
   max-width: 100%;
-  /* запас снизу: под карточкой вылезают реакции */
-  margin-bottom: 22px;
+  /* [2.31.6] запас сверху — под выступающие реакции */
+  margin-top: 10px;
+  margin-bottom: 8px;
 }
 
 .msg-content--image-only {
@@ -46,7 +37,7 @@
   display: inline-block;
   max-width: var(--image-max-w);
   max-height: var(--image-max-h);
-  /* overflow: visible — нужно, чтобы реакции вылезали за нижнюю границу */
+  /* overflow: visible — нужно, чтобы реакции вылезали за границу */
   overflow: visible;
   background: transparent;
 }
@@ -102,6 +93,8 @@
   display: flex;
   gap: 4px;
   pointer-events: auto;
+  /* [2.31.6] сдвигаем чуть ниже, чтобы не конфликтовать с реакциями сверху */
+  margin-top: 22px;
 }
 
 .msg-action-btn--overlay {
@@ -146,40 +139,36 @@
   white-space: nowrap;
 }
 
-/* ===== Реакции под карточкой (стиль из приватного чата) ===== */
-
-/*
-  Бейджи вылезают за нижнюю границу карточки.
-  Размер, форма, счётчик — 1-в-1 с .private-reaction-badge / .private-reaction-count.
-  Появление — та же анимация reactionPop.
-*/
+/* ============================================================= */
+/* [2.31.6] Реакции — правый верхний угол, выступают за границу   */
+/* ============================================================= */
 
 .msg-image-only-reactions {
   position: absolute;
-  bottom: 0;
-  left: 8px;
-  transform: translateY(65%);
+  top: -14px;
+  right: 6px;
   display: flex;
-  gap: 3px;
-  z-index: 3;
+  gap: 4px;
+  z-index: 10;
   pointer-events: none;
 }
 
 .image-only-reaction-badge {
-  width: 15px;
-  height: 15px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--card-bg);
-  border: 1.5px solid var(--card-border);
+  border: 2px solid var(--card-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 18px;
   line-height: 1;
   position: relative;
   padding: 0;
   animation: imageOnlyReactionPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .image-only-reaction-badge.own {
@@ -189,16 +178,16 @@
 
 .image-only-reaction-count {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 10px;
-  height: 10px;
-  padding: 0 2px;
-  border-radius: 5px;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
   background: var(--nick-color);
   color: #FFF;
-  border: 1px solid var(--card-bg);
-  font-size: 7px;
+  border: 2px solid var(--card-bg);
+  font-size: 10px;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -226,7 +215,8 @@ body.dark .image-only-reaction-count {
     max-width: 100%;
     width: fit-content;
     gap: 6px;
-    margin-bottom: 20px;
+    margin-top: 10px;
+    margin-bottom: 6px;
   }
 
   .msg-content--image-only {
@@ -246,43 +236,30 @@ body.dark .image-only-reaction-count {
     padding: 2px 5px !important;
     font-size: 10px !important;
   }
+  .msg-actions--overlay {
+    margin-top: 20px;
+  }
 
-  /* реакции на мобилке — как private-reaction-badge */
+  /* [2.31.6] реакции — 28×28, чуть плотнее */
+  .msg-image-only-reactions {
+    top: -12px;
+    right: 4px;
+    gap: 3px;
+  }
+
   .image-only-reaction-badge {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    border-width: 1.5px;
   }
 
   .image-only-reaction-count {
-    min-width: 11px;
-    height: 11px;
-    font-size: 7px;
+    min-width: 14px;
+    height: 14px;
+    font-size: 9px;
+    top: -5px;
+    right: -5px;
+    padding: 0 3px;
   }
-
-  .msg-image-only-reactions {
-    left: 8px;
-  }
-}
-
-/* ============================================================= */
-/* [2.31.1] Бурст ❤️ при двойном тапе по картинке в карточке      */
-/* ============================================================= */
-
-.msg-heart-burst {
-  position: absolute;
-  font-size: 72px;
-  line-height: 1;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  animation: msgHeartBurst 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  z-index: 5;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.55));
-}
-
-@keyframes msgHeartBurst {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
-  35%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
-  65%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
 }
