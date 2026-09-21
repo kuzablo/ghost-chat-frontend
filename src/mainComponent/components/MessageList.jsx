@@ -46,17 +46,26 @@ const MessageList = ({
   const lastTapRef = useRef({ id: null, time: 0, x: 0, y: 0 });
   const [heartBurst, setHeartBurst] = useState(null);
 
+  const editTextareaRef = useRef(null);
+
   useEffect(() => {
     return () => {
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
     };
   }, []);
 
+  // [2.32.23] авто-высота textarea
+  useEffect(() => {
+    const el = editTextareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 240) + 'px';
+  }, [editText, editingMessageId]);
+
   const startEdit = (message) => {
     setEditingMessageId(message.id);
     setEditText(message.text);
     setIsEditing(true);
-    setTimeout(() => window.scrollTo(0, 0), 50);
   };
 
   const cancelEdit = () => {
@@ -65,8 +74,6 @@ const MessageList = ({
     setIsEditing(false);
   };
 
-  // [2.32.22] пустой текст можно сохранить, если у сообщения есть картинка —
-  //           так imageOnly → текст → imageOnly работает в обе стороны
   const saveEdit = (messageId) => {
     const original = messages.find(m => m.id === messageId);
     const nextText = editText.trim();
@@ -289,11 +296,38 @@ const MessageList = ({
     };
   };
 
-  const getArrowOpacity = (m, dir) => {
+  const getSwipeOpacity = (m, dir) => {
     if (swipeState.id !== m.id) return 0;
     if (swipeState.direction !== dir) return 0;
     const abs = Math.abs(swipeState.dx);
     return Math.min(abs / SWIPE_THRESHOLD, 1);
+  };
+
+  const isSwipeReady = (m, dir) => {
+    if (swipeState.id !== m.id) return false;
+    if (swipeState.direction !== dir) return false;
+    return Math.abs(swipeState.dx) >= SWIPE_THRESHOLD;
+  };
+
+  const renderSwipeGlow = (m) => {
+    if (swipeState.id !== m.id) return null;
+    if (swipeState.direction === 'reply') {
+      return (
+        <div
+          className="msg-swipe-glow msg-swipe-glow--reply"
+          style={{ opacity: getSwipeOpacity(m, 'reply') }}
+        />
+      );
+    }
+    if (swipeState.direction === 'delete') {
+      return (
+        <div
+          className="msg-swipe-glow msg-swipe-glow--delete"
+          style={{ opacity: getSwipeOpacity(m, 'delete') }}
+        />
+      );
+    }
+    return null;
   };
 
   return (
@@ -305,6 +339,9 @@ const MessageList = ({
           const isImageOnly = !m.text?.trim() && !!m.imageUrl && !isEditingThis;
           const prevMessage = messages[i - 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
+
+          const readyReply = isSwipeReady(m, 'reply');
+          const readyDelete = isSwipeReady(m, 'delete');
 
           const dateDivider = showDateDivider ? (
             <div className="date-divider" key={`date-${m.id}`}>
@@ -345,24 +382,10 @@ const MessageList = ({
                   <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                     {getInitial(m.nickname)}
                   </div>
-                  <div className="msg-content msg-content--image-only">
-                    {swipeState.id === m.id && swipeState.direction === 'reply' && (
-                      <div
-                        className="msg-reply-arrow"
-                        style={{ opacity: getArrowOpacity(m, 'reply') }}
-                      >
-                        ↩
-                      </div>
-                    )}
-                    {swipeState.id === m.id && swipeState.direction === 'delete' && (
-                      <div
-                        className="msg-delete-arrow"
-                        style={{ opacity: getArrowOpacity(m, 'delete') }}
-                      >
-                        🗑
-                      </div>
-                    )}
 
+                  {renderSwipeGlow(m)}
+
+                  <div className="msg-content msg-content--image-only">
                     <div
                       className="msg-image-only-wrap"
                       style={getSwipeStyle(m)}
@@ -453,31 +476,17 @@ const MessageList = ({
                 <div className="msg-avatar" style={{ background: getAvatarColor(m.nickname) }}>
                   {getInitial(m.nickname)}
                 </div>
+
+                {renderSwipeGlow(m)}
+
                 <div
-                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''}`}
+                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''} ${readyReply ? 'msg-content--ready-reply' : ''} ${readyDelete ? 'msg-content--ready-delete' : ''} ${isEditingThis ? 'msg-content--editing' : ''}`}
                   style={getSwipeStyle(m)}
                   onClick={(e) => handleMsgClick(e, m)}
                   onTouchStart={(e) => handleMsgTouchStart(e, m)}
                   onTouchMove={(e) => handleMsgTouchMove(e, m)}
                   onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                 >
-                  {swipeState.id === m.id && swipeState.direction === 'reply' && (
-                    <div
-                      className="msg-reply-arrow"
-                      style={{ opacity: getArrowOpacity(m, 'reply') }}
-                    >
-                      ↩
-                    </div>
-                  )}
-                  {swipeState.id === m.id && swipeState.direction === 'delete' && (
-                    <div
-                      className="msg-delete-arrow"
-                      style={{ opacity: getArrowOpacity(m, 'delete') }}
-                    >
-                      🗑
-                    </div>
-                  )}
-
                   {editRingId === m.id && <div className="msg-edit-ring" />}
 
                   <div className="msg-header">
@@ -511,26 +520,37 @@ const MessageList = ({
 
                   {isEditingThis ? (
                     <div className="msg-edit-area">
-                      <input
-                        type="text"
+                      <textarea
+                        ref={editTextareaRef}
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
                         autoFocus
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(m.id);
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            saveEdit(m.id);
+                          }
                           if (e.key === 'Escape') cancelEdit();
                         }}
-                        className="msg-edit-input"
+                        className="msg-edit-input msg-edit-textarea"
+                        rows={1}
                         inputMode="text"
                         enterKeyHint="done"
-                        style={{ touchAction: 'manipulation', fontSize: '16px' }}
                       />
-                      <button className="btn" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>
-                        Сохранить
-                      </button>
-                      <button className="btn" onClick={(e) => { e.stopPropagation(); cancelEdit(); }}>
-                        Отмена
-                      </button>
+                      <div className="msg-edit-actions">
+                        <button
+                          className="btn msg-edit-btn msg-edit-btn--cancel"
+                          onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                        >
+                          Отмена
+                        </button>
+                        <button
+                          className="btn msg-edit-btn msg-edit-btn--save"
+                          onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}
+                        >
+                          Сохранить
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="msg-text">{m.text}</div>

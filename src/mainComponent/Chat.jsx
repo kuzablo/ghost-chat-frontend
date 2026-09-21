@@ -39,11 +39,12 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.23] feat(swipe): подсветка вместо иконок; textarea в редакторе с авто-высотой
 // [2.32.22] счётчик N/M в fullscreen, автозакрытие если фото удалили
 // [2.32.21] скролл держится у низа при resize; убрано body.transform
 // [2.32.20] длинные сообщения в ЛС не вылезают за карточку
 // [2.32.19] автоскрытие пикера 2с; бурст ❤️ в точке клика; модалка только на мобильных
-const VERSION = '2.32.22';
+const VERSION = '2.32.23';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

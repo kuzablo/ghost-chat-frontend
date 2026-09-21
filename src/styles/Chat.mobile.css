@@ -1,15 +1,13 @@
 /* ===== Мобильная версия ===== */
 @media (max-width: 600px) {
-  /* Прячем QR и угловые кнопки */
   .qr-wrap { display: none; }
   .theme-toggle, .players-toggle { display: none !important; }
 
   .mobile-capsule {
     display: block;
-    order: 1; /* [2.28.6] капсула — в самый низ */
+    order: 1;
   }
 
-  /* [2.28.6] Карточка от края до края — как нативное приложение */
   .chat-container {
     flex-direction: column;
     padding: 0;
@@ -28,7 +26,6 @@
     border-radius: 0;
   }
 
-  /* Шапка вертикальная, по центру */
   .chat-header {
     flex-direction: column;
     align-items: center;
@@ -70,7 +67,6 @@
   .chat-header-theme:active { transform: scale(0.9); }
   .chat-header-theme .theme-icon { width: 20px; height: 20px; }
 
-  /* [2.28.6] сообщения — со своими боковыми отступами */
   .messages-wrapper {
     padding: 0 8px;
     margin-bottom: 8px;
@@ -97,6 +93,9 @@
   .reaction-btn { padding: 2px 6px; font-size: 11px; border-width: 1.5px; }
   .reaction-badge { font-size: 9px; padding: 0 4px; border-width: 1.5px; }
 
+  /* [2.32.23] свайп-подсветка на мобиле — во всю высоту */
+  .msg-swipe-glow { top: -3px; bottom: -3px; width: 70%; }
+
   /* ===== Инпут ===== */
   .input-row {
     display: none;
@@ -112,7 +111,6 @@
     padding-bottom: calc(8px + var(--kb-height, 0px));
   }
 
-  /* fallback input[type="search"] */
   .input-row input[type="search"] {
     padding: 10px 14px;
     font-size: 16px;
@@ -132,7 +130,6 @@
     box-shadow: 0 0 0 4px rgba(59, 181, 232, 0.18);
   }
 
-  /* contentEditable + placeholder */
   .input-row .chat-input-editable {
     padding: 10px 14px;
     font-size: 16px;
@@ -165,7 +162,6 @@
   .send-btn .send-icon { font-size: 24px; }
   .send-btn .send-spinner { width: 22px; height: 22px; }
 
-  /* [2.28.6] status — со своими боковыми отступами */
   .status {
     font-size: 11px;
     margin-top: 4px;
@@ -177,7 +173,6 @@
     padding: 0 12px;
   }
 
-  /* Панель игроков */
   .players-overlay {
     width: 260px;
     top: calc(env(safe-area-inset-top, 0px) + 50px);
@@ -201,7 +196,6 @@
   .friend-request-actions .btn { padding: 4px 8px; font-size: 11px; }
   .friends-header { font-size: 10px; padding-top: 8px; margin-top: 10px; margin-bottom: 4px; }
 
-  /* Приватный чат */
   .private-chat-overlay {
     bottom: 0;
     width: 100vw;
@@ -223,7 +217,6 @@
   .private-reaction-picker { padding: 5px 10px; gap: 3px; }
   .private-reaction-picker button { font-size: 24px; padding: 3px 5px; }
 
-  /* Дуэль */
   .duel-box {
     position: fixed;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
@@ -237,30 +230,26 @@
   .duel-actions .btn { padding: 8px 10px; font-size: 12px; }
   .duel-notice { padding: 8px 14px; font-size: 12px; border-width: 2px; }
 
-  /* Auth modal */
   .auth-modal { width: 92%; padding: 18px 16px; border-width: 3px; }
   .auth-modal h3 { font-size: 15px; }
   .auth-modal input { font-size: 16px; padding: 10px 12px; border-width: 2px; }
   .auth-modal .btn { font-size: 14px; }
 
-  /* Редактирование */
-  .msg-edit-area { flex-wrap: wrap; gap: 4px; }
-  .msg-edit-input { font-size: 14px; padding: 5px 8px; }
-  .msg-edit-area .btn { font-size: 11px; padding: 4px 8px; }
+  /* [2.32.23] редактор на мобиле */
+  .msg-edit-area { gap: 6px; }
+  .msg-edit-textarea { font-size: 16px; padding: 8px 10px; min-height: 44px; max-height: 200px; }
+  .msg-edit-actions { gap: 6px; }
+  .msg-edit-btn { font-size: 12px; padding: 6px 12px; }
 
-  /* Кнопка «вниз» */
   .scroll-down-btn { width: 36px; height: 36px; font-size: 18px; bottom: 10px; right: 10px; }
 
-  /* Дата-разделитель */
   .date-divider { margin: 10px 0 8px; }
   .date-divider span { font-size: 10px; padding: 2px 10px; border-width: 1.5px; }
 
-  /* Уведомления */
   .join-notices { top: 6px; right: 6px; gap: 4px; }
   .join-notice { padding: 3px 10px 3px 3px; font-size: 11px; border-width: 1.5px; max-width: 180px; }
   .join-notice-avatar { width: 20px; height: 20px; font-size: 9px; border-width: 1px; }
 
-  /* реакции в обычных сообщениях */
   .msg-reaction-badge { width: 18px; height: 18px; font-size: 11px; }
   .msg-reaction-count { min-width: 11px; height: 11px; font-size: 7px; }
   .msg-reaction-picker { padding: 5px 10px; gap: 3px; }
@@ -268,9 +257,6 @@
   .msg-reactions--above-picker { transform: translateY(65%) scale(1.1); }
   .msg-image-only-reactions--above-picker { transform: translateY(60%) scale(1.1); }
 
-  /* reply */
-  .msg-reply-arrow { left: -30px; width: 22px; height: 22px; font-size: 14px; }
-  .msg-delete-arrow { right: -30px; width: 22px; height: 22px; font-size: 12px; }
   .msg-action-btn--delete { display: none !important; }
   .msg-action-btn--edit { display: none !important; }
   .msg-edit-ring { top: -4px; left: -4px; right: -4px; bottom: -4px; border-radius: calc(var(--radius-md) + 4px); padding: 2.5px; }
