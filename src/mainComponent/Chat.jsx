@@ -41,12 +41,11 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
-// [2.32.28] fix(chat): склейка сообщений — плоские внутренние углы, наложение бордеров
-// [2.32.27] feat(chat): объединение подряд идущих сообщений одного автора (до 60 сек)
-// [2.32.26] fullscreen: точки-индикатор, стрелки на ПК, fade-переход
-// [2.32.25] аватары в сообщениях
-// [2.32.24] Профиль: bio, аватар, удаление друга
-const VERSION = '2.32.28';
+// [2.32.30] fullscreen-свайп через refs — без setState на каждом кадре
+// [2.32.29] при смене темы глушим transition; 550ms → 320ms
+// [2.32.28] склейка по минуте; инфопанель
+// [2.32.27] склейка сообщений
+const VERSION = '2.32.30';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -128,8 +127,6 @@ const Chat = () => {
 
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
-  const [dragY, setDragY] = useState(0);
-  const [fsSwipeX, setFsSwipeX] = useState(0);
   const [fsHeart, setFsHeart] = useState(null);
   const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
   const [inputDragY, setInputDragY] = useState(0);
@@ -150,6 +147,10 @@ const Chat = () => {
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
+
+  // [2.32.30] прямые манипуляции fullscreen без ререндера
+  const fsImgRef = useRef(null);
+  const fsOverlayRef = useRef(null);
 
   const swipeStartXRef = useRef(null);
   const swipeStartYRef = useRef(null);
@@ -174,6 +175,8 @@ const Chat = () => {
     startY: 0,
     direction: null,
     active: false,
+    lastDx: 0,
+    lastDy: 0,
   });
   const fsLastTapRef = useRef(0);
   const fsTapPosRef = useRef({ x: 0, y: 0 });
@@ -198,6 +201,20 @@ const Chat = () => {
     if (!yt.hasStarted) return;
     setShowMiniPlayer(false);
   }, [showMiniPlayer, yt.hasStarted]);
+
+  // [2.32.30] сброс inline-стилей при смене фото
+  useEffect(() => {
+    if (!fullscreenImage) return;
+    const img = fsImgRef.current;
+    if (img) {
+      img.style.transition = '';
+      img.style.transform = '';
+    }
+    const ov = fsOverlayRef.current;
+    if (ov) {
+      ov.style.background = '';
+    }
+  }, [fullscreenImage?.messageId]);
 
   const subscribeToPush = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -383,7 +400,6 @@ const Chat = () => {
   const hasPrevImage = currentImageIndex > 0;
   const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
 
-  // карта avatarUrl для отображения аватарок в чате
   const avatarByUser = {};
   for (const p of players) {
     if (p.userId && p.avatarUrl) avatarByUser[p.userId] = p.avatarUrl;
@@ -396,7 +412,6 @@ const Chat = () => {
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
-  // аватар автора открытого фото
   const fsAuthorAvatarUrl = fullscreenMessage
     ? avatarByUser[fullscreenMessage.userId]
     : null;
@@ -762,11 +777,7 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  const fsOverlayOpacity = fullscreenImage
-    ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
-    : 0.95;
-
-  // [2.32.26] перейти на соседнее фото
+  // [2.32.30] переход на соседнее фото (без изменений)
   const fsGoPrev = (e) => {
     if (e) e.stopPropagation();
     if (!hasPrevImage) return;
@@ -780,6 +791,7 @@ const Chat = () => {
     setFullscreenImage({ url: next.imageUrl, messageId: next.id });
   };
 
+  // [2.32.30] fullscreen-свайп — напрямую через DOM, без setState
   const handleFsTouchStart = (e) => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
@@ -788,6 +800,8 @@ const Chat = () => {
       startY: t.clientY,
       direction: null,
       active: true,
+      lastDx: 0,
+      lastDy: 0,
     };
   };
 
@@ -805,17 +819,27 @@ const Chat = () => {
       g.direction = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
     }
 
+    const img = fsImgRef.current;
+    if (!img) return;
+
     if (g.direction === 'horizontal') {
-      if (
-        (dx > 0 && hasPrevImage) ||
-        (dx < 0 && hasNextImage)
-      ) {
-        setFsSwipeX(dx);
+      if ((dx > 0 && hasPrevImage) || (dx < 0 && hasNextImage)) {
+        g.lastDx = dx;
+        img.style.transition = 'none';
+        img.style.transform = `translate3d(${dx}px, 0, 0)`;
         if (e.cancelable) e.preventDefault();
       }
     } else {
       if (dy > 0) {
-        setDragY(dy);
+        g.lastDy = dy;
+        const scale = Math.max(0.85, 1 - dy / 800);
+        img.style.transition = 'none';
+        img.style.transform = `translate3d(0, ${dy}px, 0) scale(${scale})`;
+        const ov = fsOverlayRef.current;
+        if (ov) {
+          const alpha = Math.max(0.15, 0.95 - (dy / 200) * 0.6);
+          ov.style.background = `rgba(10, 10, 10, ${alpha})`;
+        }
         if (e.cancelable) e.preventDefault();
       }
     }
@@ -825,9 +849,14 @@ const Chat = () => {
     const g = fsGestureRef.current;
     g.active = false;
 
+    const img = fsImgRef.current;
+    if (!img) {
+      g.direction = null;
+      return;
+    }
+
     if (!g.direction) {
-      setFsSwipeX(0);
-      setDragY(0);
+      g.direction = null;
       return;
     }
 
@@ -836,17 +865,31 @@ const Chat = () => {
     const dy = t.clientY - g.startY;
 
     if (g.direction === 'horizontal') {
+      img.style.transition = 'transform 0.22s cubic-bezier(0.25, 1, 0.5, 1)';
       if (dx <= -FS_SWIPE_THRESHOLD && hasNextImage) {
         const next = imageMessages[currentImageIndex + 1];
         setFullscreenImage({ url: next.imageUrl, messageId: next.id });
       } else if (dx >= FS_SWIPE_THRESHOLD && hasPrevImage) {
         const prev = imageMessages[currentImageIndex - 1];
         setFullscreenImage({ url: prev.imageUrl, messageId: prev.id });
+      } else {
+        img.style.transform = 'translate3d(0,0,0)';
       }
-      setFsSwipeX(0);
     } else {
-      if (dy > FS_CLOSE_THRESHOLD) closeFullscreen();
-      setDragY(0);
+      if (dy > FS_CLOSE_THRESHOLD) {
+        closeFullscreen();
+      } else {
+        img.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+        img.style.transform = 'translate3d(0,0,0) scale(1)';
+        const ov = fsOverlayRef.current;
+        if (ov) {
+          ov.style.transition = 'background 0.25s';
+          ov.style.background = '';
+          setTimeout(() => {
+            if (ov) ov.style.transition = '';
+          }, 300);
+        }
+      }
     }
 
     g.direction = null;
@@ -1528,8 +1571,8 @@ const Chat = () => {
       {fullscreenImage && (
         <div
           className="fullscreen-overlay"
+          ref={fsOverlayRef}
           onClick={closeFullscreen}
-          style={{ background: `rgba(10, 10, 10, ${fsOverlayOpacity})` }}
         >
           <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
             <div className="fs-author">
@@ -1581,6 +1624,7 @@ const Chat = () => {
 
             <img
               key={fullscreenImage.messageId}
+              ref={fsImgRef}
               src={fullscreenImage.url}
               alt=""
               className="fs-image"
@@ -1591,13 +1635,6 @@ const Chat = () => {
               onTouchEnd={handleFsTouchEnd}
               onTouchCancel={handleFsTouchEnd}
               onDoubleClick={handleFsDoubleTap}
-              style={{
-                transform: `translate(${fsSwipeX}px, ${dragY}px) scale(${Math.max(0.85, 1 - dragY / 800)})`,
-                transition:
-                  fsSwipeX === 0 && dragY === 0
-                    ? 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)'
-                    : 'none',
-              }}
             />
 
             <button

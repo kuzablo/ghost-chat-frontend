@@ -199,7 +199,7 @@ body.dark .blur-overlay {
 .notif-modal-later:active { transform: scale(0.96); }
 
 /* ============================================================= */
-/* [2.32.26] Fullscreen — переработан: точки, стрелки, fade       */
+/* [2.32.30] Fullscreen — свайп через transform3d, GPU-слой      */
 /* ============================================================= */
 
 .fullscreen-overlay {
@@ -212,6 +212,7 @@ body.dark .blur-overlay {
   touch-action: none;
   animation: fsFadeIn 0.18s ease-out;
   overflow: hidden;
+  will-change: background;
 }
 
 @keyframes fsFadeIn {
@@ -219,7 +220,7 @@ body.dark .blur-overlay {
   to   { opacity: 1; }
 }
 
-/* ===== Шапка компактнее ===== */
+/* ===== Шапка ===== */
 
 .fs-topbar {
   flex-shrink: 0;
@@ -327,7 +328,7 @@ body.dark .blur-overlay {
   background: rgba(0, 0, 0, 0.75);
 }
 
-/* ===== Сцена с фото ===== */
+/* ===== Сцена ===== */
 
 .fs-stage {
   flex: 1;
@@ -338,6 +339,7 @@ body.dark .blur-overlay {
   justify-content: center;
   overflow: hidden;
   padding: 4px;
+  touch-action: none;
 }
 
 .fs-image {
@@ -351,6 +353,9 @@ body.dark .blur-overlay {
   -webkit-user-drag: none;
   cursor: default;
   will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   animation: fsImageIn 0.24s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
@@ -399,7 +404,7 @@ body.dark .blur-overlay {
   cursor: not-allowed;
 }
 
-/* ===== Точки-индикатор снизу ===== */
+/* ===== Точки-индикатор ===== */
 
 .fs-dots {
   position: absolute;
@@ -432,7 +437,7 @@ body.dark .blur-overlay {
   background: #FFFFFF;
 }
 
-/* ===== Сердечко при двойном тапе ===== */
+/* ===== Сердечко ===== */
 
 .fs-heart-burst {
   position: absolute;
@@ -452,7 +457,7 @@ body.dark .blur-overlay {
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
 }
 
-/* ===== Нижняя панель (реакции) ===== */
+/* ===== Нижняя панель ===== */
 
 .fs-bottombar {
   flex-shrink: 0;
@@ -712,7 +717,7 @@ body.dark .blur-overlay {
   font-weight: 700;
 }
 
-/* ===== Уведомления «зашёл / вышел» ===== */
+/* ===== Уведомления ===== */
 .join-notices {
   position: absolute;
   top: 10px;
