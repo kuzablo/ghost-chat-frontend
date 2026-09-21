@@ -36,14 +36,13 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.31.4] fix: бурст в обычном сообщении привязывается к картинке
+// [2.31.5] fix: пикер реакций в fullscreen выше и крупнее (44×44)
+// [2.31.4] fix: бурст ❤️ в обычном сообщении привязывается к картинке
 // [2.31.3] кольцо long-press через CSS-переменные в :root
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
-// [2.31.1] двойной тап по картинке в карточке  бурст
-// [2.31.0] fullscreen: 
-// [2.30.1] кольцо long-press у image-only — по границам картинки
-// [2.30.0] DialogsPanel: кнопка «←», свайп вправо, секции по датам
-const VERSION = '2.31.4';
+// [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
+// [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
+const VERSION = '2.31.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;

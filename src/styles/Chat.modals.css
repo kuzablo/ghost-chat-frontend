@@ -294,7 +294,7 @@ body.dark .blur-overlay {
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding: 12px 14px calc(env(safe-area-inset-bottom, 0px) + 8px);
   background: linear-gradient(
     to top,
     rgba(0, 0, 0, 0.7) 0%,
@@ -357,8 +357,8 @@ body.dark .blur-overlay {
 }
 
 .fs-reaction-toggle {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
   color: #111;
@@ -387,13 +387,14 @@ body.dark .blur-overlay {
 .fs-reaction-picker {
   position: absolute;
   right: 14px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+  /* [2.31.5] выше и с запасом от home-indicator */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   display: flex;
-  gap: 4px;
+  gap: 6px;
   background: rgba(255, 255, 255, 0.98);
   border: 2px solid #111;
-  border-radius: 30px;
-  padding: 6px 10px;
+  border-radius: 34px;
+  padding: 8px 12px;
   z-index: 5;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   animation: fsPickerIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -407,12 +408,19 @@ body.dark .blur-overlay {
 .fs-reaction-picker-btn {
   background: transparent;
   border: none;
-  font-size: 26px;
+  font-size: 28px;
   cursor: pointer;
-  padding: 4px;
+  /* [2.31.5] 44×44 — tap target по Apple HIG */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   line-height: 1;
   transition: transform 0.12s, background 0.15s;
+  touch-action: manipulation;
 }
 
 .fs-reaction-picker-btn:active {
@@ -431,7 +439,7 @@ body.dark .blur-overlay {
   position: absolute;
   left: 14px;
   right: 14px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   background: #FFFFFF;
   border: 2px solid #111;
   border-radius: var(--radius-md);
