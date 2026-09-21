@@ -2,9 +2,10 @@ import { forwardRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.33.4] Секция «Заблокированные» в самом конце — список позора.
-           Пропы blockedUsers[], onUnblockUser.
-  [2.32.38] InfoPanel с 8 визуальными демо.
+  [2.33.9] Актуализация: цифры 25 МБ, дружба-ритуал, блокировка, фото в личке.
+           Анонимные плейсхолдеры — ◆ и ◇ вместо имён.
+  [2.33.4] Секция «Заблокированные» в конце.
+  [2.32.38] InfoPanel с визуальными демо.
 */
 const InfoPanel = forwardRef(({
   onClose,
@@ -26,7 +27,7 @@ const InfoPanel = forwardRef(({
             />
             <div className="info-brand-text">
               <h2 className="info-brand-title">О приложении</h2>
-              <div className="info-brand-subtitle">banjoboy's crew · v2.33.4</div>
+              <div className="info-brand-subtitle">banjoboy's crew · v2.33.9</div>
             </div>
           </div>
           <button
@@ -41,8 +42,8 @@ const InfoPanel = forwardRef(({
         <div className="info-body">
 
           <p className="info-intro">
-            Всё, что умеет чат — коротко и с примерами. Некоторые жесты проще
-            один раз увидеть.
+            Здесь всё, что умеет чат. Не список функций — короткий разговор
+            о том, как устроено.
           </p>
 
           {/* ===== 1. Общий чат ===== */}
@@ -52,23 +53,23 @@ const InfoPanel = forwardRef(({
               <h3>Общий чат</h3>
             </div>
             <p>
-              Пиши текст, отправляй фото до 25 МБ, ставь реакции. История
-              сохраняется — зайдёшь завтра, всё на месте.
+              Текст, фото до 25 МБ, реакции. История остаётся — вернёшься
+              завтра, всё на месте.
             </p>
             <ul className="info-list">
               <li><b>Enter</b> — отправить.</li>
-              <li><b>📎</b> — прикрепить фото.</li>
-              <li>Пока печатаешь — другие видят «печатает…».</li>
+              <li><b>📎</b> — фото из галереи или файлов, не только с камеры.</li>
+              <li>Пока печатаешь — остальные видят «печатает…».</li>
             </ul>
 
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--merge">
                 <div className="info-merge-card">
-                  <span className="info-merge-avatar">Я</span>
-                  <span className="info-merge-text">Привет</span>
+                  <span className="info-merge-avatar">◆</span>
+                  <span className="info-merge-text">привет</span>
                 </div>
                 <div className="info-merge-card info-merge-card--mid">
-                  <span className="info-merge-text">Как дела</span>
+                  <span className="info-merge-text">как ты</span>
                 </div>
                 <div className="info-merge-card info-merge-card--last">
                   <span className="info-merge-text">го в дуэль</span>
@@ -84,15 +85,13 @@ const InfoPanel = forwardRef(({
               <div className="info-section-icon">🎭</div>
               <h3>Реакции</h3>
             </div>
-            <p>
-              Тапнул по сообщению — открылся пикер с реакциями:
-            </p>
+            <p>Тап по сообщению — открывается пикер:</p>
 
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--reactions">
                 <div className="info-reaction-card">
-                  <span className="info-reaction-nick">Aня</span>
-                  <span className="info-reaction-text">смотри что нашла</span>
+                  <span className="info-reaction-nick">◆</span>
+                  <span className="info-reaction-text">смотри что нашёл</span>
                 </div>
                 <div className="info-reaction-picker">
                   <span className="info-reaction-emoji">👍</span>
@@ -103,11 +102,11 @@ const InfoPanel = forwardRef(({
                 </div>
                 <div className="info-reaction-finger">👆</div>
               </div>
-              <div className="info-demo-caption">тапнул → пикер → тапнул эмодзи</div>
+              <div className="info-demo-caption">тап → пикер → эмодзи</div>
             </div>
 
             <p>
-              Тапнул второй раз — реакция снята. Свои подсвечиваются синим.
+              Второй тап — снять. Свои подсвечиваются синим.
             </p>
           </section>
 
@@ -115,17 +114,17 @@ const InfoPanel = forwardRef(({
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">↩️</div>
-              <h3>Ответы на сообщение</h3>
+              <h3>Ответы</h3>
             </div>
             <p>
-              <b>Свайп влево</b> по сообщению — от левого края расходится
-              синяя подсветка. Отпускаешь, и сверху вылезает «кому отвечаешь».
+              <b>Свайп влево</b> по сообщению — от края расходится подсветка.
+              Отпускаешь — вылезает «кому отвечаешь».
             </p>
 
             <div className="info-demo">
               <div className="info-demo-stage">
                 <div className="info-demo-card info-demo-card--swipe-left">
-                  <span className="info-demo-card-avatar">A</span>
+                  <span className="info-demo-card-avatar">◆</span>
                   <span className="info-demo-card-lines"><i></i><i></i></span>
                 </div>
                 <div className="info-demo-arrow info-demo-arrow--reply">↩</div>
@@ -135,8 +134,8 @@ const InfoPanel = forwardRef(({
             </div>
 
             <p>
-              Внутри готового сообщения цитата кликабельна — тапнул, и чат
-              прыгнул к оригиналу, оригинал мигнёт синим.
+              Цитата внутри готова к тапу: прыгает к оригиналу, оригинал
+              коротко мигает.
             </p>
           </section>
 
@@ -146,14 +145,12 @@ const InfoPanel = forwardRef(({
               <div className="info-section-icon">✏️</div>
               <h3>Своё сообщение</h3>
             </div>
-            <p>
-              Свои сообщения можно менять и удалять.
-            </p>
+            <p>Свои сообщения можно менять и удалять.</p>
 
             <div className="info-demo">
               <div className="info-demo-stage">
                 <div className="info-demo-card info-demo-card--ring">
-                  <span className="info-demo-card-avatar">Я</span>
+                  <span className="info-demo-card-avatar">◆</span>
                   <span className="info-demo-card-lines"><i></i><i></i></span>
                   <span className="info-demo-ring" />
                 </div>
@@ -162,15 +159,13 @@ const InfoPanel = forwardRef(({
               <div className="info-demo-caption">зажми 1.5 сек</div>
             </div>
 
-            <p>
-              При удалении карточка едет вправо — так:
-            </p>
+            <p>При удалении карточка едет вправо — так:</p>
 
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--delete">
                 <div className="info-delete-glow" />
                 <div className="info-delete-card">
-                  <span className="info-delete-nick">Я</span>
+                  <span className="info-delete-nick">◆</span>
                   <span className="info-delete-text">ой, не туда</span>
                 </div>
                 <div className="info-delete-finger">👆</div>
@@ -194,18 +189,18 @@ const InfoPanel = forwardRef(({
             </div>
             <p>
               Зажми себя в панели игроков — откроется меню, там пункт
-              <b> Профиль</b>. Можно поставить аватарку, написать пару слов о себе
-              и оформить: 7 шрифтов, свой цвет, поворот.
+              <b> Профиль</b>. Аватарка, пара слов о себе, оформление: 7 шрифтов,
+              свой цвет, поворот.
             </p>
 
             <div className="info-demo">
               <div className="info-demo-stage info-demo-stage--profile">
                 <div className="info-profile-card">
-                  <div className="info-profile-avatar">A</div>
+                  <div className="info-profile-avatar">◇</div>
                   <div className="info-profile-meta">
-                    <div className="info-profile-nick">Aня</div>
+                    <div className="info-profile-nick">◇</div>
                     <div className="info-profile-bio" style={{ fontFamily: "'Caveat', cursive", color: '#3BB5E8', transform: 'rotate(-3deg)' }}>
-                      люблю котиков и радио
+                      пара слов, чтобы ты узнал меня
                     </div>
                   </div>
                 </div>
@@ -214,9 +209,9 @@ const InfoPanel = forwardRef(({
             </div>
 
             <ul className="info-list">
-              <li><b>📷 Сменить фото</b> — выбери из галереи, до 2 МБ.</li>
+              <li><b>📷 Сменить фото</b> — из галереи, до 25 МБ.</li>
               <li><b>Bio</b> — до 200 символов. Видно всем.</li>
-              <li>Аватарка появляется в чате рядом с твоими сообщениями и в списке игроков.</li>
+              <li>Аватарка появляется в чате и в списке игроков.</li>
             </ul>
           </section>
 
@@ -244,7 +239,7 @@ const InfoPanel = forwardRef(({
               <li><b>✉️</b> — написать личное сообщение.</li>
               <li><b>⚔️</b> — вызвать на дуэль.</li>
               <li><b>🤝</b> — отправить запрос дружбы.</li>
-              <li><b>🚫</b> — заблокировать пользователя.</li>
+              <li><b>🚫</b> — заблокировать.</li>
               <li><b>Долгий тап</b> на игроке — меню действий.</li>
             </ul>
           </section>
@@ -260,28 +255,49 @@ const InfoPanel = forwardRef(({
               по ✉️ или из списка диалогов 💬.
             </p>
             <p>
-              Внутри работают те же реакции. Видно «печатает…» и статус
-              <b> прочитано / не прочитано</b>.
+              Внутри — реакции, «печатает…», статус <b>прочитано</b>.
+              Фото можно отправлять прямо в личку — кнопка 📎.
             </p>
           </section>
 
-          {/* ===== 8. Диалоги ===== */}
+          {/* ===== 8. Дружба ===== */}
+          <section className="info-section">
+            <div className="info-section-head">
+              <div className="info-section-icon">🤝</div>
+              <h3>Дружба</h3>
+            </div>
+            <p>
+              Запрос дружбы — это не кнопка. Это <b>ритуал</b>. Огонь слева,
+              вода справа. Один тянется — другой отвечает. Между ними — нить.
+            </p>
+            <ul className="info-list">
+              <li><b>Принять</b> — нить стягивается, две половины становятся одним.</li>
+              <li><b>Отклонить</b> — нить гаснет в обратную сторону.</li>
+              <li><b>Отменить запрос</b> — инициатор может убрать вызов.</li>
+              <li>Отказали — нить тускнеет. Чем больше отказов, тем холоднее цвет.</li>
+            </ul>
+            <p>
+              Когда тебя ждут — отказ лучше молчания. Инициатор увидит, что
+              ты решил.
+            </p>
+          </section>
+
+          {/* ===== 9. Диалоги ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">💬</div>
               <h3>Диалоги</h3>
             </div>
             <p>
-              Кнопка 💬 — список всех личных чатов. Секции «Сегодня», «Вчера»,
-              «Раньше». У непрочитанного — счётчик и подсветка.
+              Кнопка 💬 — список всех личных чатов. Секции: «Сегодня»,
+              «Вчера», «Раньше». У непрочитанного — счётчик и подсветка.
             </p>
             <p>
-              Если открыл диалог из этого списка — после закрытия
-              автоматически вернёшься обратно в список.
+              Открыл диалог из списка — после закрытия вернёшься туда же.
             </p>
           </section>
 
-          {/* ===== 9. Дуэли ===== */}
+          {/* ===== 10. Дуэли ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">⚔️</div>
@@ -297,16 +313,15 @@ const InfoPanel = forwardRef(({
             </ul>
           </section>
 
-          {/* ===== 10. Фото ===== */}
+          {/* ===== 11. Фото ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">📷</div>
               <h3>Просмотр фото</h3>
             </div>
             <p>
-              Тап по фото — открывается на весь экран. Сверху видны автор
-              и дата, счётчик «2 / 5». Снизу по центру — точки: где ты
-              в галерее.
+              Тап по фото — открывается на весь экран. Сверху автор и дата,
+              счётчик. Внизу точки — где ты в галерее.
             </p>
 
             <div className="info-demo">
@@ -327,22 +342,22 @@ const InfoPanel = forwardRef(({
             </div>
 
             <ul className="info-list">
-              <li><b>Свайп влево-вправо</b> — перелистывание между фото чата.</li>
-              <li><b>← →</b> на ПК — то же самое мышью.</li>
-              <li><b>Двойной тап</b> — реакция ❤️ прямо в точку тапа.</li>
+              <li><b>Свайп влево-вправо</b> — перелистывание.</li>
+              <li><b>← →</b> на ПК — то же мышью.</li>
+              <li><b>Двойной тап</b> — ❤️ прямо в точку.</li>
               <li><b>Свайп вниз</b> или <b>✕</b> — закрыть.</li>
             </ul>
           </section>
 
-          {/* ===== 11. Уведомления ===== */}
+          {/* ===== 12. Уведомления ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">🔔</div>
               <h3>Уведомления</h3>
             </div>
             <p>
-              На телефоне можно разрешить уведомления — тогда новое сообщение
-              придёт, даже если чат закрыт или телефон в кармане.
+              На телефоне — можно разрешить уведомления. Тогда новое
+              сообщение придёт, даже если чат закрыт или телефон в кармане.
             </p>
 
             <div className="info-demo">
@@ -356,7 +371,7 @@ const InfoPanel = forwardRef(({
                     <span className="info-push-icon">🐱</span>
                     <span className="info-push-title">banjoboy's crew</span>
                   </div>
-                  <div className="info-push-body">Aня: го в дуэль</div>
+                  <div className="info-push-body">◆ го в дуэль</div>
                 </div>
               </div>
               <div className="info-demo-caption">push + бейдж на иконке</div>
@@ -369,7 +384,7 @@ const InfoPanel = forwardRef(({
             </ul>
           </section>
 
-          {/* ===== 12. Радио ===== */}
+          {/* ===== 13. Радио ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">🎵</div>
@@ -393,14 +408,14 @@ const InfoPanel = forwardRef(({
             </div>
 
             <ul className="info-list">
-              <li><b>Первый запуск</b> — зажми маскота, откроется мини-плеер, один раз нажми play.</li>
+              <li><b>Первый запуск</b> — зажми маскота, откроется мини-плеер, нажми play.</li>
               <li><b>Короткий тап</b> — пауза или продолжить.</li>
               <li><b>Двойной тап</b> или <b>долгое нажатие</b> — следующий трек.</li>
               <li><b>Свайп вверх/вниз</b> по маскоту — громкость.</li>
             </ul>
           </section>
 
-          {/* ===== 13. Темы ===== */}
+          {/* ===== 14. Темы ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">🌙</div>
@@ -408,7 +423,7 @@ const InfoPanel = forwardRef(({
             </div>
             <p>
               Светлая и тёмная. Кнопка 🌙/☀️ справа вверху. Новая тема
-              растекается кругом из точки нажатия, иконка переворачивается.
+              растекается кругом из точки тапа, иконка переворачивается.
             </p>
 
             <div className="info-demo">
@@ -427,7 +442,7 @@ const InfoPanel = forwardRef(({
             </div>
           </section>
 
-          {/* ===== 14. Нижняя капсула ===== */}
+          {/* ===== 15. Нижняя капсула ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">📱</div>
@@ -453,27 +468,26 @@ const InfoPanel = forwardRef(({
 
             <ul className="info-list">
               <li><b>Тап</b> или <b>свайп вверх</b> — развернуть.</li>
-              <li><b>Свайп вверх</b> ещё раз — сразу открыть ввод сообщения.</li>
+              <li><b>Свайп вверх</b> ещё раз — сразу открыть ввод.</li>
               <li><b>Свайп вниз</b> по капсуле — свернуть.</li>
-              <li>Если есть непрочитанное — на полоске пульсирует красная точка.</li>
+              <li>Есть непрочитанное — на полоске пульсирует красная точка.</li>
             </ul>
           </section>
 
-          {/* ===== 15. PWA ===== */}
+          {/* ===== 16. PWA ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">📲</div>
               <h3>Установить как приложение</h3>
             </div>
             <p>
-              На iPhone открой чат в <b>Safari</b> → нажми <b>Поделиться</b> →
-              выбери <b>«На экран "Домой"»</b>. Появится иконка на домашнем
-              экране, чат будет открываться без адресной строки, во весь
-              экран, с бейджем непрочитанного на иконке.
+              На iPhone открой чат в <b>Safari</b> → <b>Поделиться</b> →
+              <b> «На экран "Домой"»</b>. Появится иконка, чат будет открываться
+              без адресной строки, во весь экран, с бейджем непрочитанного.
             </p>
           </section>
 
-          {/* ===== 16. Все жесты ===== */}
+          {/* ===== 17. Все жесты ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">✨</div>
@@ -492,7 +506,7 @@ const InfoPanel = forwardRef(({
             </ul>
           </section>
 
-          {/* ===== 17. Заблокированные (список позора) ===== */}
+          {/* ===== 18. Заблокированные ===== */}
           <section className="info-section info-section--blocks">
             <div className="info-section-head">
               <div className="info-section-icon">🚫</div>

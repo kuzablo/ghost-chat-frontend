@@ -44,6 +44,7 @@ import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 
+// [2.33.9] InfoPanel: актуализация + анонимные плейсхолдеры
 // [2.33.8] Пульс комнаты — полоска-дыхание под шапкой
 // [2.33.7] React.memo + useCallback: ввод в инпут не перерисовывает историю
 // [2.33.6] фото из файлов + фото в личке
@@ -56,7 +57,7 @@ import '../styles/Chat.roompulse.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.33.8';
+const VERSION = '2.33.9';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
