@@ -132,10 +132,12 @@ body.dark .player-item {
   flex-shrink: 0;
 }
 
+/* [2.32.20] ник и статы — по центру */
 .player-name {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -143,6 +145,7 @@ body.dark .player-item {
   color: var(--text);
   line-height: 1.2;
   transition: color 0.12s;
+  text-align: center;
 }
 
 .player-stats {
@@ -150,6 +153,7 @@ body.dark .player-item {
   font-weight: 500;
   color: var(--text-muted);
   margin-top: 2px;
+  letter-spacing: 0.3px;
 }
 
 .player-item .online-status {
@@ -326,7 +330,6 @@ body.dark .players-info-link {
   background: rgba(59, 181, 232, 0.12);
 }
 
-/* подсказка «нажми и держи» — пульсирует, но не назойливо */
 .player-hint {
   font-size: 9px;
   font-weight: 700;

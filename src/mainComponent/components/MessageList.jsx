@@ -47,6 +47,9 @@ const MessageList = ({
   const lastTapRef = useRef({ id: null, time: 0, x: 0, y: 0 });
   const [heartBurst, setHeartBurst] = useState(null);
 
+  // [2.32.20] храним исходный viewport, чтобы восстановить его же
+  const originalViewportRef = useRef(null);
+
   useEffect(() => {
     return () => {
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
@@ -67,14 +70,11 @@ const MessageList = ({
       body.style.height = '100%';
       body.style.transform = 'scale(1)';
 
+      // [2.32.20] сохраняем исходный viewport и восстанавливаем его же
       const metaViewport = document.querySelector('meta[name=viewport]');
-      if (metaViewport) {
+      if (metaViewport && originalViewportRef.current === null) {
+        originalViewportRef.current = metaViewport.content;
         metaViewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-      } else {
-        const meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-        document.head.appendChild(meta);
       }
 
       window.scrollTo(0, 0);
@@ -91,8 +91,8 @@ const MessageList = ({
         body.style.transform = '';
         window.scrollTo(0, Math.abs(savedScrollY));
 
-        if (metaViewport) {
-          metaViewport.content = 'width=device-width, initial-scale=1.0';
+        if (metaViewport && originalViewportRef.current !== null) {
+          metaViewport.content = originalViewportRef.current;
         }
       };
     }
