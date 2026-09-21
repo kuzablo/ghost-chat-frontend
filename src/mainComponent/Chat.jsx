@@ -38,6 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
 // [2.32.4] авто-скрытие мини-плеера 6s → 0.5s
 // [2.32.3] авто-скрытие мини-плеера через 6 секунд
 // [2.32.2] fix: мини-плеер скрывается сразу после тапа play
@@ -53,7 +54,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.4';
+const VERSION = '2.32.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -129,7 +130,6 @@ const Chat = () => {
   const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
@@ -185,18 +185,6 @@ const Chat = () => {
   const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
-
-  useEffect(() => {
-    if (yt.hasStarted) setShowMiniPlayer(false);
-  }, [yt.hasStarted]);
-
-  // [2.32.4] мини-плеер живёт 0.5 сек — этого достаточно, чтобы iframe
-  // получил play-команду, дальше он в фоне играет, а окно скрыто
-  useEffect(() => {
-    if (!showMiniPlayer) return;
-    const t = setTimeout(() => setShowMiniPlayer(false), 500);
-    return () => clearTimeout(t);
-  }, [showMiniPlayer]);
 
   useEffect(() => {
     if (!yt.hasStarted) return;
@@ -759,7 +747,6 @@ const Chat = () => {
   };
 
   const LONG_PRESS_MS = 600;
-  const DOUBLE_TAP_MS = 250;
   const VOLUME_PIXELS_PER_PERCENT = 2;
 
   const handleMascotPointerDown = (e) => {
@@ -774,7 +761,7 @@ const Chat = () => {
 
     ref.longPressTimer = setTimeout(() => {
       ref.longPressFired = true;
-      yt.next();
+      ref.longPressTimer = null;
     }, LONG_PRESS_MS);
   };
 
@@ -814,26 +801,20 @@ const Chat = () => {
       return;
     }
 
+    // [2.32.5] долгий тап: переключить трек (и запустить, если не запущено)
     if (ref.longPressFired) {
       ref.longPressFired = false;
-      return;
-    }
-
-    const duration = Date.now() - ref.startTime;
-    if (duration > LONG_PRESS_MS) return;
-
-    const now = Date.now();
-    if (now - ref.lastTapTime < DOUBLE_TAP_MS) {
       ref.lastTapTime = 0;
       yt.next();
       return;
     }
-    ref.lastTapTime = now;
 
+    // [2.32.5] короткий тап: работает только как пауза/плей,
+    // и только если плеер уже запущен
     if (!yt.hasStarted) {
-      setShowMiniPlayer(true);
       return;
     }
+
     yt.toggle();
   };
 
@@ -1092,6 +1073,9 @@ const Chat = () => {
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
+              {!yt.hasStarted && (
+                <div className="mascot-start-hint">зажми</div>
+              )}
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
@@ -1483,22 +1467,8 @@ const Chat = () => {
         </div>
       )}
 
-      <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
+      <div className="yt-hidden-host">
         <div id={yt.containerId} />
-        {showMiniPlayer && (
-          <>
-            <button
-              type="button"
-              className="yt-overlay-play"
-              onClick={() => {
-                yt.toggle();
-                setShowMiniPlayer(false);
-              }}
-              aria-label="Воспроизвести"
-            />
-            <div className="yt-mini-hint">▶ нажми play</div>
-          </>
-        )}
       </div>
     </>
   );

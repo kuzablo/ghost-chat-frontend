@@ -182,3 +182,45 @@
 .yt-overlay-play:focus {
   outline: none;
 }
+
+/* ============================================================= */
+/* [2.32.5] Подсказка «зажми» над маскотом, пока плеер не запущен */
+/* ============================================================= */
+
+.mascot-start-hint {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #FFF;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 12;
+  animation: mascotHintBob 2.4s ease-in-out infinite;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mascot-start-hint::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid rgba(0, 0, 0, 0.85);
+}
+
+@keyframes mascotHintBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.85; }
+  50%      { transform: translateX(-50%) translateY(-3px); opacity: 1; }
+}
