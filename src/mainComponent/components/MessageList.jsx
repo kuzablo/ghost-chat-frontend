@@ -347,16 +347,23 @@ const MessageList = ({
     );
   };
 
-  // =============================================================
-  // [2.32.27] Группировка: подряд от одного автора, в диапазоне минуты
-  // =============================================================
-  const GROUP_WINDOW_MS = 60 * 1000;
+  // [2.32.28] склейка по одной минуте на циферблате, не по разнице в 60 сек
+  const sameMinute = (t1, t2) => {
+    const d1 = new Date(t1);
+    const d2 = new Date(t2);
+    return (
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate() &&
+      d1.getHours() === d2.getHours() &&
+      d1.getMinutes() === d2.getMinutes()
+    );
+  };
 
   const isGroupable = (a, b) => {
     if (!a || !b) return false;
     if (a.userId !== b.userId) return false;
-    if (b.time - a.time >= GROUP_WINDOW_MS) return false;
-    if (isNewDay(a.time, b.time)) return false;
+    if (!sameMinute(a.time, b.time)) return false;
     if (b.replyTo) return false;
     if (editingMessageId && (a.id === editingMessageId || b.id === editingMessageId)) return false;
 
