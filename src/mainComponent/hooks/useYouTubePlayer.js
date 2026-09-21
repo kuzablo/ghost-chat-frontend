@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /*
-  [2.32.8] iOS Safari не играет звук у iframe за пределами экрана.
-           Плеер уменьшен до 1×1px, контейнер тоже 1×1px — по CSS
-           он прижат в правый нижний угол. iOS считает его видимым.
+  [2.32.8] откат 1×1px — iOS всё равно не играет. Вернули 200×120.
   [2.32.1] iOS: убраны controls и disablekb — иначе тап по встроенному
            плееру открывает приложение YouTube.
 */
@@ -61,8 +59,8 @@ export const useYouTubePlayer = () => {
       if (!host) return;
 
       playerRef.current = new YT.Player(containerIdRef.current, {
-        height: '1',
-        width: '1',
+        height: '120',
+        width: '200',
         videoId: PLAYLIST[0],
         playerVars: {
           autoplay: 0,

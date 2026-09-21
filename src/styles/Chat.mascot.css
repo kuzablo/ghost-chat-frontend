@@ -1,27 +1,53 @@
 /*
-  [2.32.8] iframe YouTube видимый 1×1px в правом нижнем углу.
-           Раньше был за экраном — iOS не играл звук.
+  [2.32.8] вернул оверлей-кнопку и 200×120 — 1×1px не работал.
   [2.15.23] Стили маскота-радио.
 */
 
 .yt-hidden-host {
   position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
+  top: -9999px;
+  left: -9999px;
+  width: 200px;
+  height: 120px;
   opacity: 0.01;
   pointer-events: none;
-  z-index: 1;
+  z-index: -1;
+  transition: opacity 0.2s ease-out;
 }
 
-.yt-hidden-host iframe {
-  width: 1px;
-  height: 1px;
+.yt-hidden-host--visible {
+  top: auto;
+  left: auto;
+  bottom: 20px;
+  right: 20px;
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 9999;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.yt-hidden-host--visible iframe {
+  width: 200px;
+  height: 120px;
   display: block;
   border: 0;
+}
+
+.yt-mini-hint {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #FFF;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   pointer-events: none;
+  animation: mascotTipFade 0.2s ease-out;
 }
 
 .chat-header-mascot-wrap {
@@ -39,7 +65,6 @@
   transition: transform 0.15s ease-out;
 }
 
-/* [2.15.23] маскот дребезжит, когда играет */
 .chat-header-logo.mascot-playing {
   animation: mascotVibrate 1.4s ease-in-out infinite;
 }
@@ -58,7 +83,6 @@
   cursor: grabbing;
 }
 
-/* [2.15.23] мини-эквалайзер под маскотом */
 .mascot-equalizer {
   position: absolute;
   bottom: -2px;
@@ -114,7 +138,6 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-/* [2.15.23] название трека в шапке */
 .chat-header-track-title {
   font-weight: 800;
   font-size: 13px;
@@ -129,4 +152,23 @@
 @keyframes trackTitleFade {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+.yt-overlay-play {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 10;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.yt-overlay-play:focus {
+  outline: none;
 }
