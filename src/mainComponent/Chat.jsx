@@ -41,6 +41,7 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.35] fix(theme): очищен index.css от шаблона Vite; класс меняется внутри View Transition
 // [2.32.34] feat(profile): кастомизация bio — 7 шрифтов, цвет, поворот
 // [2.32.32] polish(theme): круг быстрее, Material-easing, старая тема мягко гаснет
 // [2.32.31] fix(css): вернуть transition background/border-color у .msg-content — тема
@@ -48,7 +49,7 @@ import '../styles/Chat.profile.css';
 // [2.32.29] при смене темы глушим transition; 550ms → 320ms
 // [2.32.28] склейка по минуте; инфопанель
 // [2.32.27] склейка сообщений
-const VERSION = '2.32.34';
+const VERSION = '2.32.35';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

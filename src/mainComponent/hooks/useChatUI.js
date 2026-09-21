@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
-  [2.32.31] откат к 2.21.0 — тема работает как раньше
+  [2.32.34] toggleTheme: класс меняется внутри callback View Transition
+            — иначе снапшот "old" уже с новой темой и анимация бессмысленна
   [2.32.19] активная реакция-пикер автоскрывается через 2 сек
 */
 const PICKER_AUTOHIDE_MS = 2000;
@@ -36,14 +37,15 @@ export const useChatUI = () => {
     const y = event?.clientY ?? 30;
 
     if (typeof document.startViewTransition !== 'function') {
+      document.body.classList.toggle('dark', next);
       setIsDark(next);
       return;
     }
 
-    document.body.classList.toggle('dark', next);
+    const transition = document.startViewTransition(() => {
+      document.body.classList.toggle('dark', next);
+    });
     setIsDark(next);
-
-    const transition = document.startViewTransition(() => {});
 
     transition.ready
       .then(() => {
