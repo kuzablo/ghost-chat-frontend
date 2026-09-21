@@ -127,6 +127,84 @@ body.dark .blur-overlay {
 }
 
 /* ============================================================= */
+/* [2.32.16] Модалка разрешения уведомлений                       */
+/* ============================================================= */
+
+.notif-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 22px 20px 18px;
+  width: 90%;
+  max-width: 380px;
+  z-index: 1000;
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+  animation: notifModalIn 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes notifModalIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.notif-modal-title {
+  margin: 6px 0 12px;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.25;
+}
+
+.notif-modal-text {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.notif-modal-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0 0 16px;
+  font-style: italic;
+}
+
+.notif-modal-allow {
+  width: 100%;
+  font-size: 14px;
+  padding: 12px 18px;
+  margin-bottom: 8px;
+}
+
+.notif-modal-later {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  touch-action: manipulation;
+  transition: color 0.15s;
+}
+
+.notif-modal-later:hover {
+  color: var(--text);
+}
+
+.notif-modal-later:active {
+  transform: scale(0.96);
+}
+
+/* ============================================================= */
 /* [2.31.0] Fullscreen — три слоя: шапка, картинка, низ          */
 /* ============================================================= */
 
@@ -146,8 +224,6 @@ body.dark .blur-overlay {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
-/* ===== Верхняя панель: автор + закрыть ===== */
 
 .fs-topbar {
   flex-shrink: 0;
@@ -236,8 +312,6 @@ body.dark .blur-overlay {
   background: rgba(0, 0, 0, 0.75);
 }
 
-/* ===== Центр: картинка ===== */
-
 .fs-stage {
   flex: 1;
   min-height: 0;
@@ -267,7 +341,6 @@ body.dark .blur-overlay {
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* Сердечко при двойном тапе */
 .fs-heart-burst {
   position: absolute;
   font-size: 84px;
@@ -285,8 +358,6 @@ body.dark .blur-overlay {
   65%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
 }
-
-/* ===== Нижняя панель: реакции + кнопка ===== */
 
 .fs-bottombar {
   flex-shrink: 0;
@@ -382,12 +453,9 @@ body.dark .blur-overlay {
   background: #FFFFFF;
 }
 
-/* ===== Пикер реакций — над нижней панелью ===== */
-
 .fs-reaction-picker {
   position: absolute;
   right: 14px;
-  /* [2.31.5] выше и с запасом от home-indicator */
   bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   display: flex;
   gap: 6px;
@@ -410,7 +478,6 @@ body.dark .blur-overlay {
   border: none;
   font-size: 28px;
   cursor: pointer;
-  /* [2.31.5] 44×44 — tap target по Apple HIG */
   width: 44px;
   height: 44px;
   padding: 0;
@@ -432,8 +499,6 @@ body.dark .blur-overlay {
   background: rgba(59, 181, 232, 0.35);
   box-shadow: 0 0 0 2px #3BB5E8;
 }
-
-/* ===== Список поставивших ===== */
 
 .fs-reaction-list {
   position: absolute;

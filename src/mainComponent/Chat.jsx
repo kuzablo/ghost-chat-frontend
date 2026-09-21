@@ -10,6 +10,7 @@ import InfoPanel from './components/InfoPanel';
 import DialogsPanel from './components/DialogsPanel';
 import ConfirmModal from './components/ConfirmModal';
 import ChatInput from './components/ChatInput';
+import NotificationPermissionModal from './components/NotificationPermissionModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -38,18 +39,15 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.32.13] мини-плеер прячется моментально после старта (было 0.5 сек)
-// [2.32.12] мини-плеер снова виден на первом запуске — iOS даёт play только по тапу
-// [2.32.11] откат радио к рабочей версии — YouTube popup приемлем
-// [2.32.8] фикс мигания/прыжков при первом входе в PWA
-// [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
-// [2.32.5] радио: первый запуск только долгим тапом, мини-плеер убран
-const VERSION = '2.32.14';
+// [2.32.16] модалка запроса разрешения на уведомления — для бейджа на иконке iOS
+// [2.32.15] плеер мелькает при long-press, моментально скрывается после старта
+const VERSION = '2.32.16';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
 const FS_CLOSE_THRESHOLD = 120;
 const FS_DOUBLE_TAP_MS = 250;
+const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 
 const ThemeIcon = () => (
   <span className="theme-icon" aria-hidden="true">
@@ -121,10 +119,9 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
-  // [2.32.7] подсказка «зажми» — только пока палец нажат и плеер не запущен
   const [mascotHintVisible, setMascotHintVisible] = useState(false);
-  // [2.32.12] мини-плеер — виден пока юзер не тапнет play (iOS)
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [showNotifModal, setShowNotifModal] = useState(false);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
@@ -180,12 +177,32 @@ const Chat = () => {
 
   const yt = useYouTubePlayer();
 
-  // [2.32.13] как только YouTube стартанул — прячем мини-плеер моментально
   useEffect(() => {
     if (!showMiniPlayer) return;
     if (!yt.hasStarted) return;
     setShowMiniPlayer(false);
   }, [showMiniPlayer, yt.hasStarted]);
+
+  useEffect(() => {
+    if (!isAuth) return;
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window)) return;
+
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone =
+      navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (isIos && !isStandalone) return;
+
+    if (Notification.permission !== 'default') return;
+
+    let snooze = 0;
+    try { snooze = Number(localStorage.getItem('ghost-chat-notif-snooze') || 0); } catch { /* noop */ }
+    if (Date.now() - snooze < NOTIF_SNOOZE_MS) return;
+
+    const t = setTimeout(() => setShowNotifModal(true), 1500);
+    return () => clearTimeout(t);
+  }, [isAuth]);
 
   useEffect(() => {
     if (!yt.hasStarted) return;
@@ -769,10 +786,9 @@ const Chat = () => {
       ref.longPressTimer = null;
       setMascotHintVisible(false);
 
-      // [2.32.12] первый запуск — показываем плеер, чтобы юзер тапнул play (iOS)
-      //           уже играет — листаем трек
       if (!yt.hasStarted) {
         setShowMiniPlayer(true);
+        yt.next();
       } else {
         yt.next();
       }
@@ -833,6 +849,22 @@ const Chat = () => {
 
   const handleMascotContextMenu = (e) => {
     e.preventDefault();
+  };
+
+  const handleNotifAllow = async () => {
+    try {
+      if ('Notification' in window) {
+        await Notification.requestPermission();
+      }
+    } catch { /* noop */ }
+    setShowNotifModal(false);
+  };
+
+  const handleNotifLater = () => {
+    try {
+      localStorage.setItem('ghost-chat-notif-snooze', String(Date.now()));
+    } catch { /* noop */ }
+    setShowNotifModal(false);
   };
 
   const handleReply = (m) => {
@@ -1066,6 +1098,12 @@ const Chat = () => {
         description="Вы выйдете из banjoboy's crew. Зайти снова можно в любой момент."
         onConfirm={handleLogoutConfirm}
         onCancel={() => setLogoutConfirm(false)}
+      />
+
+      <NotificationPermissionModal
+        open={showNotifModal}
+        onAllow={handleNotifAllow}
+        onLater={handleNotifLater}
       />
 
       <div className="chat-container">
@@ -1480,12 +1518,8 @@ const Chat = () => {
         </div>
       )}
 
-      {/* [2.32.13] мини-плеер виден при showMiniPlayer — юзер тапает play, моментально прячется */}
       <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
         <div id={yt.containerId} />
-        {showMiniPlayer && (
-          <div className="yt-mini-hint">▶ нажми play</div>
-        )}
       </div>
     </>
   );
