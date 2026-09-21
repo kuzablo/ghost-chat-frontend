@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.28.7] После перезахода восстанавливаем unreadByUser из dialogs_list.
+           Убран фильтр по онлайн-игрокам — он стирал непрочитанные
+           от тех, кто ушёл офлайн.
   [2.17.0] Добавлено:
     - state dialogs (список диалогов);
     - handleWs обрабатывает dialogs_list, dialog_update, dialog_unread_reset;
@@ -29,7 +32,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
       const { [userId]: _, ...rest } = prev;
       return rest;
     });
-    // [2.17.0] при открытии диалога обнуляем unread в списке
     setDialogs(prev => prev.map(d =>
       d.userId === userId ? { ...d, unread: 0 } : d
     ));
@@ -44,25 +46,21 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
     setPrivateTypingUser(null);
   }, []);
 
-  // Непрочитанные: фильтруем при смене списка онлайн-игроков
-  useEffect(() => {
-    const onlineUserIds = new Set(players.map(p => p.userId));
-    setUnreadByUser(prev => {
-      const newUnread = {};
-      for (const [userId, hasUnread] of Object.entries(prev)) {
-        if (onlineUserIds.has(userId)) {
-          newUnread[userId] = hasUnread;
-        }
-      }
-      return newUnread;
-    });
-  }, [players]);
-
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
-      case 'dialogs_list':
-        setDialogs(msg.data || []);
+      case 'dialogs_list': {
+        const list = msg.data || [];
+        setDialogs(list);
+        // [2.28.7] восстанавливаем unread-карту из списка диалогов
+        setUnreadByUser(prev => {
+          const next = { ...prev };
+          list.forEach(d => {
+            if (d.unread > 0) next[d.userId] = true;
+          });
+          return next;
+        });
         return true;
+      }
 
       case 'dialog_update': {
         const { userId, nickname, lastText, lastAt, unread } = msg.data;
@@ -107,23 +105,11 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
         return true;
 
       case 'unread_private_list': {
-        const onlineUserIds = new Set(playersRef.current.map(p => p.userId));
         const newUnread = {};
-        msg.data.forEach(senderId => {
-          if (onlineUserIds.has(senderId)) {
-            newUnread[senderId] = true;
-          }
+        (msg.data || []).forEach(senderId => {
+          newUnread[senderId] = true;
         });
-        setUnreadByUser(prev => {
-          const updated = { ...prev, ...newUnread };
-          const filtered = {};
-          for (const [userId, val] of Object.entries(updated)) {
-            if (onlineUserIds.has(userId)) {
-              filtered[userId] = val;
-            }
-          }
-          return filtered;
-        });
+        setUnreadByUser(prev => ({ ...prev, ...newUnread }));
         return true;
       }
 

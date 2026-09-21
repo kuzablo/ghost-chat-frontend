@@ -40,7 +40,7 @@ import '../styles/Chat.stickers.css';
 // [2.27.0] счётчик непрочитанных в заголовке вкладки + Badging API
 // [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
 // [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
-const VERSION = '2.28.6';
+const VERSION = '2.28.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 
