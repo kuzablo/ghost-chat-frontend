@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 
 /*
-  [2.20.1] Меню стикеров. Стиль 1-в-1 с капсульными кнопками:
-  квадраты 56x56, скругление 18px, белый фон, чёрная обводка, наклон ±3°.
+  [2.29.0] Поддержка item.badge — красный кружок с числом на кнопке.
+  [2.20.1] Меню стикеров. Стиль 1-в-1 с капсульными кнопками.
 */
 const StickerMenu = ({ open, title, subtitle, items, onClose }) => {
   useEffect(() => {
@@ -40,6 +40,9 @@ const StickerMenu = ({ open, title, subtitle, items, onClose }) => {
               title={item.label}
             >
               <span className="sticker-menu-item-icon">{item.icon}</span>
+              {item.badge ? (
+                <span className="sticker-menu-item-badge">{item.badge}</span>
+              ) : null}
             </button>
           ))}
         </div>

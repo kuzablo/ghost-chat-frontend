@@ -185,3 +185,37 @@ body.dark .sticker-menu-item--danger {
   from { --ring-progress: 0deg; }
   to   { --ring-progress: 360deg; }
 }
+
+/* ============================================================= */
+/* [2.29.0] Бейдж непрочитанных на стикере                       */
+/* ============================================================= */
+
+.sticker-menu-item-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #E11D48;
+  color: #FFFFFF;
+  border: 2px solid var(--card-border);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+  animation: stickerBadgePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes stickerBadgePulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+
+body.dark .sticker-menu-item-badge {
+  border-color: #172236;
+}

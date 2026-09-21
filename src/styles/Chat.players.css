@@ -304,3 +304,63 @@ body.dark .players-info-link {
     font-size: 12px;
   }
 }
+
+/* ============================================================= */
+/* [2.29.0] Свой профиль — обводка, подсказка long-press         */
+/* ============================================================= */
+
+.player-item--self {
+  position: relative;
+  border: 2px solid var(--btn-bg);
+  border-radius: var(--radius-sm);
+  background: rgba(59, 181, 232, 0.06);
+  margin-bottom: 8px;
+  padding: 8px 8px;
+}
+
+.player-item--self .player-name {
+  color: var(--nick-color);
+}
+
+.player-item--self:hover {
+  background: rgba(59, 181, 232, 0.12);
+}
+
+/* подсказка «нажми и держи» — пульсирует, но не назойливо */
+.player-hint {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--btn-bg);
+  background: rgba(59, 181, 232, 0.12);
+  border: 1px dashed var(--btn-bg);
+  border-radius: 8px;
+  padding: 3px 6px;
+  margin-left: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  animation: selfHintPulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@keyframes selfHintPulse {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.06); }
+}
+
+body.dark .player-item--self {
+  background: rgba(59, 181, 232, 0.08);
+  border-color: #3BB5E8;
+}
+
+body.dark .player-item--self:hover {
+  background: rgba(59, 181, 232, 0.16);
+}
+
+body.dark .player-hint {
+  color: #3BB5E8;
+  border-color: #3BB5E8;
+  background: rgba(59, 181, 232, 0.1);
+}
