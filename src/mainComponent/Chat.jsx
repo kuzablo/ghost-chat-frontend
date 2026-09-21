@@ -39,15 +39,27 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
-// [2.32.16] модалка запроса разрешения на уведомления — для бейджа на иконке iOS
-// [2.32.15] плеер мелькает при long-press, моментально скрывается после старта
-const VERSION = '2.32.16';
+// [2.32.17] Web Push: подписка после разрешения уведомлений; убрана подсказка «зажми»
+// [2.32.16] модалка разрешения уведомлений
+// [2.32.15] плеер мелькает при long-press, моментально скрывается
+const VERSION = '2.32.17';
 const WS_URL = 'wss://api.banjoboy420.ru';
+const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
 const FS_CLOSE_THRESHOLD = 120;
 const FS_DOUBLE_TAP_MS = 250;
 const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
+const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
+
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+  return out;
+};
 
 const ThemeIcon = () => (
   <span className="theme-icon" aria-hidden="true">
@@ -119,7 +131,6 @@ const Chat = () => {
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
-  const [mascotHintVisible, setMascotHintVisible] = useState(false);
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
 
@@ -183,6 +194,44 @@ const Chat = () => {
     setShowMiniPlayer(false);
   }, [showMiniPlayer, yt.hasStarted]);
 
+  // [2.32.17] подписка на push
+  const subscribeToPush = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!tokenRef.current) return;
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+
+      const res = await fetch(`${API_URL}/api/push/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: tokenRef.current,
+          subscription: sub.toJSON(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.warn('[push] subscribe failed:', res.status, data);
+      } else {
+        console.log('[push] subscribed');
+      }
+    } catch (err) {
+      console.warn('[push] subscribe error:', err);
+    }
+  }, [tokenRef]);
+
+  // [2.32.17] проверка разрешения + тихая подписка если уже разрешено
   useEffect(() => {
     if (!isAuth) return;
     if (typeof window === 'undefined') return;
@@ -194,6 +243,12 @@ const Chat = () => {
       (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     if (isIos && !isStandalone) return;
 
+    if (Notification.permission === 'granted') {
+      // уже разрешено — молча обновляем/создаём подписку
+      subscribeToPush();
+      return;
+    }
+
     if (Notification.permission !== 'default') return;
 
     let snooze = 0;
@@ -202,7 +257,7 @@ const Chat = () => {
 
     const t = setTimeout(() => setShowNotifModal(true), 1500);
     return () => clearTimeout(t);
-  }, [isAuth]);
+  }, [isAuth, subscribeToPush]);
 
   useEffect(() => {
     if (!yt.hasStarted) return;
@@ -777,14 +832,9 @@ const Chat = () => {
     ref.pointerId = e.pointerId;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
 
-    if (!yt.hasStarted) {
-      setMascotHintVisible(true);
-    }
-
     ref.longPressTimer = setTimeout(() => {
       ref.longPressFired = true;
       ref.longPressTimer = null;
-      setMascotHintVisible(false);
 
       if (!yt.hasStarted) {
         setShowMiniPlayer(true);
@@ -807,7 +857,6 @@ const Chat = () => {
           clearTimeout(ref.longPressTimer);
           ref.longPressTimer = null;
         }
-        setMascotHintVisible(false);
         setVolumeTipVisible(true);
       }
       const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
@@ -825,8 +874,6 @@ const Chat = () => {
       clearTimeout(ref.longPressTimer);
       ref.longPressTimer = null;
     }
-
-    setMascotHintVisible(false);
 
     if (ref.inVolumeDrag) {
       ref.inVolumeDrag = false;
@@ -854,7 +901,10 @@ const Chat = () => {
   const handleNotifAllow = async () => {
     try {
       if ('Notification' in window) {
-        await Notification.requestPermission();
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          await subscribeToPush();
+        }
       }
     } catch { /* noop */ }
     setShowNotifModal(false);
@@ -1124,9 +1174,6 @@ const Chat = () => {
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
               />
-              {mascotHintVisible && !yt.hasStarted && (
-                <div className="mascot-start-hint">зажми</div>
-              )}
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
               )}
