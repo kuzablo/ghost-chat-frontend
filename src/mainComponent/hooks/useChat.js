@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.33.1] клиентская проверка размера файла до загрузки — >25 МБ отбиваем сразу.
+  [2.33.0] friendshipRitual — state ритуала дружбы (огонь и вода).
+  [2.32.42] avatarCache — накапливающий кэш userId → avatarUrl.
   [2.32.41] bannedUsers — Set забаненных навсегда userId.
-            Ловим banned_users_update от сервера, отдаём наружу
-            для метки на аватарках в чате.
   [2.21.0] profile_changed отдаёт font/textColor/textRotation
   [2.20.0] profileData + обработка profile_changed / friend_removed
   [2.27.0] hiddenUnread
   [2.26.0] черновик
   [2.16.0] replyTo
 */
+const MAX_UPLOAD_MB = 25;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+
 export const useChat = ({
   sendMessage,
   isAuth,
@@ -34,6 +38,8 @@ export const useChat = ({
   const [replyTo, setReplyTo] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [bannedUsers, setBannedUsers] = useState(() => new Set());
+  const [avatarCache, setAvatarCache] = useState({});
+  const [friendshipRitual, setFriendshipRitual] = useState(null);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -103,6 +109,23 @@ export const useChat = ({
     });
   }, [players, nicknameRef]);
 
+  // [2.32.42] накопление аватарок — merge в кэш
+  const mergeAvatars = useCallback((items) => {
+    setAvatarCache(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const it of items || []) {
+        const id = it.userId || it.id;
+        const url = it.avatarUrl;
+        if (id && url && next[id] !== url) {
+          next[id] = url;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   // ===== Методы =====
   const handleSendMessage = useCallback(() => {
     if (sending || !sendMessageRef.current || !isAuthRef.current) return;
@@ -133,6 +156,14 @@ export const useChat = ({
     if (!file) return;
     if (!isAuthRef.current || !sendMessageRef.current) {
       setErrorMessage('Не авторизован или нет соединения');
+      return;
+    }
+
+    // [2.33.1] клиентская проверка размера — не тратим трафик
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setErrorMessage(`Файл больше ${MAX_UPLOAD_MB} МБ`);
+      e.target.value = '';
+      setTimeout(() => setErrorMessage(''), 4000);
       return;
     }
 
@@ -216,6 +247,10 @@ export const useChat = ({
       sendMessageRef.current({ type: 'friend_request_accept', data: { requestId } });
     }
     setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+    setFriendshipRitual(prev => {
+      if (!prev || prev.requestId !== requestId) return prev;
+      return { ...prev, phase: 'accept' };
+    });
   }, []);
 
   const handleDeclineRequest = useCallback((requestId) => {
@@ -223,6 +258,10 @@ export const useChat = ({
       sendMessageRef.current({ type: 'friend_request_decline', data: { requestId } });
     }
     setFriendRequests(prev => prev.filter(r => r.requestId !== requestId));
+    setFriendshipRitual(prev => {
+      if (!prev || prev.requestId !== requestId) return prev;
+      return { ...prev, phase: 'reject' };
+    });
   }, []);
 
   const togglePlayers = useCallback(() => {
@@ -231,11 +270,16 @@ export const useChat = ({
     }
   }, []);
 
+  const clearRitual = useCallback(() => {
+    setFriendshipRitual(null);
+  }, []);
+
   // ===== WS-фильтр =====
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
       case 'friends_list':
         setFriends(msg.data);
+        mergeAvatars(msg.data);
         return true;
 
       case 'history':
@@ -265,6 +309,7 @@ export const useChat = ({
 
       case 'players':
         setPlayers(msg.data);
+        mergeAvatars(msg.data);
         return true;
 
       case 'typing': {
@@ -281,7 +326,6 @@ export const useChat = ({
         setBannedUntil(msg.data.until);
         return true;
 
-      // [2.32.41] метка забаненных навсегда
       case 'banned_users_update': {
         const ids = msg.data?.bannedUserIds || [];
         setBannedUsers(new Set(ids));
@@ -292,15 +336,36 @@ export const useChat = ({
         if (onNoticeRef.current) onNoticeRef.current(msg.data.message);
         return true;
 
-      case 'friend_request_sent':
-        if (onNoticeRef.current) {
-          onNoticeRef.current(`Запрос дружбы отправлен пользователю ${msg.data.receiverNickname}`);
-        }
+      // ===== Ритуал: я отправил запрос =====
+      case 'friend_request_sent': {
+        setFriendshipRitual({
+          requestId: msg.data.requestId,
+          initiatorId: myIdRef.current,
+          initiatorNick: nicknameRef.current,
+          initiatorAvatar: null,
+          targetId: msg.data.receiverId,
+          targetNick: msg.data.receiverNickname,
+          targetAvatar: msg.data.receiverAvatar || null,
+          phase: 'pull',
+        });
         return true;
+      }
 
-      case 'new_friend_request':
+      // ===== Ритуал: мне пришёл запрос =====
+      case 'new_friend_request': {
         setFriendRequests(prev => [...prev, msg.data]);
+        setFriendshipRitual({
+          requestId: msg.data.requestId,
+          initiatorId: msg.data.senderId,
+          initiatorNick: msg.data.senderNickname,
+          initiatorAvatar: msg.data.senderAvatar || null,
+          targetId: myIdRef.current,
+          targetNick: nicknameRef.current,
+          targetAvatar: null,
+          phase: 'appear',
+        });
         return true;
+      }
 
       case 'friend_request_accepted_notification':
         if (onNoticeRef.current) {
@@ -309,10 +374,21 @@ export const useChat = ({
         if (sendMessageRef.current) {
           sendMessageRef.current({ type: 'get_friends' });
         }
+        setFriendshipRitual(prev => {
+          if (!prev) return prev;
+          return { ...prev, phase: 'accept' };
+        });
+        return true;
+
+      case 'friend_request_declined':
+        setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
+        setFriendshipRitual(prev => {
+          if (!prev) return prev;
+          return { ...prev, phase: 'reject' };
+        });
         return true;
 
       case 'friend_request_accepted':
-      case 'friend_request_declined':
         setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
         return true;
 
@@ -320,12 +396,11 @@ export const useChat = ({
         setFriendRequests(msg.data);
         return true;
 
-      // [2.20.0] профиль
       case 'profile_data':
         setProfileData(msg.data);
+        mergeAvatars([msg.data]);
         return true;
 
-      // [2.21.0] font/textColor/textRotation добавлены
       case 'profile_changed': {
         const { userId, avatarUrl, bio, font, textColor, textRotation } = msg.data;
         setFriends(prev => prev.map(f => f.userId === userId ? { ...f, avatarUrl } : f));
@@ -335,6 +410,9 @@ export const useChat = ({
             ? { ...prev, avatarUrl, bio, font, textColor, textRotation }
             : prev
         ));
+        if (userId && avatarUrl) {
+          setAvatarCache(prev => (prev[userId] === avatarUrl ? prev : { ...prev, [userId]: avatarUrl }));
+        }
         return true;
       }
 
@@ -354,7 +432,7 @@ export const useChat = ({
       default:
         return false;
     }
-  }, [nicknameRef]);
+  }, [nicknameRef, mergeAvatars]);
 
   return {
     messages,
@@ -365,6 +443,8 @@ export const useChat = ({
     notices,
     bannedUntil,
     bannedUsers,
+    avatarCache,
+    friendshipRitual,
     errorMessage,
     setErrorMessage,
     input,
@@ -390,5 +470,6 @@ export const useChat = ({
     handleAcceptRequest,
     handleDeclineRequest,
     togglePlayers,
+    clearRitual,
   };
 };

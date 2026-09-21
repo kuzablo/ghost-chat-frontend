@@ -11,6 +11,7 @@ import ConfirmModal from './components/ConfirmModal';
 import ChatInput from './components/ChatInput';
 import NotificationPermissionModal from './components/NotificationPermissionModal';
 import ProfilePanel from './components/ProfilePanel';
+import FriendshipRitual from './components/FriendshipRitual';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -39,15 +40,19 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
+import '../styles/Chat.friendship.css';
 
+// [2.33.1] лимит загрузки 25 МБ, клиентская проверка размера
+// [2.33.0] Ритуал дружбы — огонь и вода, компонент FriendshipRitual
+// [2.32.42] avatarCache от useChat — аватарки не пропадают при офлайне
 // [2.32.41] bannedUsers прокинут в MessageList — метка на аватарках
 // [2.32.40] ConfirmBanModal удалён — бан идёт через ConfirmModal с danger.
-// [2.32.39] useMemo для avatarByUser/imageMessages — не пересобираем на каждом WS.
+// [2.32.39] useMemo для imageMessages — не пересобираем на каждом WS.
 // [2.32.38] свайп влево от правого края → диалоги
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.32.41';
+const VERSION = '2.33.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -343,6 +348,8 @@ const Chat = () => {
     notices,
     bannedUntil,
     bannedUsers,
+    avatarCache,
+    friendshipRitual,
     errorMessage,
     setErrorMessage,
     input,
@@ -367,6 +374,7 @@ const Chat = () => {
     handleAcceptRequest,
     handleDeclineRequest,
     togglePlayers: chatTogglePlayers,
+    clearRitual,
   } = chat;
 
   const priv = usePrivateChat({ sendMessage, myId, players });
@@ -406,23 +414,12 @@ const Chat = () => {
   const hasPrevImage = currentImageIndex > 0;
   const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
 
-  const avatarByUser = useMemo(() => {
-    const map = {};
-    for (const p of players) {
-      if (p.userId && p.avatarUrl) map[p.userId] = p.avatarUrl;
-    }
-    for (const f of friends) {
-      if (f.userId && f.avatarUrl) map[f.userId] = f.avatarUrl;
-    }
-    return map;
-  }, [players, friends]);
-
   const fullscreenMessage = currentImageMessage || null;
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
 
   const fsAuthorAvatarUrl = fullscreenMessage
-    ? avatarByUser[fullscreenMessage.userId]
+    ? avatarCache[fullscreenMessage.userId]
     : null;
 
   useEffect(() => {
@@ -1306,6 +1303,39 @@ const Chat = () => {
         />
       )}
 
+      {friendshipRitual && (
+        <FriendshipRitual
+          open={!!friendshipRitual}
+          myId={myId}
+          initiatorId={friendshipRitual.initiatorId}
+          initiatorNick={friendshipRitual.initiatorNick}
+          initiatorAvatar={
+            friendshipRitual.initiatorAvatar ||
+            avatarCache[friendshipRitual.initiatorId] ||
+            null
+          }
+          targetId={friendshipRitual.targetId}
+          targetNick={friendshipRitual.targetNick}
+          targetAvatar={
+            friendshipRitual.targetAvatar ||
+            avatarCache[friendshipRitual.targetId] ||
+            null
+          }
+          phase={friendshipRitual.phase}
+          onAccept={() => {
+            if (friendshipRitual.requestId) {
+              handleAcceptRequest(friendshipRitual.requestId);
+            }
+          }}
+          onDecline={() => {
+            if (friendshipRitual.requestId) {
+              handleDeclineRequest(friendshipRitual.requestId);
+            }
+          }}
+          onDone={clearRitual}
+        />
+      )}
+
       <ConfirmModal
         open={!!banConfirm}
         title={`Забанить ${banConfirm?.nickname || 'пользователя'} навсегда?`}
@@ -1406,7 +1436,7 @@ const Chat = () => {
               onEditMessage={handleEditMessage}
               containerRef={messagesContainerRef}
               onReply={handleReply}
-              avatarByUser={avatarByUser}
+              avatarByUser={avatarCache}
               bannedUsers={bannedUsers}
             />
 
