@@ -41,6 +41,7 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.37] perf(dialogs): свайп вправо через DOM — без setState на каждом кадре
 // [2.32.36] perf(swipe): свайпы сообщений через DOM — без setState на каждом кадре
 // [2.32.35] fix(theme): очищен index.css от шаблона Vite; класс меняется внутри View Transition
 // [2.32.34] feat(profile): кастомизация bio — 7 шрифтов, цвет, поворот
@@ -50,7 +51,7 @@ import '../styles/Chat.profile.css';
 // [2.32.29] при смене темы глушим transition; 550ms → 320ms
 // [2.32.28] склейка по минуте; инфопанель
 // [2.32.27] склейка сообщений
-const VERSION = '2.32.36';
+const VERSION = '2.32.37';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

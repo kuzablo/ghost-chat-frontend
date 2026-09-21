@@ -1,7 +1,8 @@
-import { forwardRef, useRef, useState } from 'react';
+import { forwardRef, useRef, useEffect } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 
 /*
+  [2.32.37] Свайп вправо через DOM — без setState на каждом кадре.
   [2.30.0] Свайп вправо — закрытие. Кнопка «←» вместо крестика.
            Секции по датам: Сегодня / Вчера / Раньше.
   [2.17.0] Панель диалогов.
@@ -15,8 +16,20 @@ const DialogsPanel = forwardRef(({
 }, ref) => {
   const isOnline = (userId) => players.some(p => p.userId === userId);
 
-  const swipeRef = useRef({ active: false, startX: 0, startY: 0, direction: null });
-  const [dragX, setDragX] = useState(0);
+  const panelRef = useRef(null);
+  const swipeRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    direction: null,
+    lastDx: 0,
+  });
+
+  // связываем внешний ref с внутренним
+  useEffect(() => {
+    if (typeof ref === 'function') ref(panelRef.current);
+    else if (ref) ref.current = panelRef.current;
+  }, [ref]);
 
   const isSameDay = (a, b) => {
     if (!a || !b) return false;
@@ -60,52 +73,77 @@ const DialogsPanel = forwardRef(({
     sections[sections.length - 1].items.push(d);
   });
 
-  /* ===== Свайп вправо ===== */
+  /* ===== Свайп вправо — через DOM, без setState ===== */
+
+  const SWIPE_THRESHOLD = 80;
+  const SWIPE_MAX = 200;
+  const DIRECTION_LOCK = 8;
+
+  const resetPanel = (animated = true) => {
+    const el = panelRef.current;
+    if (!el) return;
+    el.style.transition = animated
+      ? 'transform 0.22s cubic-bezier(0.25, 1, 0.5, 1)'
+      : 'none';
+    el.style.transform = '';
+    if (animated) {
+      setTimeout(() => {
+        if (panelRef.current) panelRef.current.style.transition = '';
+      }, 240);
+    }
+  };
 
   const handleTouchStart = (e) => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
-    swipeRef.current = {
-      active: true,
-      startX: t.clientX,
-      startY: t.clientY,
-      direction: null,
-    };
+    const s = swipeRef.current;
+    s.active = true;
+    s.startX = t.clientX;
+    s.startY = t.clientY;
+    s.direction = null;
+    s.lastDx = 0;
+    if (panelRef.current) {
+      panelRef.current.style.transition = 'none';
+    }
   };
 
   const handleTouchMove = (e) => {
     const s = swipeRef.current;
     if (!s.active) return;
     if (e.touches.length !== 1) return;
+
     const t = e.touches[0];
     const dx = t.clientX - s.startX;
     const dy = t.clientY - s.startY;
 
     if (!s.direction) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
       s.direction = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
     }
     if (s.direction === 'vertical') return;
 
     if (dx > 0) {
-      setDragX(Math.min(dx, 200));
+      const off = Math.min(dx, SWIPE_MAX);
+      s.lastDx = off;
+      if (panelRef.current) {
+        panelRef.current.style.transform = `translateX(${off}px)`;
+      }
       if (e.cancelable) e.preventDefault();
     }
   };
 
   const handleTouchEnd = (e) => {
     const s = swipeRef.current;
+    if (!s.active) return;
     s.active = false;
-    if (!s.direction) {
-      setDragX(0);
+
+    if (s.direction === 'horizontal' && s.lastDx > SWIPE_THRESHOLD) {
+      onClose();
       return;
     }
-    const t = e.changedTouches[0];
-    const dx = t.clientX - s.startX;
-    if (s.direction === 'horizontal' && dx > 80) {
-      onClose();
-    }
-    setDragX(0);
+    resetPanel(true);
+    s.direction = null;
+    s.lastDx = 0;
   };
 
   return (
@@ -117,15 +155,11 @@ const DialogsPanel = forwardRef(({
       />
       <aside
         className="dialogs-panel"
-        ref={ref}
+        ref={panelRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        style={{
-          transform: dragX > 0 ? `translateX(${dragX}px)` : undefined,
-          transition: dragX === 0 ? 'transform 0.22s cubic-bezier(0.25, 1, 0.5, 1)' : 'none',
-        }}
       >
         <header className="dialogs-header">
           <button
