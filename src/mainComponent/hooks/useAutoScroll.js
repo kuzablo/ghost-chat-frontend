@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
+  [2.32.39] Второй ResizeObserver — запись scrollTop обёрнута в RAF,
+            чтобы не ловить layout thrashing.
   [2.32.22] скролл вниз только при новом последнем сообщении —
             реакции и редактирование больше не дёргают
   [2.32.21] постоянный ResizeObserver: если юзер у низа — держим у низа
@@ -69,24 +71,33 @@ export const useAutoScroll = ({ messages, resetKey }) => {
   }, [resetKey]);
 
   /* [2.32.21] постоянный ResizeObserver — держим скролл у низа,
-     если юзер не ушёл вверх */
+     если юзер не ушёл вверх.
+     [2.32.39] запись scrollTop в RAF — избегаем layout thrashing. */
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
     if (typeof ResizeObserver === 'undefined') return;
 
     const KEEP_BOTTOM_PX = 80;
+    let rafId = null;
 
     const ro = new ResizeObserver(() => {
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      if (distanceFromBottom < KEEP_BOTTOM_PX) {
-        el.scrollTop = el.scrollHeight;
-      }
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (distanceFromBottom < KEEP_BOTTOM_PX) {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
     });
 
     ro.observe(el);
 
-    return () => ro.disconnect();
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, []);
 
   // Индикатор «вниз»

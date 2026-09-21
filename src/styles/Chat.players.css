@@ -1,4 +1,8 @@
-/* ===== Панель игроков ===== */
+/* ===== Панель игроков =====
+   [2.32.39] unreadPulse: box-shadow → transform.
+             box-shadow в бесконечной анимации заставляет пересчитывать
+             paint каждый кадр. transform — на GPU.
+*/
 .players-overlay {
   position: fixed;
   top: 60px;
@@ -195,7 +199,10 @@ body.dark .player-item {
   border-color: var(--danger);
 }
 
-/* ===== Непрочитанное личное — пульсация кнопки ✉️ ===== */
+/* ===== Непрочитанное личное — пульсация кнопки ✉️ =====
+   [2.32.39] box-shadow → transform.
+   box-shadow в бесконечной анимации заставляет paint каждый кадр,
+   transform — только compositor. */
 .player-action-btn--unread {
   background: var(--btn-bg);
   border-color: var(--btn-border);
@@ -208,15 +215,12 @@ body.dark .player-item {
 
 @keyframes unreadPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(59, 181, 232, 0.7);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(59, 181, 232, 0);
-    transform: scale(1.08);
+    transform: scale(1.1);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 181, 232, 0);
     transform: scale(1);
   }
 }

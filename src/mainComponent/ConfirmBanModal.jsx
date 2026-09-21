@@ -1,5 +1,9 @@
 import React from 'react';
 
+/*
+  [2.32.39] Убран backdrop-filter: blur(8px) — заменён на rgba как в других
+            модалках. Разгружает композитор, единый стиль оверлеев.
+*/
 const ConfirmBanModal = ({ open, nickname, onConfirm, onCancel }) => {
   if (!open) return null;
 
@@ -12,8 +16,7 @@ const ConfirmBanModal = ({ open, nickname, onConfirm, onCancel }) => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.4)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(17, 17, 17, 0.55)',
           zIndex: 998,
         }}
         onClick={onCancel}

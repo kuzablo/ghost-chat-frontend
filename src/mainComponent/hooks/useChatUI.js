@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
+  [2.32.39] useCallback на toggleReactions/closeFullscreen — стабильные
+            ссылки для memo-компонентов, меньше ререндеров.
   [2.32.34] toggleTheme: класс меняется внутри callback View Transition
             — иначе снапшот "old" уже с новой темой и анимация бессмысленна
   [2.32.19] активная реакция-пикер автоскрывается через 2 сек
@@ -72,14 +74,14 @@ export const useChatUI = () => {
     transition.finished.catch(() => { /* noop */ });
   }, [isDark]);
 
-  const toggleReactions = (messageId) => {
+  const toggleReactions = useCallback((messageId) => {
     setActiveMessageId(prev => (prev === messageId ? null : messageId));
-  };
+  }, []);
 
-  const closeFullscreen = () => {
+  const closeFullscreen = useCallback(() => {
     setFullscreenImage(null);
     setShowFullscreenReactions(false);
-  };
+  }, []);
 
   return {
     isDark, setIsDark,

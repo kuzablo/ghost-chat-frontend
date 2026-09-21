@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import ConfirmBanModal from './ConfirmBanModal';
 import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
@@ -41,11 +41,12 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.39] useMemo для avatarByUser/imageMessages — не пересобираем на каждом WS
 // [2.32.38] свайп влево от правого края → диалоги
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.32.38';
+const VERSION = '2.32.39';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -389,7 +390,12 @@ const Chat = () => {
   const totalNotifications = unreadCount + friendRequestsCount;
   const totalUnread = hiddenUnread + unreadCount + friendRequestsCount;
 
-  const imageMessages = messages.filter(m => m.imageUrl);
+  // [2.32.39] useMemo — imageMessages пересобирался на каждом WS-сообщении
+  const imageMessages = useMemo(
+    () => messages.filter(m => m.imageUrl),
+    [messages]
+  );
+
   const currentImageIndex = fullscreenImage
     ? imageMessages.findIndex(m => m.id === fullscreenImage.messageId)
     : -1;
@@ -399,13 +405,17 @@ const Chat = () => {
   const hasPrevImage = currentImageIndex > 0;
   const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
 
-  const avatarByUser = {};
-  for (const p of players) {
-    if (p.userId && p.avatarUrl) avatarByUser[p.userId] = p.avatarUrl;
-  }
-  for (const f of friends) {
-    if (f.userId && f.avatarUrl) avatarByUser[f.userId] = f.avatarUrl;
-  }
+  // [2.32.39] useMemo — avatarByUser пересобирался на каждом WS-сообщении
+  const avatarByUser = useMemo(() => {
+    const map = {};
+    for (const p of players) {
+      if (p.userId && p.avatarUrl) map[p.userId] = p.avatarUrl;
+    }
+    for (const f of friends) {
+      if (f.userId && f.avatarUrl) map[f.userId] = f.avatarUrl;
+    }
+    return map;
+  }, [players, friends]);
 
   const fullscreenMessage = currentImageMessage || null;
   const fullscreenReactions = fullscreenMessage?.reactions || {};
