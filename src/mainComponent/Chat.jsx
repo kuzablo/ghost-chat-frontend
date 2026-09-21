@@ -25,6 +25,8 @@ import { useDuel } from './hooks/useDuel';
 import { usePrivateChat } from './hooks/usePrivateChat';
 import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
+import InstallPwaBanner from './components/InstallPwaBanner';
+
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
 import '../styles/Chat.players.css';
@@ -36,6 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.31.8] баннер установки PWA для iOS Safari
 // [2.31.7] ring-thickness унифицирован в PlayersPanel
 // [2.31.6] реакции image-only — правый верхний угол, размер ×2
 // [2.31.5] fix: пикер реакций в fullscreen выше и крупнее (44×44)
@@ -44,7 +47,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.31.8';
+const VERSION = '2.31.9';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -1317,6 +1320,7 @@ const Chat = () => {
         />
       )}
 
+      <InstallPwaBanner />
       {isNewVersionAvailable && <LatestVersionLink />}
 
       {fullscreenImage && (
