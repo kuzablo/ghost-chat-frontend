@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
-  [2.32.29] на время смены темы глушим все CSS-transition (было тяжело на мобиле)
-            + анимация радиального раскрытия укорочена 550ms → 320ms
+  [2.32.31] откат к 2.21.0 — тема работает как раньше
   [2.32.19] активная реакция-пикер автоскрывается через 2 сек
-  [2.21.0] toggleTheme(event) — плавное переключение темы
 */
 const PICKER_AUTOHIDE_MS = 2000;
 
@@ -37,28 +35,15 @@ export const useChatUI = () => {
     const x = event?.clientX ?? window.innerWidth - 30;
     const y = event?.clientY ?? 30;
 
-    // [2.32.29] глушим все transition на корне — иначе сотни элементов
-    // одновременно анимируют цвет, вызывая лаг на мобиле
-    document.documentElement.classList.add('theme-switching');
-
-    // фолбэк — без View Transitions API
     if (typeof document.startViewTransition !== 'function') {
       setIsDark(next);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          document.documentElement.classList.remove('theme-switching');
-        });
-      });
       return;
     }
 
-    // синхронно переключаем класс — снапшот "нового" состояния корректный
     document.body.classList.toggle('dark', next);
     setIsDark(next);
 
-    const transition = document.startViewTransition(() => {
-      // пусто — DOM уже переключён выше
-    });
+    const transition = document.startViewTransition(() => {});
 
     transition.ready
       .then(() => {
@@ -74,19 +59,15 @@ export const useChatUI = () => {
             ],
           },
           {
-            duration: 320,
-            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+            duration: 550,
+            easing: 'ease-in-out',
             pseudoElement: '::view-transition-new(root)',
           }
         );
       })
       .catch(() => { /* noop */ });
 
-    transition.finished
-      .catch(() => { /* noop */ })
-      .finally(() => {
-        document.documentElement.classList.remove('theme-switching');
-      });
+    transition.finished.catch(() => { /* noop */ });
   }, [isDark]);
 
   const toggleReactions = (messageId) => {

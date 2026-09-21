@@ -1349,7 +1349,11 @@ body.dark .theme-icon-moon {
 
 /* плавный переход при распаде группы во время редактирования */
 .msg-content {
-  transition: border-radius 0.18s ease, margin 0.18s ease;
+  transition:
+    border-radius 0.18s ease,
+    margin 0.18s ease,
+    background 0.2s,
+    border-color 0.2s;
 }
 
 /* в image-only склейки нет */
