@@ -19,6 +19,7 @@ const MessageList = ({
   containerRef,
   onReply,
   avatarByUser = {},
+  bannedUsers = new Set(),
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -380,17 +381,22 @@ const MessageList = ({
   };
 
   // [2.32.25] аватар в сообщении: картинка если есть, иначе инициал
+  // [2.32.41] метка забаненного: красная обводка + бейдж 🚫
   const renderMsgAvatar = (userId, nick) => {
     const url = avatarByUser[userId];
+    const isBanned = bannedUsers.has(userId);
     return (
       <div
-        className="msg-avatar"
+        className={`msg-avatar${isBanned ? ' msg-avatar--banned' : ''}`}
         style={url
           ? { backgroundImage: `url(${url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
           : { background: getAvatarColor(nick) }
         }
       >
         {!url && getInitial(nick)}
+        {isBanned && (
+          <span className="msg-avatar-banned-badge" aria-hidden="true">🚫</span>
+        )}
       </div>
     );
   };

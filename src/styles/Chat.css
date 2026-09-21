@@ -231,6 +231,28 @@ body {
   box-shadow: 0 2px 0 rgba(0,0,0,0.15);
 }
 
+/* [2.32.41] метка забаненного навсегда: красная обводка + бейдж 🚫
+   overflow: visible — чтобы бейдж в углу не обрезался */
+.msg-avatar--banned {
+  overflow: visible;
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 2px var(--danger), 0 2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.msg-avatar-banned-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-size: 11px;
+  line-height: 1;
+  background: var(--card-bg);
+  border-radius: 50%;
+  padding: 1px 2px;
+  border: 1.5px solid var(--danger);
+  z-index: 3;
+  pointer-events: none;
+}
+
 .msg-content {
   display: inline-flex;
   flex-direction: column;

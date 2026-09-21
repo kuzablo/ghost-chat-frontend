@@ -40,13 +40,14 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.41] bannedUsers прокинут в MessageList — метка на аватарках
 // [2.32.40] ConfirmBanModal удалён — бан идёт через ConfirmModal с danger.
 // [2.32.39] useMemo для avatarByUser/imageMessages — не пересобираем на каждом WS.
 // [2.32.38] свайп влево от правого края → диалоги
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.32.40';
+const VERSION = '2.32.41';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -341,6 +342,7 @@ const Chat = () => {
     friendRequests,
     notices,
     bannedUntil,
+    bannedUsers,
     errorMessage,
     setErrorMessage,
     input,
@@ -1405,6 +1407,7 @@ const Chat = () => {
               containerRef={messagesContainerRef}
               onReply={handleReply}
               avatarByUser={avatarByUser}
+              bannedUsers={bannedUsers}
             />
 
             {notices.length > 0 && (

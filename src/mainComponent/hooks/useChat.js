@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.32.41] bannedUsers — Set забаненных навсегда userId.
+            Ловим banned_users_update от сервера, отдаём наружу
+            для метки на аватарках в чате.
   [2.21.0] profile_changed отдаёт font/textColor/textRotation
   [2.20.0] profileData + обработка profile_changed / friend_removed
   [2.27.0] hiddenUnread
@@ -30,6 +33,7 @@ export const useChat = ({
   const [hiddenUnread, setHiddenUnread] = useState(0);
   const [replyTo, setReplyTo] = useState(null);
   const [profileData, setProfileData] = useState(null);
+  const [bannedUsers, setBannedUsers] = useState(() => new Set());
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -277,6 +281,13 @@ export const useChat = ({
         setBannedUntil(msg.data.until);
         return true;
 
+      // [2.32.41] метка забаненных навсегда
+      case 'banned_users_update': {
+        const ids = msg.data?.bannedUserIds || [];
+        setBannedUsers(new Set(ids));
+        return true;
+      }
+
       case 'admin_error':
         if (onNoticeRef.current) onNoticeRef.current(msg.data.message);
         return true;
@@ -353,6 +364,7 @@ export const useChat = ({
     friendRequests,
     notices,
     bannedUntil,
+    bannedUsers,
     errorMessage,
     setErrorMessage,
     input,
