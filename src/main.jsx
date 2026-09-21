@@ -1,15 +1,22 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.jsx';
+
+// [2.32.8] тему ставим синхронно до первого рендера — иначе мигание
+try {
+  if (localStorage.getItem('ghost-chat-theme') === 'dark') {
+    document.body.classList.add('dark');
+  }
+} catch { /* noop */ }
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
   </StrictMode>
-)
+);
 
-// [2.28.0] регистрация Service Worker для PWA
+// регистрация Service Worker для PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
