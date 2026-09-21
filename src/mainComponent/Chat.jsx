@@ -55,7 +55,7 @@ import '../styles/Chat.friendship.css';
 // [2.32.37] свайп DialogsPanel через DOM
 // [2.32.36] свайпы сообщений через DOM
 // [2.32.35] 8 визуальных демо в InfoPanel
-const VERSION = '2.33.5';
+const VERSION = '2.33.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1532,7 +1532,6 @@ const Chat = () => {
               onChange={handleFileUpload}
               accept="image/*"
               style={{ display: 'none' }}
-              capture="environment"
             />
             <button
               className={`send-btn ${sending ? 'sending' : ''}`}

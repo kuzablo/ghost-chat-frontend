@@ -4,13 +4,14 @@ import ChatInput from './ChatInput';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 const PICKER_AUTOHIDE_MS = 2000;
+const MAX_UPLOAD_MB = 25;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 /*
-  [2.32.20] скролл вниз только при новом последнем сообщении,
-            не при реакции/редактировании
+  [2.33.6] загрузка фото в личных сообщениях: 📎 + превью + лайтбокс
+  [2.32.20] скролл вниз только при новом последнем сообщении
   [2.32.19] пикер реакций автоскрывается через 2 сек
-  [2.29.3] без плавного скролла при открытии
-  [2.26.1] <input> заменён на ChatInput
+  [2.26.1] ChatInput вместо <input>
   [2.19.4] PrivateChat принимает sendMessage
 */
 const PrivateChat = ({
@@ -27,24 +28,26 @@ const PrivateChat = ({
   const [pickerFor, setPickerFor] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
   const [pickerAbove, setPickerAbove] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [fullscreenImage, setFullscreenImage] = useState(null);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const lastMsgIdRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setLocalTypingUser(typingUser);
   }, [typingUser]);
 
-  // [2.32.19] автоскрытие пикера
   useEffect(() => {
     if (!pickerFor) return;
     const t = setTimeout(() => setPickerFor(null), PICKER_AUTOHIDE_MS);
     return () => clearTimeout(t);
   }, [pickerFor]);
 
-  // [2.32.20] скролл только при новом последнем сообщении
   useEffect(() => {
     const last = initialMessages[initialMessages.length - 1];
     const lastId = last?.id ?? null;
@@ -79,6 +82,49 @@ const PrivateChat = ({
     });
   };
 
+  // [2.33.6] загрузка фото
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Только изображения');
+      setTimeout(() => setUploadError(''), 4000);
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setUploadError(`Файл больше ${MAX_UPLOAD_MB} МБ`);
+      setTimeout(() => setUploadError(''), 4000);
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('https://api.banjoboy420.ru/api/upload', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      sendMessage({
+        type: 'private_message',
+        data: { recipientId: userId, text: '', imageUrl: data.imageUrl },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки фото:', err);
+      setUploadError('Не удалось загрузить');
+      setTimeout(() => setUploadError(''), 4000);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const sendReaction = (messageId, emoji) => {
     if (!sendMessage) return;
     sendMessage({
@@ -90,6 +136,8 @@ const PrivateChat = ({
 
   const handleMessageTap = (id, e) => {
     if (e.target.closest('.private-reaction-picker')) return;
+    if (e.target.closest('.private-msg-image')) return;
+    if (e.target.closest('.private-attach-btn')) return;
 
     if (pickerFor === id) {
       setPickerFor(null);
@@ -165,7 +213,22 @@ const PrivateChat = ({
                 </span>
 
                 <div className="private-msg-text-wrap">
-                  <span className="private-msg-text">{m.text}</span>
+                  {m.imageUrl && (
+                    <img
+                      src={m.imageUrl}
+                      alt="photo"
+                      className="private-msg-image"
+                      loading="lazy"
+                      draggable={false}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFullscreenImage(m.imageUrl);
+                      }}
+                    />
+                  )}
+                  {m.text && (
+                    <span className="private-msg-text">{m.text}</span>
+                  )}
 
                   {hasReactions && (
                     <div className="private-msg-reactions">
@@ -215,7 +278,28 @@ const PrivateChat = ({
           })}
           <div ref={messagesEndRef} />
         </div>
+
+        {uploadError && (
+          <div className="private-upload-error">{uploadError}</div>
+        )}
+
         <div className="private-input-row">
+          <button
+            type="button"
+            className="private-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            title="Прикрепить фото"
+          >
+            {isUploading ? '⏳' : '📎'}
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
           <ChatInput
             value={input}
             onChange={handlePrivateInput}
@@ -230,6 +314,28 @@ const PrivateChat = ({
           </button>
         </div>
       </div>
+
+      {fullscreenImage && (
+        <div
+          className="private-image-overlay"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <img
+            src={fullscreenImage}
+            alt=""
+            className="private-image-full"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            type="button"
+            className="private-image-close"
+            onClick={() => setFullscreenImage(null)}
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </>
   );
 };
