@@ -44,6 +44,8 @@ import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 
+// [2.34.4] fix: dialogsBg — единственный источник в useChat
+// [2.34.3] Кастомизация фона диалогов + крупнее аватарки
 // [2.34.1] Мои диалоги: разделители, мини-пульс, long-press → профиль
 // [2.34.0] Диалоги — редизайн + avatarUrl с бэка
 // [2.33.9] InfoPanel: актуализация + анонимные плейсхолдеры
@@ -59,7 +61,7 @@ import '../styles/Chat.roompulse.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.34.1';
+const VERSION = '2.34.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -358,6 +360,7 @@ const Chat = () => {
     avatarCache,
     friendshipRitual,
     blockedUsers,
+    dialogsBg,
     errorMessage,
     setErrorMessage,
     input,
@@ -385,6 +388,7 @@ const Chat = () => {
     clearRitual,
     blockUser,
     unblockUser,
+    saveDialogsBg,
   } = chat;
 
   const priv = usePrivateChat({ sendMessage, myId, players });
@@ -415,7 +419,6 @@ const Chat = () => {
     [messages]
   );
 
-  // [2.33.7] стабильный Set блокированных для memo PlayersPanel
   const blockedIds = useMemo(
     () => new Set(blockedUsers.map(u => u.userId)),
     [blockedUsers]
@@ -735,7 +738,6 @@ const Chat = () => {
     setShowPlayers(prev => !prev);
   };
 
-  // [2.33.7] useCallback на все функции, передаваемые в memo-компоненты
   const handleOpenInfo = useCallback(() => {
     setShowPlayers(false);
     setShowInfo(true);
@@ -1221,12 +1223,10 @@ const Chat = () => {
     }
   };
 
-  // [2.33.7] стабильный колбэк для ConfirmModal бана
   const handleBanConfirm = useCallback((userId, nickname) => {
     setBanConfirm({ userId, nickname });
   }, []);
 
-  // [2.33.7] стабильные колбэки для ритуала
   const handleRitualAccept = useCallback(() => {
     if (friendshipRitual && friendshipRitual.requestId) {
       handleAcceptRequest(friendshipRitual.requestId);
@@ -1239,17 +1239,14 @@ const Chat = () => {
     }
   }, [friendshipRitual, handleDeclineRequest]);
 
-  // [2.33.7] стабильный колбэк закрытия уведомления о дуэли
   const handleCloseDuelNotice = useCallback(() => {
     setDuelNotice('');
   }, []);
 
-  // [2.33.7] стабильный колбэк закрытия окна бана
   const handleBanCancel = useCallback(() => {
     setBanConfirm(null);
   }, []);
 
-  // [2.33.7] стабильный колбэк подтверждения бана
   const handleBanDo = useCallback(() => {
     if (banConfirm) {
       banForever(banConfirm.userId);
@@ -1257,7 +1254,6 @@ const Chat = () => {
     }
   }, [banConfirm, banForever]);
 
-  // [2.33.7] стабильный колбэк отмены логаута
   const handleLogoutCancel = useCallback(() => {
     setLogoutConfirm(false);
   }, []);
@@ -1328,6 +1324,9 @@ const Chat = () => {
           dialogs={dialogs}
           players={players}
           myId={myId}
+          dialogsBg={dialogsBg}
+          onSaveDialogsBg={saveDialogsBg}
+          token={token}
           onOpen={handleOpenFromDialogs}
           onClose={handleCloseDialogs}
           onOpenProfile={handleOpenProfile}

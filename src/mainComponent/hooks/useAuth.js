@@ -3,8 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 const API_URL = 'https://api.banjoboy420.ru';
 
 /*
-  [2.16.0] добавлены adminUserId и adminNickname —
-  нужны, чтобы писать админу, даже если он офлайн.
+  [2.34.4] dialogsBg убран — source of truth в useChat
+  [2.16.0] adminUserId и adminNickname
 */
 export const useAuth = () => {
   const storedToken = localStorage.getItem('ghost-chat-token') || '';
@@ -82,7 +82,6 @@ export const useAuth = () => {
     setIsAuth(true);
     setIsAdmin(data.role === 'admin');
     setServerVersion(data.serverVersion || '');
-    // [2.16.0]
     setAdminUserId(data.adminUserId || null);
     setAdminNickname(data.adminNickname || null);
   };

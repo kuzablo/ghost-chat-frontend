@@ -1,19 +1,40 @@
 import { forwardRef, useRef, useEffect, useState, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
+import DialogsBgPicker, { PRESETS_MAP } from './DialogsBgPicker';
 
 /*
-  [2.34.1] Убрана стрелка. Мини-пульс в шапке. Разделители между карточками.
-           Long-press на аватарке → профиль. Свайп в обе стороны — закрыть.
-  [2.34.0] Редизайн: карточки, аватарки, онлайн-точка, пульс непрочитанного.
-  [2.33.7] React.memo
+  [2.34.4] URL-фон без двойного затемнения
+  [2.34.3] Фон окна диалогов + кнопка кастомизации.
+  [2.34.2] Аватарки 64px, сжатые отступы.
+  [2.34.1] Мини-пульс, разделители, long-press → профиль.
+  [2.34.0] Редизайн карточек.
+  [2.33.7] React.memo.
 */
 const LONG_PRESS_MS = 500;
 const MOVE_CANCEL_PX = 8;
+
+const getBgCss = (bg) => {
+  if (!bg) return null;
+  if (bg.startsWith('preset:')) {
+    const id = bg.slice('preset:'.length);
+    return PRESETS_MAP[id] || null;
+  }
+  if (bg.startsWith('url:')) {
+    const url = bg.slice('url:'.length);
+    return `url(${url})`;
+  }
+  return null;
+};
+
+const isUrlBg = (bg) => !!(bg && bg.startsWith('url:'));
 
 const DialogsPanel = forwardRef(({
   dialogs,
   players,
   myId,
+  dialogsBg,
+  onSaveDialogsBg,
+  token,
   onOpen,
   onClose,
   onOpenProfile,
@@ -29,7 +50,6 @@ const DialogsPanel = forwardRef(({
     lastDx: 0,
   });
 
-  // Long-press на аватарке
   const pressRef = useRef({
     timer: null,
     startX: 0,
@@ -38,6 +58,7 @@ const DialogsPanel = forwardRef(({
     userId: null,
   });
   const [pressingUserId, setPressingUserId] = useState(null);
+  const [showBgPicker, setShowBgPicker] = useState(false);
 
   useEffect(() => {
     if (typeof ref === 'function') ref(panelRef.current);
@@ -170,7 +191,6 @@ const DialogsPanel = forwardRef(({
     }
     if (s.direction === 'vertical') return;
 
-    // Свайп в обе стороны — сдвигаем по модулю
     const off = Math.min(Math.abs(dx), SWIPE_MAX);
     s.lastDx = off;
     if (panelRef.current) {
@@ -194,7 +214,6 @@ const DialogsPanel = forwardRef(({
     s.lastDx = 0;
   };
 
-  // Мини-пульс: амплитуда = онлайн, частота = непрочитанное
   const pulseAmp = 1 + Math.min(onlineCount, 6) * 0.5;
   const pulseSpeed = 1.4 + Math.min(totalUnread, 8) * 0.35;
 
@@ -252,6 +271,23 @@ const DialogsPanel = forwardRef(({
     );
   };
 
+  const bgCss = getBgCss(dialogsBg);
+  const hasBg = !!bgCss;
+  const bgIsUrl = isUrlBg(dialogsBg);
+
+  // [2.34.4] для URL — только backgroundImage, затемняет ::before в CSS.
+  // Никакого второго linear-gradient.
+  const panelStyle = hasBg
+    ? bgIsUrl
+      ? {
+          backgroundImage: bgCss,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }
+      : { background: bgCss }
+    : undefined;
+
   return (
     <>
       <div
@@ -260,8 +296,9 @@ const DialogsPanel = forwardRef(({
         aria-hidden="true"
       />
       <aside
-        className="dialogs-panel"
+        className={`dialogs-panel ${hasBg ? 'dialogs-panel--custom' : ''}`}
         ref={panelRef}
+        style={panelStyle}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -308,7 +345,24 @@ const DialogsPanel = forwardRef(({
             </div>
           </div>
 
-          <div className="dialogs-header-spacer" aria-hidden="true" />
+          <button
+            type="button"
+            className="dialogs-header-bg-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowBgPicker(true);
+            }}
+            title="Фон окна"
+            aria-label="Фон окна"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" strokeWidth="2"
+                 strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </button>
         </header>
 
         <div className="dialogs-list">
@@ -372,6 +426,15 @@ const DialogsPanel = forwardRef(({
           ))}
         </div>
       </aside>
+
+      {showBgPicker && (
+        <DialogsBgPicker
+          current={dialogsBg}
+          onClose={() => setShowBgPicker(false)}
+          onSave={onSaveDialogsBg}
+          token={token}
+        />
+      )}
     </>
   );
 });

@@ -1,19 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.33.5] case 'avatars_map' — карта всех аватарок из БД при логине.
-           Аватарки офлайн-юзеров видны в истории чата.
-  [2.33.4] blockedUsers — список тех, кого я заблокировал.
-  [2.33.3] rejectCount в friendshipRitual, тост при отказе.
-  [2.33.1] клиентская проверка размера файла до загрузки.
-  [2.33.0] friendshipRitual — state ритуала дружбы.
-  [2.32.42] avatarCache — накапливающий кэш userId → avatarUrl.
-  [2.32.41] bannedUsers — Set забаненных навсегда userId.
-  [2.21.0] profile_changed отдаёт font/textColor/textRotation
-  [2.20.0] profileData + обработка profile_changed / friend_removed
-  [2.27.0] hiddenUnread
-  [2.26.0] черновик
-  [2.16.0] replyTo
+  [2.34.4] case 'auth_ok' — dialogsBg из auth_ok (source of truth здесь)
+  [2.34.3] dialogsBg — фон окна диалогов
+  [2.33.5] avatars_map — карта всех аватарок
+  [2.33.4] blockedUsers — список заблокированных
+  [2.33.3] rejectCount в ритуале
+  [2.33.0] friendshipRitual
+  [2.32.42] avatarCache
+  [2.32.41] bannedUsers
 */
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
@@ -45,6 +40,7 @@ export const useChat = ({
   const [avatarCache, setAvatarCache] = useState({});
   const [friendshipRitual, setFriendshipRitual] = useState(null);
   const [blockedUsers, setBlockedUsers] = useState([]);
+  const [dialogsBg, setDialogsBg] = useState(null);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -289,9 +285,20 @@ export const useChat = ({
     }
   }, []);
 
+  const saveDialogsBg = useCallback((bg) => {
+    if (sendMessageRef.current) {
+      sendMessageRef.current({ type: 'dialogs_bg_update', data: { bg } });
+    }
+  }, []);
+
   // ===== WS-фильтр =====
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
+      // [2.34.4] dialogsBg из auth_ok. return false — Chat.jsx продолжит обрабатывать
+      case 'auth_ok':
+        setDialogsBg(msg.data?.dialogsBg || null);
+        return false;
+
       case 'friends_list':
         setFriends(msg.data);
         mergeAvatars(msg.data);
@@ -347,13 +354,20 @@ export const useChat = ({
         return true;
       }
 
-      // [2.33.5] карта всех аватарок из БД — офлайн-юзеры в истории
       case 'avatars_map':
         mergeAvatars(msg.data?.avatars || []);
         return true;
 
       case 'blocks_list':
         setBlockedUsers(msg.data?.blocked || []);
+        return true;
+
+      case 'dialogs_bg_updated':
+        setDialogsBg(msg.data?.bg || null);
+        return true;
+
+      case 'dialogs_bg_error':
+        if (onNoticeRef.current) onNoticeRef.current(msg.data?.message || 'Ошибка фона');
         return true;
 
       case 'admin_error':
@@ -475,6 +489,7 @@ export const useChat = ({
     avatarCache,
     friendshipRitual,
     blockedUsers,
+    dialogsBg,
     errorMessage,
     setErrorMessage,
     input,
@@ -503,5 +518,6 @@ export const useChat = ({
     clearRitual,
     blockUser,
     unblockUser,
+    saveDialogsBg,
   };
 };
