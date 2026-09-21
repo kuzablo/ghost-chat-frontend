@@ -41,10 +41,10 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
-// [2.32.25] карта avatarUrl для отображения аватарок в чате
+// [2.32.26] fullscreen: точки-индикатор, стрелки на ПК, fade-переход
+// [2.32.25] аватары в сообщениях
 // [2.32.24] Профиль: bio, аватар, удаление друга
-// [2.32.23] свайп-подсветка; textarea в редакторе
-const VERSION = '2.32.25';
+const VERSION = '2.32.26';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -381,7 +381,7 @@ const Chat = () => {
   const hasPrevImage = currentImageIndex > 0;
   const hasNextImage = currentImageIndex >= 0 && currentImageIndex < imageMessages.length - 1;
 
-  // [2.32.25] карта avatarUrl для отображения аватарок в чате
+  // карта avatarUrl для отображения аватарок в чате
   const avatarByUser = {};
   for (const p of players) {
     if (p.userId && p.avatarUrl) avatarByUser[p.userId] = p.avatarUrl;
@@ -393,6 +393,11 @@ const Chat = () => {
   const fullscreenMessage = currentImageMessage || null;
   const fullscreenReactions = fullscreenMessage?.reactions || {};
   const fullscreenReactionEntries = Object.entries(fullscreenReactions);
+
+  // аватар автора открытого фото
+  const fsAuthorAvatarUrl = fullscreenMessage
+    ? avatarByUser[fullscreenMessage.userId]
+    : null;
 
   useEffect(() => {
     if (!fullscreenImage) return;
@@ -758,6 +763,20 @@ const Chat = () => {
   const fsOverlayOpacity = fullscreenImage
     ? Math.max(0.35, 0.95 - (dragY / 120) * 0.5)
     : 0.95;
+
+  // [2.32.26] перейти на соседнее фото
+  const fsGoPrev = (e) => {
+    if (e) e.stopPropagation();
+    if (!hasPrevImage) return;
+    const prev = imageMessages[currentImageIndex - 1];
+    setFullscreenImage({ url: prev.imageUrl, messageId: prev.id });
+  };
+  const fsGoNext = (e) => {
+    if (e) e.stopPropagation();
+    if (!hasNextImage) return;
+    const next = imageMessages[currentImageIndex + 1];
+    setFullscreenImage({ url: next.imageUrl, messageId: next.id });
+  };
 
   const handleFsTouchStart = (e) => {
     if (e.touches.length !== 1) return;
@@ -1508,15 +1527,19 @@ const Chat = () => {
         <div
           className="fullscreen-overlay"
           onClick={closeFullscreen}
-          style={{ background: `rgba(0, 0, 0, ${fsOverlayOpacity})` }}
+          style={{ background: `rgba(10, 10, 10, ${fsOverlayOpacity})` }}
         >
           <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
             <div className="fs-author">
               <div
                 className="fs-author-avatar"
-                style={{ background: getAvatarColor(fullscreenMessage?.nickname || '?') }}
+                style={
+                  fsAuthorAvatarUrl
+                    ? { backgroundImage: `url(${fsAuthorAvatarUrl})` }
+                    : { background: getAvatarColor(fullscreenMessage?.nickname || '?') }
+                }
               >
-                {getInitial(fullscreenMessage?.nickname || '?')}
+                {!fsAuthorAvatarUrl && getInitial(fullscreenMessage?.nickname || '?')}
               </div>
               <div className="fs-author-meta">
                 <div className="fs-author-nick">
@@ -1544,7 +1567,18 @@ const Chat = () => {
           </div>
 
           <div className="fs-stage" onClick={closeFullscreen}>
+            <button
+              type="button"
+              className="fs-nav fs-nav--prev"
+              onClick={fsGoPrev}
+              disabled={!hasPrevImage}
+              aria-label="Предыдущее фото"
+            >
+              ‹
+            </button>
+
             <img
+              key={fullscreenImage.messageId}
               src={fullscreenImage.url}
               alt=""
               className="fs-image"
@@ -1563,6 +1597,17 @@ const Chat = () => {
                     : 'none',
               }}
             />
+
+            <button
+              type="button"
+              className="fs-nav fs-nav--next"
+              onClick={fsGoNext}
+              disabled={!hasNextImage}
+              aria-label="Следующее фото"
+            >
+              ›
+            </button>
+
             {fsHeart && (
               <span
                 key={fsHeart.key}
@@ -1571,6 +1616,17 @@ const Chat = () => {
               >
                 ❤️
               </span>
+            )}
+
+            {imageMessages.length > 1 && imageMessages.length <= 12 && (
+              <div className="fs-dots" aria-hidden="true">
+                {imageMessages.map((im, idx) => (
+                  <span
+                    key={im.id}
+                    className={`fs-dot ${idx === currentImageIndex ? 'fs-dot--active' : ''}`}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
