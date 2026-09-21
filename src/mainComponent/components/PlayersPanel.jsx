@@ -347,7 +347,7 @@ const PlayersPanel = forwardRef(({
               className="players-info-link"
               onClick={onOpenInfo}
             >
-              Что умеет чат?
+              О приложении
             </button>
           )}
         </div>

@@ -1,6 +1,7 @@
-/* ===== [2.17.0] Инфо-панель «Что умеет чат» ===== */
+/* ============================================================= */
+/* [2.32.0] Инфо-панель «О приложении»                            */
+/* ============================================================= */
 
-/* затемнение фона */
 .info-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -19,13 +20,14 @@ body.dark .info-overlay {
   to   { opacity: 1; }
 }
 
-/* выезжающая панель справа */
+/* ===== Панель ===== */
+
 .info-panel {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 380px;
+  width: 420px;
   max-width: 92vw;
   background: var(--card-bg);
   border-left: 3px solid var(--card-border);
@@ -42,50 +44,92 @@ body.dark .info-overlay {
   to   { transform: translateX(0); }
 }
 
+/* ===== Шапка ===== */
+
 .info-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 2px solid var(--card-border);
-  flex-shrink: 0;
   gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 2px solid var(--card-border);
+  background: var(--card-bg);
 }
 
-.info-header h2 {
-  font-size: 16px;
+.info-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.info-brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--card-border);
+  background: #FFF;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.info-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.info-brand-title {
+  margin: 0;
+  font-size: 17px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: 0.3px;
-  margin: 0;
+}
+
+.info-brand-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 .info-close {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   background: var(--input-bg);
   border: 2px solid var(--card-border);
   color: var(--text);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  flex-shrink: 0;
-  transition: transform 0.12s;
+  transition: transform 0.12s, background 0.15s;
   touch-action: manipulation;
+}
+
+.info-close:hover {
+  background: var(--messages-bg);
 }
 
 .info-close:active {
   transform: scale(0.9);
 }
 
+/* ===== Тело ===== */
+
 .info-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 18px 24px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -104,9 +148,22 @@ body.dark .info-overlay {
   border-radius: 8px;
 }
 
+.info-intro {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  background: var(--messages-bg);
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--card-border);
+}
+
+/* ===== Секции ===== */
+
 .info-section {
   margin-bottom: 22px;
-  padding-bottom: 18px;
+  padding-bottom: 20px;
   border-bottom: 1px dashed var(--card-border);
 }
 
@@ -116,45 +173,44 @@ body.dark .info-overlay {
   padding-bottom: 0;
 }
 
+.info-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.info-section-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--messages-bg);
+  border: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
 .info-section h3 {
-  font-size: 14px;
+  margin: 0;
+  font-size: 15px;
   font-weight: 800;
   color: var(--text);
-  margin: 0 0 8px;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .info-section p {
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--text);
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 
 .info-section p:last-child {
   margin-bottom: 0;
-}
-
-.info-section ul {
-  margin: 0 0 8px;
-  padding-left: 20px;
-  list-style: none;
-}
-
-.info-section li {
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text);
-  margin-bottom: 4px;
-  position: relative;
-}
-
-.info-section li::before {
-  content: '·';
-  position: absolute;
-  left: -12px;
-  color: var(--btn-bg);
-  font-weight: 800;
 }
 
 .info-section b {
@@ -166,55 +222,421 @@ body.dark .info-section b {
   color: #3BB5E8;
 }
 
+/* ===== Списки ===== */
+
+.info-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.info-list li {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  margin-bottom: 5px;
+  position: relative;
+}
+
+.info-list li::before {
+  content: '·';
+  position: absolute;
+  left: -12px;
+  color: var(--btn-bg);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.info-list:last-child {
+  margin-bottom: 0;
+}
+
+/* ===== Реакции в столбик эмодзи ===== */
+
+.info-emoji-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  background: var(--messages-bg);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--card-border);
+}
+
+.info-emoji-row span {
+  display: inline-block;
+  animation: infoEmojiBob 2.4s ease-in-out infinite;
+}
+
+.info-emoji-row span:nth-child(2) { animation-delay: 0.12s; }
+.info-emoji-row span:nth-child(3) { animation-delay: 0.24s; }
+.info-emoji-row span:nth-child(4) { animation-delay: 0.36s; }
+.info-emoji-row span:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes infoEmojiBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ============================================================= */
+/* ===== Мини-анимации жестов ===== */
+/* ============================================================= */
+
+.info-demo {
+  margin: 12px 0;
+  padding: 12px 10px 8px;
+  background: var(--messages-bg);
+  border: 2px dashed var(--card-border);
+  border-radius: var(--radius-md);
+}
+
+.info-demo-stage {
+  position: relative;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.info-demo-caption {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+/* ===== Карточка-сообщение в анимации ===== */
+
+.info-demo-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  border-radius: 12px;
+  min-width: 130px;
+  animation: infoCardSwipeLeft 3.4s ease-in-out infinite;
+}
+
+.info-demo-card-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1.5px solid var(--card-border);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.info-demo-card-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.info-demo-card-lines i {
+  display: block;
+  height: 4px;
+  background: var(--text-muted);
+  opacity: 0.4;
+  border-radius: 2px;
+}
+
+.info-demo-card-lines i:first-child { width: 70%; }
+.info-demo-card-lines i:last-child  { width: 45%; }
+
+@keyframes infoCardSwipeLeft {
+  0%    { transform: translateX(0); }
+  15%   { transform: translateX(0); }
+  40%   { transform: translateX(-40px); }
+  55%   { transform: translateX(-40px); }
+  75%   { transform: translateX(0); }
+  100%  { transform: translateX(0); }
+}
+
+/* ===== Кольцо long-press ===== */
+
+.info-demo-card--ring {
+  animation: none;
+}
+
+.info-demo-ring {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 16px;
+  pointer-events: none;
+  border: 3px solid var(--ring-color, #3BB5E8);
+  opacity: 0;
+  animation: infoRingFill 3.4s ease-in-out infinite;
+}
+
+@keyframes infoRingFill {
+  0%, 15%  { opacity: 0; clip-path: inset(0 100% 0 0); }
+  20%      { opacity: 1; clip-path: inset(0 100% 0 0); }
+  55%      { opacity: 1; clip-path: inset(0 0 0 0); }
+  65%      { opacity: 0; clip-path: inset(0 0 0 0); }
+  100%     { opacity: 0; clip-path: inset(0 0 0 0); }
+}
+
+/* ===== Пальчик ===== */
+
+.info-demo-finger {
+  position: absolute;
+  font-size: 24px;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.info-demo-finger--swipe-left {
+  left: 60%;
+  animation: infoFingerSwipeLeft 3.4s ease-in-out infinite;
+}
+
+@keyframes infoFingerSwipeLeft {
+  0%, 10%  { opacity: 0; transform: translateX(0); }
+  15%      { opacity: 1; transform: translateX(0); }
+  40%      { opacity: 1; transform: translateX(-40px); }
+  55%      { opacity: 0; transform: translateX(-40px); }
+  100%     { opacity: 0; transform: translateX(0); }
+}
+
+.info-demo-finger--hold {
+  left: 50%;
+  top: 55%;
+  transform: translateX(-50%);
+  animation: infoFingerHold 3.4s ease-in-out infinite;
+}
+
+@keyframes infoFingerHold {
+  0%, 10%  { opacity: 0; transform: translateX(-50%) scale(1); }
+  15%      { opacity: 1; transform: translateX(-50%) scale(1); }
+  55%      { opacity: 1; transform: translateX(-50%) scale(1); }
+  60%      { opacity: 0; transform: translateX(-50%) scale(1); }
+  100%     { opacity: 0; transform: translateX(-50%) scale(1); }
+}
+
+/* ===== Стрелка ответа ===== */
+
+.info-demo-arrow {
+  position: absolute;
+  left: 20%;
+  font-size: 18px;
+  color: var(--btn-bg);
+  font-weight: 800;
+  opacity: 0;
+  z-index: 2;
+}
+
+.info-demo-arrow--reply {
+  animation: infoArrowReply 3.4s ease-in-out infinite;
+}
+
+@keyframes infoArrowReply {
+  0%, 30%  { opacity: 0; transform: scale(0.6); }
+  45%      { opacity: 1; transform: scale(1); }
+  60%      { opacity: 1; transform: scale(1); }
+  70%      { opacity: 0; transform: scale(1); }
+  100%     { opacity: 0; transform: scale(0.6); }
+}
+
+/* ===== Свайп от края — панель игроков ===== */
+
+.info-demo-stage--panel {
+  justify-content: flex-start;
+  padding-left: 10px;
+}
+
+.info-demo-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--btn-bg);
+  opacity: 0.5;
+  border-radius: 0 3px 3px 0;
+}
+
+.info-demo-panel-slide {
+  width: 44px;
+  height: 58px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  animation: infoPanelSlide 3.4s ease-in-out infinite;
+}
+
+@keyframes infoPanelSlide {
+  0%    { transform: translateX(-44px); opacity: 0.4; }
+  15%   { transform: translateX(-44px); opacity: 0.4; }
+  40%   { transform: translateX(0); opacity: 1; }
+  60%   { transform: translateX(0); opacity: 1; }
+  80%   { transform: translateX(-44px); opacity: 0.4; }
+  100%  { transform: translateX(-44px); opacity: 0.4; }
+}
+
+.info-demo-finger--swipe-right {
+  left: 8px;
+  animation: infoFingerSwipeRight 3.4s ease-in-out infinite;
+}
+
+@keyframes infoFingerSwipeRight {
+  0%, 10%  { opacity: 0; transform: translateX(0); }
+  15%      { opacity: 1; transform: translateX(0); }
+  40%      { opacity: 1; transform: translateX(34px); }
+  55%      { opacity: 0; transform: translateX(34px); }
+  100%     { opacity: 0; transform: translateX(0); }
+}
+
+/* ===== Капсула (свайп вверх) ===== */
+
+.info-demo-stage--capsule {
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0;
+}
+
+.info-demo-capsule-closed,
+.info-demo-capsule-open {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  background: linear-gradient(to top, #F5A9C0 0%, #FBC5D8 100%);
+  border: 2px solid #111;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-demo-capsule-closed {
+  width: 130px;
+  height: 16px;
+  bottom: 0;
+  animation: infoCapsuleClosed 3.4s ease-in-out infinite;
+}
+
+.info-demo-capsule-open {
+  width: 130px;
+  height: 48px;
+  bottom: 0;
+  gap: 12px;
+  animation: infoCapsuleOpen 3.4s ease-in-out infinite;
+}
+
+@keyframes infoCapsuleClosed {
+  0%, 10%  { opacity: 1; }
+  30%      { opacity: 0; }
+  75%      { opacity: 0; }
+  90%      { opacity: 1; }
+  100%     { opacity: 1; }
+}
+
+@keyframes infoCapsuleOpen {
+  0%, 20%  { opacity: 0; transform: translateX(-50%) scaleY(0.3); transform-origin: bottom; }
+  40%      { opacity: 1; transform: translateX(-50%) scaleY(1); transform-origin: bottom; }
+  70%      { opacity: 1; transform: translateX(-50%) scaleY(1); transform-origin: bottom; }
+  85%      { opacity: 0; transform: translateX(-50%) scaleY(1); transform-origin: bottom; }
+  100%     { opacity: 0; transform: translateX(-50%) scaleY(0.3); transform-origin: bottom; }
+}
+
+.info-demo-capsule-arrow {
+  color: #111;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.info-demo-capsule-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ===== Список жестов ===== */
+
+.info-list--gestures li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.info-list--gestures li::before {
+  display: none;
+}
+
+.info-gesture {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--messages-bg);
+  border: 1.5px solid var(--card-border);
+  font-size: 13px;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+/* ===== Outro ===== */
+
+.info-section--outro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 8px;
+}
+
 .info-section--outro p {
   font-style: italic;
   color: var(--text-muted);
-  font-size: 12px;
-  text-align: center;
+  font-size: 12.5px;
+  margin-bottom: 12px;
 }
 
-/* на мобилке — почти на всю ширину */
-@media (max-width: 600px) {
-  .info-panel {
-    width: 92vw;
-    max-width: 92vw;
-    border-left-width: 2px;
-  }
-
-  .info-header {
-    padding: 12px 14px;
-  }
-
-  .info-header h2 {
-    font-size: 15px;
-  }
-
-  .info-body {
-    padding: 14px 14px 20px;
-  }
-
-  .info-section {
-    margin-bottom: 18px;
-    padding-bottom: 14px;
-  }
-
-  .info-section h3 {
-    font-size: 13.5px;
-  }
-
-  .info-section p,
-  .info-section li {
-    font-size: 12.5px;
-  }
-}
-
-/* [2.19.1] кнопка «Написать админу» в outro */
 .info-admin-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 10px;
-  padding: 8px 14px;
+  padding: 10px 16px;
   background: var(--btn-bg);
   border: 2px solid var(--card-border);
   border-radius: var(--radius-md);
@@ -231,9 +653,104 @@ body.dark .info-section b {
   transform: scale(0.96);
 }
 
-.info-section--outro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+/* ============================================================= */
+/* Мобильная версия                                              */
+/* ============================================================= */
+
+@media (max-width: 600px) {
+  .info-panel {
+    width: 100vw;
+    max-width: 100vw;
+    border-left-width: 0;
+    /* [2.32.0] отступ под чёлку / Dynamic Island */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .info-header {
+    padding: 10px 12px;
+  }
+
+  .info-brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .info-brand-title {
+    font-size: 16px;
+  }
+
+  .info-brand-subtitle {
+    font-size: 10px;
+  }
+
+  .info-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .info-body {
+    padding: 14px 14px 28px;
+  }
+
+  .info-intro {
+    font-size: 13px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+  }
+
+  .info-section {
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+  }
+
+  .info-section-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+
+  .info-section h3 {
+    font-size: 14.5px;
+  }
+
+  .info-section p,
+  .info-list li {
+    font-size: 13px;
+  }
+
+  .info-demo {
+    padding: 10px 8px 6px;
+  }
+
+  .info-demo-stage {
+    height: 60px;
+  }
+
+  .info-demo-card {
+    min-width: 110px;
+    padding: 5px 8px;
+  }
+
+  .info-demo-card-avatar {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .info-emoji-row {
+    font-size: 24px;
+    gap: 6px;
+  }
+
+  .info-list--gestures li {
+    gap: 6px;
+  }
+
+  .info-gesture {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
 }
