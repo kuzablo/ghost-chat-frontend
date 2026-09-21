@@ -35,13 +35,14 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.29.2] закрытие лички из диалогов возвращает в диалоги
 // [2.29.0] PlayersPanel: свой профиль с обводкой и подсказкой, бейдж в меню
 // [2.28.5] wsError больше не дублируется, сброс при реконнекте
 // [2.28.4] фикс 4000 (не реконнектимся при Replaced)
 // [2.27.0] счётчик непрочитанных в заголовке вкладки + Badging API
 // [2.26.0] IME fix, черновик в localStorage, лимит длины сообщения
 // [2.25.0] contentEditable ChatInput — iOS не показывает InputAssistant
-const VERSION = '2.29.1';
+const VERSION = '2.29.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 
@@ -117,6 +118,8 @@ const Chat = () => {
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [showDialogs, setShowDialogs] = useState(false);
+  // [2.29.2] если личку открыли из панели диалогов — закрытие вернёт туда
+  const [cameFromDialogs, setCameFromDialogs] = useState(false);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -548,9 +551,21 @@ const Chat = () => {
     setShowDialogs(false);
   };
 
+  // [2.29.2] открыли личку из панели диалогов
   const handleOpenFromDialogs = (userId, nick) => {
+    setCameFromDialogs(true);
     setShowDialogs(false);
     openPrivateChat(userId, nick);
+  };
+
+  // [2.29.2] закрытие лички: если пришли из диалогов — вернёмся туда
+  const handleClosePrivate = () => {
+    const wasFromDialogs = cameFromDialogs;
+    closePrivateChat();
+    setCameFromDialogs(false);
+    if (wasFromDialogs) {
+      setShowDialogs(true);
+    }
   };
 
   const compareVersions = (v1, v2) => {
@@ -921,7 +936,7 @@ const Chat = () => {
           sendMessage={sendMessage}
           initialMessages={privateChat.messages || []}
           typingUser={privateTypingUser}
-          onClose={closePrivateChat}
+          onClose={handleClosePrivate}
         />
       )}
 
