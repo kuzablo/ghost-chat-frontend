@@ -1,10 +1,9 @@
 import { forwardRef } from 'react';
 
 /*
-  [2.32.0] Полная переработка: «О приложении».
-           Секции с иконками, мини-анимации жестов,
-           крестик 44×44 с safe-area сверху.
-  [2.19.1] Кнопка «Написать админу».
+  [2.32.35] 8 визуальных демо: склейка, реакции, удаление, профиль,
+            push, радио, темы, fullscreen.
+  [2.32.28] Профиль, уведомления, склейка сообщений.
 */
 const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
   return (
@@ -21,7 +20,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             />
             <div className="info-brand-text">
               <h2 className="info-brand-title">О приложении</h2>
-              <div className="info-brand-subtitle">banjoboy's crew · v2.32.0</div>
+              <div className="info-brand-subtitle">banjoboy's crew · v2.32.35</div>
             </div>
           </div>
           <button
@@ -55,6 +54,23 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <li><b>📎</b> — прикрепить фото.</li>
               <li>Пока печатаешь — другие видят «печатает…».</li>
             </ul>
+
+            {/* ДЕМО: склейка */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--merge">
+                <div className="info-merge-card">
+                  <span className="info-merge-avatar">Я</span>
+                  <span className="info-merge-text">Привет</span>
+                </div>
+                <div className="info-merge-card info-merge-card--mid">
+                  <span className="info-merge-text">Как дела</span>
+                </div>
+                <div className="info-merge-card info-merge-card--last">
+                  <span className="info-merge-text">го в дуэль</span>
+                </div>
+              </div>
+              <div className="info-demo-caption">подряд за минуту → одна карточка</div>
+            </div>
           </section>
 
           {/* ===== 2. Реакции ===== */}
@@ -64,14 +80,30 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <h3>Реакции</h3>
             </div>
             <p>
-              Тапнул по сообщению — открылись пять реакций:
+              Тапнул по сообщению — открылся пикер с реакциями:
             </p>
-            <div className="info-emoji-row">
-              <span>👍</span><span>👎</span><span>❤️</span><span>🔥</span><span>😢</span>
+
+            {/* ДЕМО: пикер + палец */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--reactions">
+                <div className="info-reaction-card">
+                  <span className="info-reaction-nick">Aня</span>
+                  <span className="info-reaction-text">смотри что нашла</span>
+                </div>
+                <div className="info-reaction-picker">
+                  <span className="info-reaction-emoji">👍</span>
+                  <span className="info-reaction-emoji">👎</span>
+                  <span className="info-reaction-emoji info-reaction-emoji--hit">❤️</span>
+                  <span className="info-reaction-emoji">🔥</span>
+                  <span className="info-reaction-emoji">😢</span>
+                </div>
+                <div className="info-reaction-finger">👆</div>
+              </div>
+              <div className="info-demo-caption">тапнул → пикер → тапнул эмодзи</div>
             </div>
+
             <p>
-              Тапнул второй раз — реакция снята. Свои подсвечиваются
-              синим, счётчик появляется, когда голосов больше одного.
+              Тапнул второй раз — реакция снята. Свои подсвечиваются синим.
             </p>
           </section>
 
@@ -82,8 +114,8 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <h3>Ответы на сообщение</h3>
             </div>
             <p>
-              <b>Свайп влево</b> по сообщению — появится стрелка, отпускаешь,
-              и сверху вылезает «кому отвечаешь».
+              <b>Свайп влево</b> по сообщению — от левого края расходится
+              синяя подсветка. Отпускаешь, и сверху вылезает «кому отвечаешь».
             </p>
 
             <div className="info-demo">
@@ -126,14 +158,67 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
               <div className="info-demo-caption">зажми 1.5 сек</div>
             </div>
 
+            <p>
+              При удалении карточка едет вправо — так:
+            </p>
+
+            {/* ДЕМО: удаление */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--delete">
+                <div className="info-delete-glow" />
+                <div className="info-delete-card">
+                  <span className="info-delete-nick">Я</span>
+                  <span className="info-delete-text">ой, не туда</span>
+                </div>
+                <div className="info-delete-finger">👆</div>
+              </div>
+              <div className="info-demo-caption">свайп вправо → удалить</div>
+            </div>
+
             <ul className="info-list">
-              <li><b>Телефон:</b> зажми сообщение — вокруг карточки нарисуется кольцо, откроется редактор.</li>
-              <li><b>Свайп вправо</b> по своему — удалить.</li>
+              <li><b>Телефон:</b> зажми — вокруг карточки кольцо, откроется редактор.</li>
+              <li><b>Свайп вправо</b> по своему — красная подсветка справа, отпустил — удалить.</li>
               <li><b>ПК:</b> кнопки ✏️ и 🗑️ прямо в карточке.</li>
+              <li>Редактор многострочный: <b>Enter</b> — сохранить, <b>Shift+Enter</b> — новая строка.</li>
             </ul>
           </section>
 
-          {/* ===== 5. Игроки и друзья ===== */}
+          {/* ===== 5. Профиль ===== */}
+          <section className="info-section">
+            <div className="info-section-head">
+              <div className="info-section-icon">👤</div>
+              <h3>Профиль</h3>
+            </div>
+            <p>
+              Зажми себя в панели игроков — откроется меню, там пункт
+              <b> Профиль</b>. Можно поставить аватарку, написать пару слов о себе
+              и оформить: 7 шрифтов, свой цвет, поворот.
+            </p>
+
+            {/* ДЕМО: мини-профиль */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--profile">
+                <div className="info-profile-card">
+                  <div className="info-profile-avatar">A</div>
+                  <div className="info-profile-meta">
+                    <div className="info-profile-nick">Aня</div>
+                    <div className="info-profile-bio" style={{ fontFamily: "'Caveat', cursive", color: '#3BB5E8', transform: 'rotate(-3deg)' }}>
+                      люблю котиков и радио
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="info-demo-caption">аватар · bio · стиль</div>
+            </div>
+
+            <ul className="info-list">
+              <li><b>📷 Сменить фото</b> — выбери из галереи, до 2 МБ.</li>
+              <li><b>Bio</b> — до 200 символов. Видно всем.</li>
+              <li>Аватарка появляется в чате рядом с твоими сообщениями и в списке игроков.</li>
+            </ul>
+          </section>
+
+          {/* ===== 6. Игроки и друзья ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">👥</div>
@@ -161,7 +246,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </ul>
           </section>
 
-          {/* ===== 6. Личные сообщения ===== */}
+          {/* ===== 7. Личные сообщения ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">✉️</div>
@@ -177,7 +262,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </p>
           </section>
 
-          {/* ===== 7. Диалоги ===== */}
+          {/* ===== 8. Диалоги ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">💬</div>
@@ -193,7 +278,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </p>
           </section>
 
-          {/* ===== 8. Дуэли ===== */}
+          {/* ===== 9. Дуэли ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">⚔️</div>
@@ -209,25 +294,81 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </ul>
           </section>
 
-          {/* ===== 9. Фото ===== */}
+          {/* ===== 10. Фото ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">📷</div>
               <h3>Просмотр фото</h3>
             </div>
             <p>
-              Тап по фото — открывается на весь экран. Сверху видны автор и
-              дата.
+              Тап по фото — открывается на весь экран. Сверху видны автор
+              и дата, счётчик «2 / 5». Снизу по центру — точки: где ты
+              в галерее.
             </p>
+
+            {/* ДЕМО: fullscreen */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--fullscreen">
+                <div className="info-fs-frame">
+                  <div className="info-fs-photo" />
+                  <div className="info-fs-counter">2 / 5</div>
+                </div>
+                <div className="info-fs-dots">
+                  <span className="info-fs-dot" />
+                  <span className="info-fs-dot info-fs-dot--active" />
+                  <span className="info-fs-dot" />
+                  <span className="info-fs-dot" />
+                  <span className="info-fs-dot" />
+                </div>
+              </div>
+              <div className="info-demo-caption">счётчик + точки</div>
+            </div>
+
             <ul className="info-list">
               <li><b>Свайп влево-вправо</b> — перелистывание между фото чата.</li>
+              <li><b>← →</b> на ПК — то же самое мышью.</li>
               <li><b>Двойной тап</b> — реакция ❤️ прямо в точку тапа.</li>
-              <li><b>Свайп вниз</b> — закрыть.</li>
-              <li><b>✕</b> в углу — закрыть.</li>
+              <li><b>Свайп вниз</b> или <b>✕</b> — закрыть.</li>
             </ul>
           </section>
 
-          {/* ===== 10. Радио ===== */}
+          {/* ===== 11. Уведомления ===== */}
+          <section className="info-section">
+            <div className="info-section-head">
+              <div className="info-section-icon">🔔</div>
+              <h3>Уведомления</h3>
+            </div>
+            <p>
+              На телефоне можно разрешить уведомления — тогда новое сообщение
+              придёт, даже если чат закрыт или телефон в кармане.
+            </p>
+
+            {/* ДЕМО: push */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--push">
+                <div className="info-push-app">
+                  <div className="info-push-app-icon">🐱</div>
+                  <div className="info-push-badge">3</div>
+                </div>
+                <div className="info-push-notification">
+                  <div className="info-push-row">
+                    <span className="info-push-icon">🐱</span>
+                    <span className="info-push-title">banjoboy's crew</span>
+                  </div>
+                  <div className="info-push-body">Aня: го в дуэль</div>
+                </div>
+              </div>
+              <div className="info-demo-caption">push + бейдж на иконке</div>
+            </div>
+
+            <ul className="info-list">
+              <li>На <b>iPhone</b> — сначала установи на домашний экран, потом разреши уведомления.</li>
+              <li>На <b>Android</b> — просто разреши в браузере.</li>
+              <li>На иконке появится число непрочитанных.</li>
+            </ul>
+          </section>
+
+          {/* ===== 12. Радио ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">🎵</div>
@@ -236,32 +377,58 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             <p>
               Маскот в шапке — это радио. Три трека по кругу, играют в фоне.
             </p>
+
+            {/* ДЕМО: радио */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--radio">
+                <div className="info-radio-mascot">
+                  <span className="info-radio-bar" />
+                  <span className="info-radio-bar" />
+                  <span className="info-radio-bar" />
+                  <span className="info-radio-bar" />
+                </div>
+                <div className="info-radio-title">♪ трек 2 · название</div>
+              </div>
+              <div className="info-demo-caption">маскот дрожит · эквалайзер · название</div>
+            </div>
+
             <ul className="info-list">
-              <li><b>Первый запуск</b> — тапнешь маскота, откроется мини-плеер, один раз нажми play.</li>
+              <li><b>Первый запуск</b> — зажми маскота, откроется мини-плеер, один раз нажми play.</li>
               <li><b>Короткий тап</b> — пауза или продолжить.</li>
               <li><b>Двойной тап</b> или <b>долгое нажатие</b> — следующий трек.</li>
               <li><b>Свайп вверх/вниз</b> по маскоту — громкость.</li>
             </ul>
-            <p>
-              Когда играет — маскот дрожит, под ним прыгает эквалайзер,
-              в шапке на 5 секунд появляется название трека.
-            </p>
           </section>
 
-          {/* ===== 11. Темы ===== */}
+          {/* ===== 13. Темы ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">🌙</div>
               <h3>Темы</h3>
             </div>
             <p>
-              Светлая и тёмная. Кнопка 🌙/☀️ справа вверху. При переключении
-              новая тема растекается по экрану кругом из точки нажатия, а
-              иконка переворачивается. Настройка запоминается.
+              Светлая и тёмная. Кнопка 🌙/☀️ справа вверху. Новая тема
+              растекается кругом из точки нажатия, иконка переворачивается.
             </p>
+
+            {/* ДЕМО: темы */}
+            <div className="info-demo">
+              <div className="info-demo-stage info-demo-stage--theme">
+                <div className="info-theme-split">
+                  <div className="info-theme-half info-theme-half--light">
+                    <span className="info-theme-icon">☀️</span>
+                  </div>
+                  <div className="info-theme-half info-theme-half--dark">
+                    <span className="info-theme-icon">🌙</span>
+                  </div>
+                  <div className="info-theme-reveal" />
+                </div>
+              </div>
+              <div className="info-demo-caption">круг из точки тапа</div>
+            </div>
           </section>
 
-          {/* ===== 12. Мобильные жесты ===== */}
+          {/* ===== 14. Нижняя капсула ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">📱</div>
@@ -293,7 +460,7 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </ul>
           </section>
 
-          {/* ===== 13. PWA ===== */}
+          {/* ===== 15. PWA ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">📲</div>
@@ -301,13 +468,13 @@ const InfoPanel = forwardRef(({ onClose, onMessageAdmin }, ref) => {
             </div>
             <p>
               На iPhone открой чат в <b>Safari</b> → нажми <b>Поделиться</b> →
-              выбери <b>«На экран “Домой”»</b>. Появится иконка на домашнем
+              выбери <b>«На экран "Домой"»</b>. Появится иконка на домашнем
               экране, чат будет открываться без адресной строки, во весь
               экран, с бейджем непрочитанного на иконке.
             </p>
           </section>
 
-          {/* ===== 14. Жесты одной таблицей ===== */}
+          {/* ===== 16. Все жесты ===== */}
           <section className="info-section">
             <div className="info-section-head">
               <div className="info-section-icon">✨</div>
