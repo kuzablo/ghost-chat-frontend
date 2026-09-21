@@ -334,6 +334,7 @@ export const useChat = ({
     isUploading,
     // [2.27.0]
     hiddenUnread,
+    setHiddenUnread,
     // [2.16.0]
     replyTo,
     setReplyTo,

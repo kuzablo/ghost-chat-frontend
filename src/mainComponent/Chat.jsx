@@ -39,10 +39,9 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.18] SW push → postMessage → бейдж на иконке (iOS не даёт из SW)
 // [2.32.17] Web Push: подписка после разрешения уведомлений; убрана подсказка «зажми»
-// [2.32.16] модалка разрешения уведомлений
-// [2.32.15] плеер мелькает при long-press, моментально скрывается
-const VERSION = '2.32.17';
+const VERSION = '2.32.18';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -244,7 +243,6 @@ const Chat = () => {
     if (isIos && !isStandalone) return;
 
     if (Notification.permission === 'granted') {
-      // уже разрешено — молча обновляем/создаём подписку
       subscribeToPush();
       return;
     }
@@ -258,6 +256,22 @@ const Chat = () => {
     const t = setTimeout(() => setShowNotifModal(true), 1500);
     return () => clearTimeout(t);
   }, [isAuth, subscribeToPush]);
+
+  // [2.32.18] SW получил push → увеличиваем счётчик «непрочитано»
+  //           → пересчитывается totalUnread → встаёт бейдж
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+
+    const onSWMessage = (e) => {
+      if (e.data?.type === 'push-received') {
+        setHiddenUnread(n => n + 1);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', onSWMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onSWMessage);
+  }, []);
 
   useEffect(() => {
     if (!yt.hasStarted) return;
@@ -312,6 +326,7 @@ const Chat = () => {
     sending,
     isUploading,
     hiddenUnread,
+    setHiddenUnread,
     replyTo,
     setReplyTo,
     handleWs: handleChatWs,
