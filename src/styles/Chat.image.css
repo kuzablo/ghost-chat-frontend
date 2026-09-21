@@ -264,3 +264,25 @@ body.dark .image-only-reaction-count {
     left: 8px;
   }
 }
+
+/* ============================================================= */
+/* [2.31.1] Бурст ❤️ при двойном тапе по картинке в карточке      */
+/* ============================================================= */
+
+.msg-heart-burst {
+  position: absolute;
+  font-size: 72px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: msgHeartBurst 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  z-index: 5;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.55));
+}
+
+@keyframes msgHeartBurst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  35%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  65%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+}

@@ -36,11 +36,12 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст, одинарный → fullscreen
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️,
 //          тап по реакции → список. safe-area сверху/снизу.
 // [2.30.1] кольцо long-press у image-only — по границам картинки
 // [2.30.0] DialogsPanel: кнопка «←», свайп вправо, секции по датам
-const VERSION = '2.31.0';
+const VERSION = '2.31.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;

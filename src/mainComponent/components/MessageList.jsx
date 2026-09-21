@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNewDay } from '../utils';
 import ConfirmModal from './ConfirmModal';
 
+const DOUBLE_TAP_MS = 250;
+
 const MessageList = ({
   messages,
   isAdmin,
@@ -36,6 +38,17 @@ const MessageList = ({
   });
   const LONG_PRESS_EDIT_MS = 1500;
   const LONG_PRESS_IGNORE_MS = 500;
+
+  // [2.31.1] обработка двойного тапа по картинке
+  const tapTimerRef = useRef(null);
+  const lastTapRef = useRef({ id: null, time: 0, x: 0, y: 0 });
+  const [heartBurst, setHeartBurst] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (isEditing) {
@@ -115,6 +128,58 @@ const MessageList = ({
     !!message?.reactions?.[emoji]?.includes(nickname);
 
   const canDelete = (m) => isAdmin || m.userId === myId;
+
+  /* ===== [2.31.1] тап по картинке: одинарный — fullscreen, двойной — ❤️ ===== */
+
+  const handleImageTap = (e, m) => {
+    e.stopPropagation();
+    if (swipeState.id === m.id) return;
+    if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
+
+    const now = Date.now();
+    const last = lastTapRef.current;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const isDouble =
+      last.id === m.id &&
+      now - last.time < DOUBLE_TAP_MS &&
+      Math.abs(x - last.x) < 40 &&
+      Math.abs(y - last.y) < 40;
+
+    if (isDouble) {
+      // отменяем отложенное открытие
+      if (tapTimerRef.current) {
+        clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
+      lastTapRef.current = { id: null, time: 0, x: 0, y: 0 };
+
+      // ставим ❤️, если ещё нет
+      const alreadyHeart = m.reactions?.['❤️']?.includes(nickname);
+      if (!alreadyHeart) {
+        sendReaction(m.id, '❤️');
+      }
+
+      // бурст
+      setHeartBurst({ id: m.id, x, y, key: now });
+      setTimeout(() => {
+        setHeartBurst(prev => (prev && prev.key === now ? null : prev));
+      }, 800);
+      return;
+    }
+
+    // одинарный тап — запоминаем и ждём второго
+    lastTapRef.current = { id: m.id, time: now, x, y };
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => {
+      tapTimerRef.current = null;
+      setFullscreenImage({ url: m.imageUrl, messageId: m.id });
+    }, DOUBLE_TAP_MS);
+  };
+
+  /* ===== / тап по картинке ===== */
 
   const handleMessageTap = (messageId, e) => {
     if (activeMessageId === messageId) {
@@ -297,6 +362,16 @@ const MessageList = ({
             </div>
           ) : null;
 
+          const heartBurstNode = heartBurst && heartBurst.id === m.id ? (
+            <span
+              key={heartBurst.key}
+              className="msg-heart-burst"
+              style={{ left: heartBurst.x, top: heartBurst.y }}
+            >
+              ❤️
+            </span>
+          ) : null;
+
           // ==== Image-only ====
           if (isImageOnly) {
             return (
@@ -324,7 +399,6 @@ const MessageList = ({
                       </div>
                     )}
 
-                    {/* [2.30.1] кольцо long-press внутри image-wrap — по границам картинки */}
                     <div
                       className="msg-image-only-wrap"
                       style={getSwipeStyle(m)}
@@ -342,17 +416,14 @@ const MessageList = ({
                         alt="photo"
                         className="msg-image-only-img"
                         loading="lazy"
+                        draggable={false}
                         onError={(e) => {
                           console.error('❌ Ошибка загрузки фото:', m.imageUrl);
                           e.target.style.display = 'none';
                         }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (swipeState.id === m.id) return;
-                          if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
-                          setFullscreenImage({ url: m.imageUrl, messageId: m.id });
-                        }}
+                        onClick={(e) => handleImageTap(e, m)}
                       />
+                      {heartBurstNode}
 
                       <div className="msg-image-overlay">
                         <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
@@ -510,15 +581,14 @@ const MessageList = ({
                         alt="photo"
                         className="msg-image"
                         loading="lazy"
+                        draggable={false}
                         onError={(e) => {
                           console.error('❌ Ошибка загрузки фото:', m.imageUrl);
                           e.target.style.display = 'none';
                         }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFullscreenImage({ url: m.imageUrl, messageId: m.id });
-                        }}
+                        onClick={(e) => handleImageTap(e, m)}
                       />
+                      {heartBurstNode}
                     </div>
                   )}
 
