@@ -347,6 +347,26 @@ const MessageList = ({
     );
   };
 
+  // =============================================================
+  // [2.32.27] Группировка: подряд от одного автора, в диапазоне минуты
+  // =============================================================
+  const GROUP_WINDOW_MS = 60 * 1000;
+
+  const isGroupable = (a, b) => {
+    if (!a || !b) return false;
+    if (a.userId !== b.userId) return false;
+    if (b.time - a.time >= GROUP_WINDOW_MS) return false;
+    if (isNewDay(a.time, b.time)) return false;
+    if (b.replyTo) return false;
+    if (editingMessageId && (a.id === editingMessageId || b.id === editingMessageId)) return false;
+
+    const aImageOnly = !a.text?.trim() && !!a.imageUrl;
+    const bImageOnly = !b.text?.trim() && !!b.imageUrl;
+    if (aImageOnly || bImageOnly) return false;
+
+    return true;
+  };
+
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -355,7 +375,13 @@ const MessageList = ({
           const isEditingThis = editingMessageId === m.id;
           const isImageOnly = !m.text?.trim() && !!m.imageUrl && !isEditingThis;
           const prevMessage = messages[i - 1];
+          const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
+
+          // [2.32.27] флаги группы
+          const isGroupStart = !isGroupable(prevMessage, m);
+          const isGroupEnd = !isGroupable(m, nextMessage);
+          const isInGroup = !isGroupStart || !isGroupEnd;
 
           const readyReply = isSwipeReady(m, 'reply');
           const readyDelete = isSwipeReady(m, 'delete');
@@ -487,8 +513,18 @@ const MessageList = ({
           return (
             <React.Fragment key={i}>
               {dateDivider}
-              <div className="msg" data-msg-id={m.id}>
-                {renderMsgAvatar(m.userId, m.nickname)}
+              <div
+                className={[
+                  'msg',
+                  isInGroup ? 'msg--in-group' : '',
+                  isGroupStart ? 'msg--group-start' : '',
+                  isGroupEnd ? 'msg--group-end' : '',
+                ].filter(Boolean).join(' ')}
+                data-msg-id={m.id}
+              >
+                {isGroupStart ? renderMsgAvatar(m.userId, m.nickname) : (
+                  <div className="msg-avatar msg-avatar--placeholder" />
+                )}
 
                 {renderSwipeGlow(m)}
 
@@ -502,32 +538,34 @@ const MessageList = ({
                 >
                   {editRingId === m.id && <div className="msg-edit-ring" />}
 
-                  <div className="msg-header">
-                    <span className="msg-nick">{m.nickname}</span>
+                  {isGroupStart && (
+                    <div className="msg-header">
+                      <span className="msg-nick">{m.nickname}</span>
 
-                    <div className="msg-actions">
-                      {isOwn && (
-                        <button
-                          className="msg-action-btn msg-action-btn--edit"
-                          onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                          title="Редактировать"
-                        >
-                          ✏️
-                        </button>
-                      )}
-                      {canDelete(m) && (
-                        <button
-                          className="msg-action-btn msg-action-btn--delete"
-                          onClick={(e) => { e.stopPropagation(); setConfirmData({ messageId: m.id }); }}
-                          title="Удалить"
-                        >
-                          🗑️
-                        </button>
-                      )}
+                      <div className="msg-actions">
+                        {isOwn && (
+                          <button
+                            className="msg-action-btn msg-action-btn--edit"
+                            onClick={(e) => { e.stopPropagation(); startEdit(m); }}
+                            title="Редактировать"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {canDelete(m) && (
+                          <button
+                            className="msg-action-btn msg-action-btn--delete"
+                            onClick={(e) => { e.stopPropagation(); setConfirmData({ messageId: m.id }); }}
+                            title="Удалить"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+
+                      <span className="msg-time">{formatMessageDate(m.time)}</span>
                     </div>
-
-                    <span className="msg-time">{formatMessageDate(m.time)}</span>
-                  </div>
+                  )}
 
                   {replyBlock}
 

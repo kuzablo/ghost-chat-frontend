@@ -41,10 +41,11 @@ import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 import '../styles/Chat.profile.css';
 
+// [2.32.27] feat(chat): объединение подряд идущих сообщений одного автора (до 60 сек)
 // [2.32.26] fullscreen: точки-индикатор, стрелки на ПК, fade-переход
 // [2.32.25] аватары в сообщениях
 // [2.32.24] Профиль: bio, аватар, удаление друга
-const VERSION = '2.32.26';
+const VERSION = '2.32.27';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
