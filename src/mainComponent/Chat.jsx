@@ -48,7 +48,7 @@ import '../styles/Chat.stickers.css';
 // [2.22.0] свайп вверх на капсуле сразу открывает и меню, и поле ввода
 // [2.21.0] radial reveal + морфинг иконки темы
 // [2.20.6] клик по кнопке темы в шапке не закрывает панель игроков
-const VERSION = '2.27.0';
+const VERSION = '2.28.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 
