@@ -28,8 +28,17 @@ const MessageList = ({
 
   const [pickerAbove, setPickerAbove] = useState(false);
 
-  const [swipeState, setSwipeState] = useState({ id: null, dx: 0, direction: null });
-  const swipeStartRef = useRef(null);
+  const swipeRef = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    direction: null,
+    cardEl: null,
+    replyGlowEl: null,
+    deleteGlowEl: null,
+    ready: false,
+    msg: null,
+  });
   const swipeActiveRef = useRef(false);
 
   const [editRingId, setEditRingId] = useState(null);
@@ -103,7 +112,7 @@ const MessageList = ({
 
   const handleImageTap = (e, m) => {
     e.stopPropagation();
-    if (swipeState.id === m.id) return;
+    if (swipeActiveRef.current) return;
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
 
     const now = Date.now();
@@ -201,15 +210,49 @@ const MessageList = ({
     setEditRingId(null);
   };
 
+  // [2.32.36] свайп через DOM — без setState на каждый кадр
+  const resetSwipeVisual = (cardEl, replyGlowEl, deleteGlowEl) => {
+    if (cardEl) {
+      cardEl.style.transition = 'transform 0.2s ease-out';
+      cardEl.style.transform = '';
+      cardEl.classList.remove('msg-content--ready-reply');
+      cardEl.classList.remove('msg-content--ready-delete');
+      setTimeout(() => {
+        if (cardEl) cardEl.style.transition = '';
+      }, 220);
+    }
+    if (replyGlowEl) replyGlowEl.style.opacity = '0';
+    if (deleteGlowEl) deleteGlowEl.style.opacity = '0';
+  };
+
   const handleMsgTouchStart = (e, m) => {
     if (e.touches.length !== 1) return;
     if (editingMessageId === m.id) return;
-    swipeStartRef.current = {
-      id: m.id,
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
+
+    const t = e.touches[0];
+    const card = e.currentTarget;
+
+    const msgEl = card.closest('.msg');
+    const replyGlow = msgEl?.querySelector('.msg-swipe-glow--reply') || null;
+    const deleteGlow = msgEl?.querySelector('.msg-swipe-glow--delete') || null;
+
+    const r = swipeRef.current;
+    r.active = true;
+    r.startX = t.clientX;
+    r.startY = t.clientY;
+    r.direction = null;
+    r.cardEl = card;
+    r.replyGlowEl = replyGlow;
+    r.deleteGlowEl = deleteGlow;
+    r.ready = false;
+    r.msg = m;
     swipeActiveRef.current = false;
+
+    // сбросить возможные остатки
+    if (card) {
+      card.style.transition = 'none';
+      card.style.transform = '';
+    }
 
     if (m.userId === myId) {
       longPressRef.current.ringTimer = setTimeout(() => {
@@ -227,108 +270,113 @@ const MessageList = ({
   };
 
   const handleMsgTouchMove = (e, m) => {
-    const start = swipeStartRef.current;
-    if (!start || start.id !== m.id) return;
+    const r = swipeRef.current;
+    if (!r.active) return;
     if (e.touches.length !== 1) return;
 
     const t = e.touches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
+    const dx = t.clientX - r.startX;
+    const dy = t.clientY - r.startY;
 
-    if (!swipeActiveRef.current) {
+    if (!r.direction) {
       if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
 
       cancelLongPress();
 
       if (Math.abs(dy) > Math.abs(dx)) {
-        swipeStartRef.current = null;
+        r.active = false;
+        r.cardEl = null;
         return;
       }
       if (dx > 0 && !canDelete(m)) {
-        swipeStartRef.current = null;
+        r.active = false;
+        r.cardEl = null;
         return;
       }
+      r.direction = dx < 0 ? 'reply' : 'delete';
       swipeActiveRef.current = true;
     }
 
     if (e.cancelable) e.preventDefault();
 
-    if (dx < 0) {
-      setSwipeState({ id: m.id, dx: Math.max(dx, -SWIPE_MAX), direction: 'reply' });
-    } else if (dx > 0) {
-      setSwipeState({ id: m.id, dx: Math.min(dx, SWIPE_MAX), direction: 'delete' });
+    if (r.direction === 'reply') {
+      const off = Math.max(dx, -SWIPE_MAX);
+      if (r.cardEl) {
+        r.cardEl.style.transition = 'none';
+        r.cardEl.style.transform = `translateX(${off}px)`;
+      }
+      if (r.replyGlowEl) {
+        const op = Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1);
+        r.replyGlowEl.style.opacity = String(op);
+      }
+    } else if (r.direction === 'delete') {
+      const off = Math.min(dx, SWIPE_MAX);
+      if (r.cardEl) {
+        r.cardEl.style.transition = 'none';
+        r.cardEl.style.transform = `translateX(${off}px)`;
+      }
+      if (r.deleteGlowEl) {
+        const op = Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1);
+        r.deleteGlowEl.style.opacity = String(op);
+      }
+    }
+
+    const abs = Math.abs(dx);
+    const nextReady = abs >= SWIPE_THRESHOLD;
+    if (nextReady !== r.ready) {
+      r.ready = nextReady;
+      if (r.cardEl) {
+        if (r.direction === 'reply') {
+          r.cardEl.classList.toggle('msg-content--ready-reply', nextReady);
+        } else if (r.direction === 'delete') {
+          r.cardEl.classList.toggle('msg-content--ready-delete', nextReady);
+        }
+      }
     }
   };
 
   const handleMsgTouchEnd = (e, m) => {
     cancelLongPress();
 
-    const start = swipeStartRef.current;
-    if (!start || start.id !== m.id) {
-      setSwipeState({ id: null, dx: 0, direction: null });
+    const r = swipeRef.current;
+    if (!r.active && !r.cardEl) {
+      // не наш свайп
       return;
     }
+
     const t = e.changedTouches[0];
-    const dx = t.clientX - start.x;
-    const dir = swipeState.direction;
-    swipeStartRef.current = null;
-    swipeActiveRef.current = false;
+    const dx = t.clientX - r.startX;
+    const dir = r.direction;
+
+    const cardEl = r.cardEl;
+    const replyGlowEl = r.replyGlowEl;
+    const deleteGlowEl = r.deleteGlowEl;
+
+    r.active = false;
+    r.direction = null;
+    r.cardEl = null;
+    r.replyGlowEl = null;
+    r.deleteGlowEl = null;
+    r.ready = false;
+    r.msg = null;
 
     if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply) {
+      resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
       onReply(m);
     } else if (dir === 'delete' && dx >= SWIPE_THRESHOLD && canDelete(m)) {
+      resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
       setConfirmData({ messageId: m.id });
+    } else {
+      resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
     }
 
-    setSwipeState({ id: null, dx: 0, direction: null });
+    setTimeout(() => { swipeActiveRef.current = false; }, 50);
   };
 
   const handleMsgClick = (e, m) => {
     if (swipeActiveRef.current) return;
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
     handleMessageTap(m.id, e);
-  };
-
-  const getSwipeStyle = (m) => {
-    if (swipeState.id !== m.id) return {};
-    return {
-      transform: `translateX(${swipeState.dx}px)`,
-      transition: swipeState.dx === 0 ? 'transform 0.2s ease-out' : 'none',
-    };
-  };
-
-  const getSwipeOpacity = (m, dir) => {
-    if (swipeState.id !== m.id) return 0;
-    if (swipeState.direction !== dir) return 0;
-    const abs = Math.abs(swipeState.dx);
-    return Math.min(abs / SWIPE_THRESHOLD, 1);
-  };
-
-  const isSwipeReady = (m, dir) => {
-    if (swipeState.id !== m.id) return false;
-    if (swipeState.direction !== dir) return false;
-    return Math.abs(swipeState.dx) >= SWIPE_THRESHOLD;
-  };
-
-  const renderSwipeGlow = (m) => {
-    if (swipeState.id !== m.id) return null;
-    if (swipeState.direction === 'reply') {
-      return (
-        <div
-          className="msg-swipe-glow msg-swipe-glow--reply"
-          style={{ opacity: getSwipeOpacity(m, 'reply') }}
-        />
-      );
-    }
-    if (swipeState.direction === 'delete') {
-      return (
-        <div
-          className="msg-swipe-glow msg-swipe-glow--delete"
-          style={{ opacity: getSwipeOpacity(m, 'delete') }}
-        />
-      );
-    }
-    return null;
   };
 
   // [2.32.25] аватар в сообщении: картинка если есть, иначе инициал
@@ -347,7 +395,7 @@ const MessageList = ({
     );
   };
 
-  // [2.32.28] склейка по одной минуте на циферблате, не по разнице в 60 сек
+  // [2.32.28] склейка по одной минуте циферблата
   const sameMinute = (t1, t2) => {
     const d1 = new Date(t1);
     const d2 = new Date(t2);
@@ -385,13 +433,9 @@ const MessageList = ({
           const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
 
-          // [2.32.27] флаги группы
           const isGroupStart = !isGroupable(prevMessage, m);
           const isGroupEnd = !isGroupable(m, nextMessage);
           const isInGroup = !isGroupStart || !isGroupEnd;
-
-          const readyReply = isSwipeReady(m, 'reply');
-          const readyDelete = isSwipeReady(m, 'delete');
 
           const dateDivider = showDateDivider ? (
             <div className="date-divider" key={`date-${m.id}`}>
@@ -431,12 +475,12 @@ const MessageList = ({
                 <div className="msg msg--image-only" data-msg-id={m.id}>
                   {renderMsgAvatar(m.userId, m.nickname)}
 
-                  {renderSwipeGlow(m)}
+                  <div className="msg-swipe-glow msg-swipe-glow--reply" />
+                  <div className="msg-swipe-glow msg-swipe-glow--delete" />
 
                   <div className="msg-content msg-content--image-only">
                     <div
                       className="msg-image-only-wrap"
-                      style={getSwipeStyle(m)}
                       onTouchStart={(e) => handleMsgTouchStart(e, m)}
                       onTouchMove={(e) => handleMsgTouchMove(e, m)}
                       onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
@@ -533,11 +577,11 @@ const MessageList = ({
                   <div className="msg-avatar msg-avatar--placeholder" />
                 )}
 
-                {renderSwipeGlow(m)}
+                <div className="msg-swipe-glow msg-swipe-glow--reply" />
+                <div className="msg-swipe-glow msg-swipe-glow--delete" />
 
                 <div
-                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''} ${readyReply ? 'msg-content--ready-reply' : ''} ${readyDelete ? 'msg-content--ready-delete' : ''} ${isEditingThis ? 'msg-content--editing' : ''}`}
-                  style={getSwipeStyle(m)}
+                  className={`msg-content ${poppingId === m.id ? 'msg-content--pop' : ''} ${activeMessageId === m.id ? 'msg-content--picker-open' : ''} ${isEditingThis ? 'msg-content--editing' : ''}`}
                   onClick={(e) => handleMsgClick(e, m)}
                   onTouchStart={(e) => handleMsgTouchStart(e, m)}
                   onTouchMove={(e) => handleMsgTouchMove(e, m)}
