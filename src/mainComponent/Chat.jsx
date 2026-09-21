@@ -38,6 +38,7 @@ import '../styles/Chat.info.css';
 import '../styles/Chat.dialogs.css';
 import '../styles/Chat.stickers.css';
 
+// [2.32.2] fix: мини-плеер скрывается сразу после тапа play
 // [2.32.1] iOS: оверлей-кнопка над YouTube-iframe, без всплытия приложения
 // [2.32.0] InfoPanel: «О приложении», секции с иконками, мини-анимации жестов
 // [2.31.10] PWA: скролл к последним сообщениям через ResizeObserver
@@ -50,7 +51,7 @@ import '../styles/Chat.stickers.css';
 // [2.31.2] кольцо long-press появляется через 1/3 удержания
 // [2.31.1] двойной тап по картинке в карточке → ❤️ + бурст
 // [2.31.0] fullscreen: шапка с автором, свайп между фото, двойной тап ❤️
-const VERSION = '2.32.1';
+const VERSION = '2.32.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const FS_SWIPE_THRESHOLD = 80;
@@ -1479,7 +1480,12 @@ const Chat = () => {
             <button
               type="button"
               className="yt-overlay-play"
-              onClick={yt.toggle}
+              onClick={() => {
+                yt.toggle();
+                // [2.32.2] сразу скрываем — иначе мини-плеер висит
+                // поверх чата до следующего тапа
+                setShowMiniPlayer(false);
+              }}
               aria-label="Воспроизвести"
             />
             <div className="yt-mini-hint">▶ нажми play</div>
