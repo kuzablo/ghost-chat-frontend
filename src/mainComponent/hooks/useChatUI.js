@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
-  [2.32.39] useCallback на toggleReactions/closeFullscreen — стабильные
-            ссылки для memo-компонентов, меньше ререндеров.
-  [2.32.34] toggleTheme: класс меняется внутри callback View Transition
-            — иначе снапшот "old" уже с новой темой и анимация бессмысленна
+  [2.35.26] theme-switching на время смены темы — гасим CSS transitions, нет фриза
+  [2.32.39] useCallback на toggleReactions/closeFullscreen
+  [2.32.34] toggleTheme: класс внутри callback View Transition
   [2.32.19] активная реакция-пикер автоскрывается через 2 сек
 */
 const PICKER_AUTOHIDE_MS = 2000;
@@ -38,13 +37,27 @@ export const useChatUI = () => {
     const x = event?.clientX ?? window.innerWidth - 30;
     const y = event?.clientY ?? 30;
 
+    // [2.35.26] На время смены темы гасим CSS transitions.
+    // Иначе сотни цветовых интерполяций стартуют одновременно — фриз.
+    const freeze = () => document.body.classList.add('theme-switching');
+    const unfreeze = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.body.classList.remove('theme-switching');
+        });
+      });
+    };
+
     if (typeof document.startViewTransition !== 'function') {
+      freeze();
       document.body.classList.toggle('dark', next);
       setIsDark(next);
+      unfreeze();
       return;
     }
 
     const transition = document.startViewTransition(() => {
+      freeze();
       document.body.classList.toggle('dark', next);
     });
     setIsDark(next);
@@ -63,7 +76,7 @@ export const useChatUI = () => {
             ],
           },
           {
-            duration: 380,
+            duration: 320,
             easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
             pseudoElement: '::view-transition-new(root)',
           }
@@ -71,7 +84,9 @@ export const useChatUI = () => {
       })
       .catch(() => { /* noop */ });
 
-    transition.finished.catch(() => { /* noop */ });
+    transition.finished
+      .then(unfreeze)
+      .catch(unfreeze);
   }, [isDark]);
 
   const toggleReactions = useCallback((messageId) => {

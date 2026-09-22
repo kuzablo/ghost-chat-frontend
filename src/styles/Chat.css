@@ -1387,3 +1387,18 @@ body.dark .theme-icon-moon {
 .msg--image-only {
   margin-bottom: 10px;
 }
+
+/* ============================================================= */
+/* [2.35.26] theme-switching — гасим transitions на время смены    */
+/*           темы. Иначе сотни элементов одновременно начинают     */
+/*           анимировать цвет → фриз на iOS.                       */
+/* ============================================================= */
+
+body.theme-switching,
+body.theme-switching *,
+body.theme-switching *::before,
+body.theme-switching *::after {
+  transition: none !important;
+  animation-duration: 0.001s !important;
+  animation-delay: 0s !important;
+}
