@@ -14,6 +14,7 @@ import ProfilePanel from './components/ProfilePanel';
 import FriendshipRitual from './components/FriendshipRitual';
 import RoomPulse from './components/RoomPulse';
 import StickerPanel from './components/StickerPanel';
+import PrivateMessageToasts from './components/PrivateMessageToasts';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -46,13 +47,15 @@ import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
+import '../styles/Chat.toasts.css';
 
+// feat: орбитальное уведомление о личных — маскот + аватарки → v2.35.30
 // [2.35.21] input-icon-btn — единые SVG-кнопки стикеров и фото
 // [2.35.20] свайп вправо на стикере = удаление
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.28';
+const VERSION = '2.35.30';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -443,6 +446,19 @@ const Chat = () => {
     () => messages.filter(m => m.imageUrl),
     [messages]
   );
+
+  // [2.35.30] Пользователи с непрочитанными личными — для орбитального уведомления
+  const unreadUserObjects = useMemo(() => {
+    const ids = Object.keys(unreadByUser).filter(id => unreadByUser[id]);
+    return ids.map(id => {
+      const d = dialogs.find(x => x.userId === id);
+      return {
+        userId: id,
+        nickname: d?.nickname || '—',
+        avatarUrl: d?.avatarUrl || avatarCache[id] || null,
+      };
+    });
+  }, [unreadByUser, dialogs, avatarCache]);
 
   const blockedIds = useMemo(
     () => new Set(blockedUsers.map(u => u.userId)),
@@ -1782,6 +1798,11 @@ const Chat = () => {
           handleAuthSubmit={handleAuthSubmit}
         />
       )}
+
+      <PrivateMessageToasts
+        users={unreadUserObjects}
+        onOpenDialogs={handleOpenDialogs}
+      />
 
       <StickerPanel
         open={stickerPanelOpen}
