@@ -57,7 +57,7 @@ import '../styles/Chat.toasts.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.40';
+const VERSION = '2.35.41';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1464,6 +1464,8 @@ const Chat = () => {
           myId={myId}
           sendMessage={sendMessage}
           initialMessages={privateChat.messages || []}
+          historyLoaded={privateChat.historyLoaded}
+          dialogsBg={dialogsBg}
           typingUser={privateTypingUser}
           onClose={handleClosePrivate}
           stickers={stickers}

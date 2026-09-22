@@ -504,3 +504,70 @@ body.dark .private-reaction-count {
 .private-image-close:active {
   transform: scale(0.9);
 }
+
+/* ============================================================= */
+/* [2.35.41] Фон, свайп-закрытие, маскот загрузки в личке         */
+/* ============================================================= */
+
+.private-chat-overlay--custom {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: fixed;
+}
+
+/* затемнение фона — единый стиль с DialogsPanel и PlayersPanel */
+.private-chat-overlay--custom::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+body.dark .private-chat-overlay--custom::before {
+  background: rgba(10, 15, 25, 0.5);
+}
+
+.private-chat-overlay--custom > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Скрываем кнопку закрытия — закрытие свайпом */
+.private-chat-close {
+  display: none;
+}
+
+/* ===== Маскот загрузки истории ===== */
+
+.private-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  pointer-events: none;
+}
+
+.private-loading-mascot {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  animation: privateLoadingPulse 1.4s ease-in-out infinite;
+}
+
+body.dark .private-loading-mascot {
+  border-color: #3BB5E8;
+  background-color: #1D2A42;
+}
+
+@keyframes privateLoadingPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}

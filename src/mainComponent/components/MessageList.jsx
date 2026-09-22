@@ -514,7 +514,7 @@ const MessageList = ({
             return (
               <React.Fragment key={m.id}>
                 {dateDivider}
-                <div className="msg msg--image-only" data-msg-id={m.id}>
+                <div className={`msg msg--image-only ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
                   {renderMsgAvatar(m.userId, m.nickname)}
 
                   <div className="msg-swipe-glow msg-swipe-glow--reply" />
@@ -608,6 +608,7 @@ const MessageList = ({
               <div
                 className={[
                   'msg',
+                  isOwn ? 'msg--own' : 'msg--other',
                   isInGroup ? 'msg--in-group' : '',
                   isGroupStart ? 'msg--group-start' : '',
                   isGroupEnd ? 'msg--group-end' : '',

@@ -1402,3 +1402,84 @@ body.theme-switching *::after {
   animation-duration: 0.001s !important;
   animation-delay: 0s !important;
 }
+
+/* ============================================================= */
+/* [2.35.41] Свои сообщения в общем чате — справа, как в личке    */
+/* ============================================================= */
+
+/* Свои — выравнивание вправо, аватар скрыт, карточка синяя */
+.msg--own {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.msg--own .msg-avatar,
+.msg--own .msg-avatar--placeholder {
+  display: none;
+}
+
+.msg--own .msg-content {
+  background: var(--btn-bg);
+  border-color: var(--btn-border);
+  color: var(--btn-text);
+}
+
+.msg--own .msg-text {
+  color: var(--btn-text);
+}
+
+.msg--own .msg-nick {
+  color: var(--btn-text);
+  opacity: 0.9;
+}
+
+.msg--own .msg-time {
+  color: var(--btn-text);
+  opacity: 0.7;
+}
+
+/* Reply-цитата у своих — чуть прозрачнее */
+.msg--own .msg-reply-quote {
+  background: rgba(255, 255, 255, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.7);
+}
+.msg--own .msg-reply-quote-nick {
+  color: rgba(255, 255, 255, 0.9);
+}
+.msg--own .msg-reply-quote-text {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Реакции у своих — позиция правая */
+.msg--own .msg-reactions {
+  left: auto;
+  right: 8px;
+}
+
+/* Пикер реакций у своих — справа */
+.msg--own .msg-reaction-picker {
+  left: auto;
+  right: 0;
+}
+
+/* Edit у своих — сохранение контраста */
+.msg--own .msg-edit-input {
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+}
+
+.msg--own .msg-edit-btn--cancel {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--btn-text);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* image-only у своих — тоже справа, аватар скрыт */
+.msg--own.msg--image-only .msg-avatar {
+  display: none;
+}
+
+.msg--own .msg-image-only-reactions {
+  left: auto;
+  right: 6px;
+}

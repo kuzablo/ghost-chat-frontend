@@ -1,13 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.28.7] После перезахода восстанавливаем unreadByUser из dialogs_list.
-           Убран фильтр по онлайн-игрокам — он стирал непрочитанные
-           от тех, кто ушёл офлайн.
-  [2.17.0] Добавлено:
-    - state dialogs (список диалогов);
-    - handleWs обрабатывает dialogs_list, dialog_update, dialog_unread_reset;
-    - openPrivateChat обнуляет unread в dialogs.
+  [2.35.41] historyLoaded в privateChat — для маскота-загрузки в PrivateChat
+  [2.28.7] восстанавливаем unreadByUser из dialogs_list
+  [2.17.0] state dialogs
 */
 export const usePrivateChat = ({ sendMessage, myId, players }) => {
   const [privateChat, setPrivateChat] = useState(null);
@@ -27,7 +23,8 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
 
   const openPrivateChat = useCallback((userId, nickname) => {
     if (userId === myIdRef.current) return;
-    setPrivateChat({ userId, nickname, messages: [] });
+    // [2.35.41] historyLoaded: false — PrivateChat покажет маскота пока не придёт private_history
+    setPrivateChat({ userId, nickname, messages: [], historyLoaded: false });
     setUnreadByUser(prev => {
       const { [userId]: _, ...rest } = prev;
       return rest;
@@ -51,7 +48,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
       case 'dialogs_list': {
         const list = msg.data || [];
         setDialogs(list);
-        // [2.28.7] восстанавливаем unread-карту из списка диалогов
         setUnreadByUser(prev => {
           const next = { ...prev };
           list.forEach(d => {
@@ -104,11 +100,22 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
         ));
         return true;
 
+      case 'unread_private_list': {
+        const newUnread = {};
+        (msg.data || []).forEach(senderId => {
+          newUnread[senderId] = true;
+        });
+        setUnreadByUser(prev => ({ ...prev, ...newUnread }));
+        return true;
+      }
+
       case 'private_message': {
+        // [2.35.41] если open chat — добавляем к истории (сразу помечаем historyLoaded)
         setPrivateChat(prev => {
           if (!prev || prev.userId !== msg.data.senderId) return prev;
           return {
             ...prev,
+            historyLoaded: true,
             messages: [...(prev.messages || []), { ...msg.data, is_read: false }],
           };
         });
@@ -137,6 +144,7 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
           if (!prev || prev.userId !== msg.data.recipientId) return prev;
           return {
             ...prev,
+            historyLoaded: true,
             messages: [...(prev.messages || []), { ...msg.data, is_read: false }],
           };
         });
@@ -152,7 +160,7 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
       case 'private_history':
         setPrivateChat(prev => {
           if (!prev || prev.userId !== msg.data.userId) return prev;
-          return { ...prev, messages: msg.data.messages };
+          return { ...prev, historyLoaded: true, messages: msg.data.messages };
         });
         setUnreadByUser(prev => {
           const { [msg.data.userId]: _, ...rest } = prev;
