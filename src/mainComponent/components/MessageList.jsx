@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNewDay } from '../utils';
 import ConfirmModal from './ConfirmModal';
+import MessageActionsMenu from './MessageActionsMenu';
 
 const DOUBLE_TAP_MS = 250;
+const LONG_PRESS_MENU_MS = 500;
 
 const MessageList = ({
   messages,
@@ -18,6 +20,7 @@ const MessageList = ({
   onEditMessage,
   containerRef,
   onReply,
+  onForward,
   avatarByUser = {},
   bannedUsers = new Set(),
 }) => {
@@ -26,8 +29,8 @@ const MessageList = ({
   const [isEditing, setIsEditing] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
-
   const [pickerAbove, setPickerAbove] = useState(false);
+  const [actionsMenu, setActionsMenu] = useState(null);
 
   const swipeRef = useRef({
     active: false,
@@ -48,9 +51,8 @@ const MessageList = ({
     ringTimer: null,
     completedAt: 0,
   });
-  const LONG_PRESS_EDIT_MS = 1500;
   const LONG_PRESS_IGNORE_MS = 500;
-  const RING_START_DELAY = 500;
+  const RING_START_DELAY = 200;
 
   const tapTimerRef = useRef(null);
   const lastTapRef = useRef({ id: null, time: 0, x: 0, y: 0 });
@@ -74,7 +76,7 @@ const MessageList = ({
   const startEdit = (message) => {
     if (message?.stickerUrl) return;
     setEditingMessageId(message.id);
-    setEditText(message.text);
+    setEditText(message.text || '');
     setIsEditing(true);
   };
 
@@ -156,6 +158,11 @@ const MessageList = ({
   };
 
   const handleMessageTap = (messageId, e) => {
+    if (actionsMenu) {
+      setActionsMenu(null);
+      return;
+    }
+
     if (activeMessageId === messageId) {
       toggleReactions(messageId);
       return;
@@ -224,9 +231,54 @@ const MessageList = ({
     if (deleteGlowEl) deleteGlowEl.style.opacity = '0';
   };
 
+  const openActionsMenuFor = (m, touchTargetEl) => {
+    const containerEl = containerRef?.current;
+    if (!containerEl) return;
+    const cardEl = touchTargetEl || null;
+    const target = cardEl && cardEl.closest('.msg') ? cardEl.closest('.msg') : cardEl;
+    const rect = (target || containerEl).getBoundingClientRect();
+    const containerRect = containerEl.getBoundingClientRect();
+
+    setActionsMenu({
+      anchor: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      },
+      container: {
+        top: containerRect.top,
+        left: containerRect.left,
+        right: containerRect.right,
+        bottom: containerRect.bottom,
+      },
+      msg: m,
+    });
+  };
+
+  const closeActionsMenu = () => setActionsMenu(null);
+
+  const buildForwardData = (m) => {
+    const forwardedFrom = m.forwardedFrom
+      ? m.forwardedFrom
+      : {
+          nickname: m.nickname,
+          originalId: m.id,
+          originalTime: m.time,
+          fromPrivate: false,
+        };
+    return {
+      text: m.text || '',
+      imageUrl: m.imageUrl || null,
+      stickerUrl: m.stickerUrl || null,
+      forwardedFrom,
+    };
+  };
+
   const handleMsgTouchStart = (e, m) => {
     if (e.touches.length !== 1) return;
     if (editingMessageId === m.id) return;
+    if (actionsMenu) return;
 
     const t = e.touches[0];
     const card = e.currentTarget;
@@ -252,19 +304,22 @@ const MessageList = ({
       card.style.transform = '';
     }
 
-    if (m.userId === myId && !m.stickerUrl) {
-      longPressRef.current.ringTimer = setTimeout(() => {
-        longPressRef.current.ringTimer = null;
-        setEditRingId(m.id);
-      }, RING_START_DELAY);
+    longPressRef.current.ringTimer = setTimeout(() => {
+      longPressRef.current.ringTimer = null;
+      setEditRingId(m.id);
+    }, RING_START_DELAY);
 
-      longPressRef.current.timer = setTimeout(() => {
-        longPressRef.current.timer = null;
-        longPressRef.current.completedAt = Date.now();
-        setEditRingId(null);
-        startEdit(m);
-      }, LONG_PRESS_EDIT_MS);
-    }
+    longPressRef.current.timer = setTimeout(() => {
+      longPressRef.current.timer = null;
+      longPressRef.current.completedAt = Date.now();
+      setEditRingId(null);
+      swipeActiveRef.current = true;
+      if (card) {
+        card.style.transform = '';
+        card.style.transition = '';
+      }
+      openActionsMenuFor(m, card);
+    }, LONG_PRESS_MENU_MS);
   };
 
   const handleMsgTouchMove = (e, m) => {
@@ -378,6 +433,10 @@ const MessageList = ({
   };
 
   const handleMsgClick = (e, m) => {
+    if (actionsMenu) {
+      setActionsMenu(null);
+      return;
+    }
     if (swipeActiveRef.current) return;
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
     handleMessageTap(m.id, e);
@@ -430,6 +489,20 @@ const MessageList = ({
     return true;
   };
 
+  const renderForwardLabel = (m) => {
+    if (!m.forwardedFrom) return null;
+    const ff = m.forwardedFrom;
+    return (
+      <div className="msg-forward-label">
+        <span className="msg-forward-arrow">↪</span>
+        <span className="msg-forward-nick">Переслано от {ff.nickname}</span>
+        {ff.originalTime && (
+          <span className="msg-forward-time">· {formatMessageDate(ff.originalTime)}</span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -452,6 +525,8 @@ const MessageList = ({
             </div>
           ) : null;
 
+          const forwardLabel = renderForwardLabel(m);
+
           if (isSticker) {
             return (
               <React.Fragment key={m.id}>
@@ -467,6 +542,7 @@ const MessageList = ({
                     onTouchMove={(e) => handleMsgTouchMove(e, m)}
                     onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                   >
+                    {forwardLabel}
                     <div className="msg-sticker-nick">{m.nickname}</div>
                     <img
                       src={m.stickerUrl}
@@ -528,6 +604,10 @@ const MessageList = ({
                     >
                       {editRingId === m.id && <div className="msg-edit-ring" />}
 
+                      {forwardLabel && (
+                        <div className="msg-image-only-forward">{forwardLabel}</div>
+                      )}
+
                       {replyBlock && (
                         <div className="msg-image-only-reply-wrap">{replyBlock}</div>
                       )}
@@ -546,27 +626,6 @@ const MessageList = ({
 
                       <div className="msg-image-overlay">
                         <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
-
-                        <div className="msg-actions msg-actions--overlay">
-                          {isOwn && (
-                            <button
-                              className="msg-action-btn msg-action-btn--overlay msg-action-btn--edit"
-                              onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                              title="Редактировать"
-                            >
-                              ✏️
-                            </button>
-                          )}
-                          {canDelete(m) && (
-                            <button
-                              className="msg-action-btn msg-action-btn--overlay msg-action-btn--delete"
-                              onClick={(e) => { e.stopPropagation(); setConfirmData({ messageId: m.id }); }}
-                              title="Удалить"
-                            >
-                              🗑️
-                            </button>
-                          )}
-                        </div>
                       </div>
 
                       <div className="msg-image-bottom-overlay">
@@ -633,31 +692,11 @@ const MessageList = ({
                   {isGroupStart && (
                     <div className="msg-header">
                       <span className="msg-nick">{m.nickname}</span>
-
-                      <div className="msg-actions">
-                        {isOwn && (
-                          <button
-                            className="msg-action-btn msg-action-btn--edit"
-                            onClick={(e) => { e.stopPropagation(); startEdit(m); }}
-                            title="Редактировать"
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {canDelete(m) && (
-                          <button
-                            className="msg-action-btn msg-action-btn--delete"
-                            onClick={(e) => { e.stopPropagation(); setConfirmData({ messageId: m.id }); }}
-                            title="Удалить"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-
                       <span className="msg-time">{formatMessageDate(m.time)}</span>
                     </div>
                   )}
+
+                  {forwardLabel}
 
                   {replyBlock}
 
@@ -765,6 +804,27 @@ const MessageList = ({
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      <MessageActionsMenu
+        open={!!actionsMenu}
+        anchor={actionsMenu?.anchor}
+        container={actionsMenu?.container}
+        isOwn={actionsMenu?.msg?.userId === myId}
+        isAdmin={isAdmin}
+        isSticker={!!actionsMenu?.msg?.stickerUrl}
+        onForward={() => {
+          if (actionsMenu?.msg && onForward) {
+            onForward(buildForwardData(actionsMenu.msg));
+          }
+        }}
+        onEdit={() => {
+          if (actionsMenu?.msg) startEdit(actionsMenu.msg);
+        }}
+        onDelete={() => {
+          if (actionsMenu?.msg) setConfirmData({ messageId: actionsMenu.msg.id });
+        }}
+        onClose={closeActionsMenu}
+      />
 
       <ConfirmModal
         open={!!confirmData}

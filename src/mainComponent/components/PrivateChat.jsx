@@ -1,8 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
-import { formatTime } from '../utils';
+import { formatTime, formatMessageDate } from '../utils';
 import ChatInput from './ChatInput';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
+import MessageActionsMenu from './MessageActionsMenu';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 const PICKER_AUTOHIDE_MS = 2000;
@@ -13,11 +14,8 @@ const SWIPE_THRESHOLD = 90;
 const SWIPE_MAX = 220;
 const DIRECTION_LOCK = 10;
 
-/*
-  [2.35.41] Свайп-закрытие, фон из dialogsBg, маскот загрузки
-  [2.35.21] input-icon-btn
-  [2.35.16] стикеры
-*/
+const LONG_PRESS_MENU_MS = 500;
+const LONG_PRESS_IGNORE_MS = 500;
 
 const StickerIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -36,12 +34,8 @@ const ClipIcon = () => (
 
 const getBgCss = (bg) => {
   if (!bg) return null;
-  if (bg.startsWith('preset:')) {
-    return null;
-  }
-  if (bg.startsWith('url:')) {
-    return `url(${bg.slice('url:'.length)})`;
-  }
+  if (bg.startsWith('preset:')) return null;
+  if (bg.startsWith('url:')) return `url(${bg.slice('url:'.length)})`;
   return null;
 };
 
@@ -51,6 +45,7 @@ const PrivateChat = ({
   userId,
   nickname,
   myId,
+  myNickname,
   sendMessage,
   onClose,
   initialMessages = [],
@@ -61,6 +56,7 @@ const PrivateChat = ({
   isAdmin = false,
   token = '',
   onStickersUpdated,
+  onForward,
 }) => {
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
@@ -72,6 +68,7 @@ const PrivateChat = ({
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [actionsMenu, setActionsMenu] = useState(null);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -79,6 +76,7 @@ const PrivateChat = ({
   const lastMsgIdRef = useRef(null);
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
+  const longPressRef = useRef({ timer: null, completedAt: 0 });
 
   const swipeRef = useRef({
     active: false,
@@ -111,7 +109,6 @@ const PrivateChat = ({
     return () => cancelAnimationFrame(id);
   }, [initialMessages]);
 
-  // Преload URL-фона
   useEffect(() => {
     const isUrl = isUrlBg(dialogsBg);
     if (!isUrl) {
@@ -127,9 +124,54 @@ const PrivateChat = ({
     return () => { img.onload = null; img.onerror = null; };
   }, [dialogsBg]);
 
-  // ===== Свайп-закрытие =====
-  const handleTouchStart = (e) => {
+  const openActionsMenuFor = (m, el) => {
+    const containerEl = messagesContainerRef.current;
+    if (!containerEl) return;
+    const target = el?.closest('.private-msg') || el;
+    const rect = (target || containerEl).getBoundingClientRect();
+    const containerRect = containerEl.getBoundingClientRect();
+    setActionsMenu({
+      anchor: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      },
+      container: {
+        top: containerRect.top,
+        left: containerRect.left,
+        right: containerRect.right,
+        bottom: containerRect.bottom,
+      },
+      msg: m,
+    });
+  };
+
+  const closeActionsMenu = () => setActionsMenu(null);
+
+  const buildForwardData = (m) => {
+    const isOwn = m.senderId === myId;
+    const authorNick = isOwn ? (myNickname || 'Я') : nickname;
+    const forwardedFrom = m.forwardedFrom
+      ? m.forwardedFrom
+      : {
+          nickname: authorNick,
+          originalId: m.id,
+          originalTime: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+          fromPrivate: true,
+        };
+    return {
+      text: m.text || '',
+      imageUrl: m.imageUrl || null,
+      stickerUrl: m.stickerUrl || null,
+      forwardedFrom,
+    };
+  };
+
+  // ===== Свайп-закрытие окна =====
+  const handlePanelTouchStart = (e) => {
     if (e.touches.length !== 1) return;
+    if (e.target.closest('.private-msg')) return;
     const t = e.touches[0];
     const s = swipeRef.current;
     s.active = true;
@@ -140,7 +182,7 @@ const PrivateChat = ({
     if (panelRef.current) panelRef.current.style.transition = 'none';
   };
 
-  const handleTouchMove = (e) => {
+  const handlePanelTouchMove = (e) => {
     const s = swipeRef.current;
     if (!s.active) return;
     if (e.touches.length !== 1) return;
@@ -164,7 +206,7 @@ const PrivateChat = ({
     if (e.cancelable) e.preventDefault();
   };
 
-  const handleTouchEnd = () => {
+  const handlePanelTouchEnd = () => {
     const s = swipeRef.current;
     if (!s.active) return;
     s.active = false;
@@ -183,6 +225,32 @@ const PrivateChat = ({
     }
     s.direction = null;
     s.lastDx = 0;
+  };
+
+  // ===== Long-press на сообщении =====
+  const cancelLongPress = () => {
+    if (longPressRef.current.timer) {
+      clearTimeout(longPressRef.current.timer);
+      longPressRef.current.timer = null;
+    }
+  };
+
+  const handleMsgTouchStart = (e, m) => {
+    if (e.touches.length !== 1) return;
+    const el = e.currentTarget;
+    longPressRef.current.timer = setTimeout(() => {
+      longPressRef.current.timer = null;
+      longPressRef.current.completedAt = Date.now();
+      openActionsMenuFor(m, el);
+    }, LONG_PRESS_MENU_MS);
+  };
+
+  const handleMsgTouchMove = () => {
+    cancelLongPress();
+  };
+
+  const handleMsgTouchEnd = () => {
+    cancelLongPress();
   };
 
   // ===== Отправка =====
@@ -265,6 +333,12 @@ const PrivateChat = ({
   };
 
   const handleMessageTap = (id, e) => {
+    if (actionsMenu) {
+      setActionsMenu(null);
+      return;
+    }
+    if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
+
     if (e.target.closest('.private-reaction-picker')) return;
     if (e.target.closest('.private-msg-image')) return;
     if (e.target.closest('.private-attach-btn')) return;
@@ -317,6 +391,20 @@ const PrivateChat = ({
     }
   };
 
+  const renderForwardLabel = (m) => {
+    if (!m.forwardedFrom) return null;
+    const ff = m.forwardedFrom;
+    return (
+      <div className="private-msg-forward-label">
+        <span className="private-msg-forward-arrow">↪</span>
+        <span className="private-msg-forward-nick">Переслано от {ff.nickname}</span>
+        {ff.originalTime && (
+          <span className="private-msg-forward-time">· {formatMessageDate(ff.originalTime)}</span>
+        )}
+      </div>
+    );
+  };
+
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
   const bgIsUrl = isUrlBg(dialogsBg);
@@ -338,14 +426,13 @@ const PrivateChat = ({
         className={`private-chat-overlay ${hasBg ? 'private-chat-overlay--custom' : ''}`}
         ref={panelRef}
         style={panelStyle}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        onTouchStart={handlePanelTouchStart}
+        onTouchMove={handlePanelTouchMove}
+        onTouchEnd={handlePanelTouchEnd}
+        onTouchCancel={handlePanelTouchEnd}
       >
         <div className="private-chat-header">
           <h4>Чат с {nickname}</h4>
-          {/* кнопки закрытия нет — свайп влево/вправо */}
         </div>
         <div className="private-typing">
           {localTypingUser ? `${localTypingUser} печатает...` : ''}
@@ -360,6 +447,7 @@ const PrivateChat = ({
             <>
               {initialMessages.map((m, i) => {
                 const isOwn = m.senderId === myId;
+                const forwardLabel = renderForwardLabel(m);
 
                 if (m.stickerUrl) {
                   return (
@@ -368,10 +456,14 @@ const PrivateChat = ({
                       className={`private-msg private-msg--sticker ${
                         isOwn ? 'private-msg--own' : 'private-msg--other'
                       }`}
+                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                      onTouchMove={handleMsgTouchMove}
+                      onTouchEnd={handleMsgTouchEnd}
                     >
                       <div className="private-msg-sticker-nick">
                         {isOwn ? 'Я' : nickname}
                       </div>
+                      {forwardLabel}
                       <img
                         src={m.stickerUrl}
                         alt=""
@@ -393,12 +485,17 @@ const PrivateChat = ({
                     key={m.id || i}
                     className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''}`}
                     onClick={(e) => handleMessageTap(m.id, e)}
+                    onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                    onTouchMove={handleMsgTouchMove}
+                    onTouchEnd={handleMsgTouchEnd}
                   >
                     <span className="private-msg-nick">
                       {isOwn ? 'Я' : nickname}
                     </span>
 
                     <div className="private-msg-text-wrap">
+                      {forwardLabel}
+
                       {m.imageUrl && (
                         <img
                           src={m.imageUrl}
@@ -516,6 +613,25 @@ const PrivateChat = ({
           </button>
         </div>
       </div>
+
+      <MessageActionsMenu
+        open={!!actionsMenu}
+        anchor={actionsMenu?.anchor}
+        container={actionsMenu?.container}
+        // !!! ВАЖНО, НАДО СДЕЛАТЬ И НЕ ПОТЕРЯТЬ, БРАТ
+        //isOwn={actionsMenu?.msg?.senderId === myId}
+        isOwn={false}
+        isAdmin={isAdmin}
+        isSticker={!!actionsMenu?.msg?.stickerUrl}
+        onForward={() => {
+          if (actionsMenu?.msg && onForward) {
+            onForward(buildForwardData(actionsMenu.msg));
+          }
+        }}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onClose={closeActionsMenu}
+      />
 
       <StickerPanel
         open={stickerPanelOpen}

@@ -15,6 +15,7 @@ import FriendshipRitual from './components/FriendshipRitual';
 import RoomPulse from './components/RoomPulse';
 import StickerPanel from './components/StickerPanel';
 import PrivateMessageToasts from './components/PrivateMessageToasts';
+import ForwardPickerModal from './components/ForwardPickerModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -49,15 +50,16 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 
-// feat: фон диалогов в PlayersPanel + орбита непрочитанных в плейсхолдере → v2.35.33
-// style: спутники на индивидуальных орбитах — свой радиус, наклон, скорость → v2.35.32
-// feat: орбитальное уведомление о личных — маскот + аватарки → v2.35.30
+// [2.35.45] пересылка сообщений — меню long-press + выбор получателя
+// [2.35.44] свои сообщения справа без синего + стикер 220px
+// [2.35.33] фон диалогов в PlayersPanel + орбита непрочитанных
+// [2.35.32] спутники на индивидуальных орбитах
+// [2.35.30] орбитальное уведомление о личных
 // [2.35.21] input-icon-btn — единые SVG-кнопки стикеров и фото
-// [2.35.20] свайп вправо на стикере = удаление
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.44';
+const VERSION = '2.35.45';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -181,6 +183,7 @@ const Chat = () => {
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
   const [profileTarget, setProfileTarget] = useState(null);
   const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
+  const [forwardData, setForwardData] = useState(null);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -907,6 +910,39 @@ const Chat = () => {
     setStickerPanelOpen(false);
   }, [sendSticker]);
 
+  // [2.35.45] Пересылка — открыть выбор получателя
+  const handleForwardOpen = useCallback((data) => {
+    if (!data) return;
+    setForwardData(data);
+  }, []);
+
+  const handleForwardPick = useCallback((target) => {
+    if (!forwardData) return;
+    if (target.type === 'general') {
+      sendMessage({
+        type: 'message',
+        data: {
+          text: forwardData.text || '',
+          imageUrl: forwardData.imageUrl || null,
+          stickerUrl: forwardData.stickerUrl || null,
+          forwardedFrom: forwardData.forwardedFrom,
+        },
+      });
+    } else if (target.type === 'private' && target.userId) {
+      sendMessage({
+        type: 'private_message',
+        data: {
+          recipientId: target.userId,
+          text: forwardData.text || '',
+          imageUrl: forwardData.imageUrl || null,
+          stickerUrl: forwardData.stickerUrl || null,
+          forwardedFrom: forwardData.forwardedFrom,
+        },
+      });
+    }
+    setForwardData(null);
+  }, [forwardData, sendMessage]);
+
   const compareVersions = (v1, v2) => {
     const p1 = v1.split('.').map(Number);
     const p2 = v2.split('.').map(Number);
@@ -1462,6 +1498,7 @@ const Chat = () => {
           userId={privateChat.userId}
           nickname={privateChat.nickname}
           myId={myId}
+          myNickname={nickname}
           sendMessage={sendMessage}
           initialMessages={privateChat.messages || []}
           historyLoaded={privateChat.historyLoaded}
@@ -1472,6 +1509,7 @@ const Chat = () => {
           isAdmin={isAdmin}
           token={token}
           onStickersUpdated={setStickersList}
+          onForward={handleForwardOpen}
         />
       )}
 
@@ -1603,6 +1641,7 @@ const Chat = () => {
               onEditMessage={handleEditMessage}
               containerRef={messagesContainerRef}
               onReply={handleReply}
+              onForward={handleForwardOpen}
               avatarByUser={avatarCache}
               bannedUsers={bannedUsers}
             />
@@ -1820,6 +1859,13 @@ const Chat = () => {
         isAdmin={isAdmin}
         token={token}
         onUploaded={setStickersList}
+      />
+
+      <ForwardPickerModal
+        open={!!forwardData}
+        onClose={() => setForwardData(null)}
+        onPick={handleForwardPick}
+        friends={friends}
       />
 
       <InstallPwaBanner />
