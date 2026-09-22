@@ -468,7 +468,7 @@ const MessageList = ({
 
           if (isImageOnly) {
             return (
-              <React.Fragment key={i}>
+              <React.Fragment key={m.id}>
                 {dateDivider}
                 <div className="msg msg--image-only" data-msg-id={m.id}>
                   {renderMsgAvatar(m.userId, m.nickname)}
@@ -493,6 +493,7 @@ const MessageList = ({
                         alt="photo"
                         className="msg-image-only-img"
                         loading="lazy"
+                        decoding="async"
                         draggable={false}
                         onError={(e) => {
                           console.error('❌ Ошибка загрузки фото:', m.imageUrl);
@@ -560,7 +561,7 @@ const MessageList = ({
           }
 
           return (
-            <React.Fragment key={i}>
+            <React.Fragment key={m.id}>
               {dateDivider}
               <div
                 className={[
@@ -663,6 +664,7 @@ const MessageList = ({
                         alt="photo"
                         className="msg-image"
                         loading="lazy"
+                        decoding="async"
                         draggable={false}
                         onError={(e) => {
                           console.error('❌ Ошибка загрузки фото:', m.imageUrl);
