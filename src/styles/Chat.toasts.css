@@ -1,5 +1,5 @@
 /* ============================================================= */
-/* [2.35.32] Орбита v3 — спутники с индивидуальными орбитами       */
+/* [2.35.34] Орбита — кнопка. Спутники на индивидуальных орбитах. */
 /* ============================================================= */
 
 .pm-orbit {
@@ -18,6 +18,14 @@
   will-change: opacity, transform;
   isolation: isolate;
   pointer-events: auto;
+
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  outline: none;
 }
 
 .pm-orbit--out {
@@ -31,8 +39,6 @@
   60%  { opacity: 1; transform: translateX(-50%) translateY(4px)  scale(1.03); }
   100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
 }
-
-/* ===== Ореолы — дышат в разном ритме ===== */
 
 .pm-orbit-halo {
   position: absolute;
@@ -94,8 +100,6 @@ body.dark .pm-orbit-halo--inner {
   50%      { transform: translate(-50%, -50%) scale(1.24); opacity: 0.45; }
 }
 
-/* ===== Маскот-планета в центре ===== */
-
 .pm-orbit-mascot-wrap {
   position: absolute;
   top: 50%;
@@ -104,9 +108,11 @@ body.dark .pm-orbit-halo--inner {
   width: 82px;
   height: 82px;
   z-index: 50;
+  pointer-events: none;
 }
 
 .pm-orbit-mascot {
+  display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -131,8 +137,6 @@ body.dark .pm-orbit-mascot {
   50%      { transform: scale(1.05);  filter: brightness(1.07); }
 }
 
-/* ===== Сцена — точка в центре ===== */
-
 .pm-orbit-stage {
   position: absolute;
   top: 50%;
@@ -143,20 +147,15 @@ body.dark .pm-orbit-mascot {
   pointer-events: none;
 }
 
-/* ===== Спутник ===== */
-
 .pm-orbit-slot {
   position: absolute;
   top: 0;
   left: 0;
   width: 42px;
   height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   will-change: transform, opacity;
   pointer-events: none;
-  /* начальная позиция — переопределяется JS */
   transform: translate(-50%, -50%) translate3d(0, 0, 0) scale(0.6);
   opacity: 0;
   animation: pmSlotFadeIn 0.5s ease-out both;
@@ -168,12 +167,12 @@ body.dark .pm-orbit-mascot {
 }
 
 .pm-orbit-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
   color: #FFF;
   font-weight: 800;
   font-size: 15px;
@@ -198,8 +197,6 @@ body.dark .pm-orbit-avatar {
   50%      { filter: brightness(1.12) drop-shadow(0 0 8px rgba(59, 181, 232, 0.6)); }
 }
 
-/* ===== +N ===== */
-
 .pm-orbit-more {
   position: absolute;
   bottom: 6px;
@@ -218,6 +215,7 @@ body.dark .pm-orbit-avatar {
   justify-content: center;
   z-index: 60;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
   animation: pmMorePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
 }
 
@@ -232,14 +230,27 @@ body.dark .pm-orbit-more {
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
-/* ===== Нажатие ===== */
-
 .pm-orbit:active .pm-orbit-mascot {
   transform: scale(0.94);
   transition: transform 0.12s ease;
 }
 
-/* ===== Мобильная версия ===== */
+.pm-orbit.pm-orbit--header {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  transform-origin: center;
+  animation: none;
+  transition: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pm-orbit.pm-orbit--header.pm-orbit--out {
+  opacity: 0;
+  pointer-events: none;
+}
 
 @media (max-width: 600px) {
   .pm-orbit {
@@ -253,6 +264,10 @@ body.dark .pm-orbit-more {
   .pm-orbit-slot { width: 38px; height: 38px; }
   .pm-orbit-avatar { width: 38px; height: 38px; font-size: 13px; }
   .pm-orbit-more { min-width: 24px; height: 24px; font-size: 11px; bottom: 2px; }
+
+  .pm-orbit.pm-orbit--header {
+    transform: translate(-50%, -50%) scale(0.42);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -262,33 +277,5 @@ body.dark .pm-orbit-more {
   .pm-orbit-avatar {
     animation-duration: 0.001s !important;
     animation-iteration-count: 1 !important;
-  }
-}
-
-/* ============================================================= */
-/* [2.35.33] Встроенный вариант орбиты (для PlayersPanel)         */
-/* ============================================================= */
-
-.pm-orbit.pm-orbit--embedded {
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: scale(0.72);
-  transform-origin: center;
-  animation: none;
-  transition: none;
-  width: 260px;
-  height: 220px;
-  margin: 0 auto;
-}
-
-.pm-orbit.pm-orbit--embedded.pm-orbit--out {
-  opacity: 0;
-  pointer-events: none;
-}
-
-@media (max-width: 600px) {
-  .pm-orbit.pm-orbit--embedded {
-    transform: scale(0.62);
   }
 }

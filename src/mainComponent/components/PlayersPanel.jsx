@@ -4,10 +4,11 @@ import StickerMenu from './StickerMenu';
 import OrbitNotification from './OrbitNotification';
 
 /*
-  [2.35.33] Кастомный фон из диалогов + плейсхолдер-маскот.
-            Если есть непрочитанные — в плейсхолдере крутится орбита,
-            клик → открыть диалоги.
-  [2.35.25] visible — панель всегда в DOM, скрыта через CSS-класс.
+  [2.35.34] Плейсхолдер-маскот и орбита в шапке разделены.
+            Плейсхолдер только одиночный маскот, z-index ниже контента.
+            Орбита в шапке — всегда поверх.
+  [2.35.33] Кастомный фон + орбита
+  [2.35.25] visible — панель всегда в DOM
   [2.35.4] дуэль: onRequestDuel(userId)
   [2.33.7] React.memo
 */
@@ -16,9 +17,7 @@ const MOVE_CANCEL_PX = 8;
 
 const getBgCss = (bg) => {
   if (!bg) return null;
-  if (bg.startsWith('preset:')) {
-    return null; // presets в PlayersPanel не используем — только свой URL
-  }
+  if (bg.startsWith('preset:')) return null;
   if (bg.startsWith('url:')) {
     return `url(${bg.slice('url:'.length)})`;
   }
@@ -79,7 +78,6 @@ const PlayersPanel = forwardRef(({
 
   const [bgLoaded, setBgLoaded] = useState(false);
 
-  // [2.35.33] Преload URL-фона — показываем плейсхолдер пока картинка не загружена.
   useEffect(() => {
     const isUrl = isUrlBg(dialogsBg);
     if (!isUrl) {
@@ -251,26 +249,26 @@ const PlayersPanel = forwardRef(({
         ref={ref}
         style={panelStyle}
       >
+        {/* Плейсхолдер: одиночный маскот, пока URL-фон грузится. Z-index ниже шапки. */}
         {showBgLoading && (
-          <div
-            className="players-bg-loading"
-            onClick={unreadUserObjects.length > 0 ? onOpenDialogs : undefined}
-            role={unreadUserObjects.length > 0 ? 'button' : undefined}
-            tabIndex={unreadUserObjects.length > 0 ? 0 : undefined}
-          >
-            {unreadUserObjects.length > 0 ? (
-              <OrbitNotification
-                users={unreadUserObjects}
-                onClick={onOpenDialogs}
-                className="pm-orbit--embedded"
-              />
-            ) : (
-              <div className="players-bg-loading-mascot" />
-            )}
+          <div className="players-bg-loading" aria-hidden="true">
+            <div className="players-bg-loading-mascot" />
           </div>
         )}
 
-        <h4>banjoboy's crew</h4>
+        {/* Шапка: орбита с непрочитанными — всегда поверх. Или обычный заголовок. */}
+        {unreadUserObjects.length > 0 ? (
+          <div className="players-header players-header--orbit">
+            <OrbitNotification
+              users={unreadUserObjects}
+              onClick={onOpenDialogs}
+              className="pm-orbit--header"
+            />
+          </div>
+        ) : (
+          <h4 className="players-title">banjoboy's crew</h4>
+        )}
+
         <input
           className="search-input"
           type="text"

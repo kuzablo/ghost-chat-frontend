@@ -1,15 +1,8 @@
 /* ===== Панель игроков =====
-   [2.35.23] Убран -webkit-overflow-scrolling: touch — тормозит монтаж на iOS
+   [2.35.34] Кастомный фон, плейсхолдер, орбита в шапке
+   [2.35.25] Скрытое состояние — панель в DOM
    [2.32.39] unreadPulse: box-shadow → transform
 */
-
-/* [2.35.25] Скрытое состояние — панель в DOM, но невидима.
-   Убирает фриз первого открытия. */
-.players-overlay--hidden {
-  visibility: hidden;
-  pointer-events: none;
-  opacity: 0;
-}
 
 .players-overlay {
   position: fixed;
@@ -28,6 +21,103 @@
   user-select: none;
   -webkit-user-drag: none;
 }
+
+.players-overlay--hidden {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* ===== Кастомный фон ===== */
+
+.players-overlay--custom {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.players-overlay--custom::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+body.dark .players-overlay--custom::before {
+  background: rgba(10, 15, 25, 0.5);
+}
+
+.players-overlay--custom > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== Плейсхолдер фона ===== */
+
+.players-bg-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.players-bg-loading-mascot {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  animation: playersBgMascotPulse 1.4s ease-in-out infinite;
+}
+
+body.dark .players-bg-loading-mascot {
+  border-color: #3BB5E8;
+}
+
+@keyframes playersBgMascotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+/* ===== Шапка панели ===== */
+
+.players-title {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.players-header--orbit {
+  position: relative;
+  width: 100%;
+  height: 130px;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* ===== Общие элементы ===== */
 
 .players-overlay h4 {
   margin: 0 0 10px;
@@ -62,8 +152,6 @@
 }
 
 .search-input::placeholder { color: var(--text-muted); }
-
-/* ===== [2.20.4] Sticky-заголовки секций ===== */
 
 .friends-header {
   position: sticky;
@@ -101,7 +189,6 @@
   opacity: 0.55;
 }
 
-/* ===== [2.20.4] Строка игрока ===== */
 .player-item {
   display: flex;
   align-items: center;
@@ -170,7 +257,6 @@ body.dark .player-item {
   margin-left: 6px;
 }
 
-/* ===== Кнопки действий ===== */
 .player-actions {
   display: flex;
   gap: 3px;
@@ -216,22 +302,15 @@ body.dark .player-item {
 }
 
 @keyframes unreadPulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 body.dark .player-action-btn--unread {
   box-shadow: 0 0 0 1.5px #3BB5E8;
 }
 
-/* ===== Онлайн-индикатор ===== */
 .online-status {
   display: inline-block;
   width: 10px;
@@ -243,7 +322,6 @@ body.dark .player-action-btn--unread {
   flex-shrink: 0;
 }
 
-/* ===== Запросы дружбы ===== */
 .friend-request-item {
   display: flex;
   justify-content: space-between;
@@ -264,7 +342,6 @@ body.dark .player-action-btn--unread {
   border-radius: 8px;
 }
 
-/* ===== Бейдж непрочитанного ===== */
 .unread-excl {
   font-size: 9px;
   font-weight: 800;
@@ -280,7 +357,6 @@ body.dark .player-action-btn--unread {
   flex-shrink: 0;
 }
 
-/* ===== [2.20.4] Ссылка «Что умеет чат?» внизу панели ===== */
 .players-info-link {
   display: block;
   width: 100%;
@@ -314,8 +390,6 @@ body.dark .players-info-link {
     font-size: 12px;
   }
 }
-
-/* ===== [2.29.0] Свой профиль ===== */
 
 .player-item--self {
   position: relative;
@@ -370,78 +444,4 @@ body.dark .player-hint {
   color: #3BB5E8;
   border-color: #3BB5E8;
   background: rgba(59, 181, 232, 0.1);
-}
-
-/* ============================================================= */
-/* [2.35.33] Кастомный фон + плейсхолдер с орбитой                */
-/* ============================================================= */
-
-.players-overlay--custom {
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-/* Затемнение фона: как в DialogsPanel — единый стиль */
-.players-overlay--custom::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.35);
-  pointer-events: none;
-  z-index: 0;
-  border-radius: inherit;
-}
-
-body.dark .players-overlay--custom::before {
-  background: rgba(10, 15, 25, 0.5);
-}
-
-/* Контент панели — выше затемнения */
-.players-overlay--custom > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Плейсхолдер: маскот + орбита, пока URL-фон грузится */
-.players-bg-loading {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--card-bg);
-  border-radius: inherit;
-  pointer-events: auto;
-}
-
-.players-bg-loading-mascot {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 3px solid var(--card-border);
-  background: #FFF url('/mascot.png') center / cover no-repeat;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-  animation: playersBgMascotPulse 1.4s ease-in-out infinite;
-}
-
-body.dark .players-bg-loading-mascot {
-  border-color: #3BB5E8;
-}
-
-@keyframes playersBgMascotPulse {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
-  50%      { transform: scale(1.06); opacity: 1; }
-}
-
-/* Орбита внутри плейсхолдера — уменьшенная версия */
-.players-bg-loading .pm-orbit--embedded {
-  cursor: pointer;
 }

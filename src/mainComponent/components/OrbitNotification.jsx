@@ -2,10 +2,9 @@ import { useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.35.33] Орбита-уведомление: маскот в центре, аватарки-спутники вокруг.
+  [2.35.34] Орбита-уведомление — переписано на <button> для надёжного клика.
             У каждой аватарки своя орбита: радиус, наклон, скорость, направление.
             Аватарка уходит за маскота и выходит спереди.
-            Переиспользуется в PrivateMessageToasts и PlayersPanel.
 */
 const MAX_AVATARS = 5;
 
@@ -74,34 +73,30 @@ const OrbitNotification = ({
   const more = users.length - MAX_AVATARS;
 
   return (
-    <div
-      className={`pm-orbit ${className}`}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      aria-label="Новые личные сообщения"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick?.();
-        }
+    <button
+      type="button"
+      className={`pm-orbit ${className}`.trim()}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClick) onClick();
       }}
+      aria-label="Новые личные сообщения"
     >
-      <div className="pm-orbit-halo pm-orbit-halo--outer" />
-      <div className="pm-orbit-halo pm-orbit-halo--inner" />
+      <span className="pm-orbit-halo pm-orbit-halo--outer" aria-hidden="true" />
+      <span className="pm-orbit-halo pm-orbit-halo--inner" aria-hidden="true" />
 
-      <div className="pm-orbit-mascot-wrap">
-        <div className="pm-orbit-mascot" />
-      </div>
+      <span className="pm-orbit-mascot-wrap" aria-hidden="true">
+        <span className="pm-orbit-mascot" />
+      </span>
 
-      <div className="pm-orbit-stage" ref={orbitRef}>
+      <span className="pm-orbit-stage" ref={orbitRef} aria-hidden="true">
         {shown.map((u, i) => (
-          <div
+          <span
             key={u.userId}
             className="pm-orbit-slot"
             style={{ animationDelay: `${0.06 + i * 0.12}s` }}
           >
-            <div
+            <span
               className="pm-orbit-avatar"
               style={u.avatarUrl
                 ? { backgroundImage: `url(${u.avatarUrl})` }
@@ -109,15 +104,15 @@ const OrbitNotification = ({
               }
             >
               {!u.avatarUrl && getInitial(u.nickname || '?')}
-            </div>
-          </div>
+            </span>
+          </span>
         ))}
-      </div>
+      </span>
 
       {more > 0 && (
-        <div className="pm-orbit-more">+{more}</div>
+        <span className="pm-orbit-more">+{more}</span>
       )}
-    </div>
+    </button>
   );
 };
 
