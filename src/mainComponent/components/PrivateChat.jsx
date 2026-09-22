@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { formatTime, formatMessageDate } from '../utils';
 import ChatInput from './ChatInput';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
@@ -16,6 +16,14 @@ const DIRECTION_LOCK = 10;
 
 const LONG_PRESS_MENU_MS = 500;
 const LONG_PRESS_IGNORE_MS = 500;
+
+// [2.35.47] Чипы фильтра по дате
+const DATE_FILTERS = [
+  { id: 'all',   label: 'Всё',      days: null },
+  { id: 'today', label: 'Сегодня',  days: 0 },
+  { id: '7d',    label: '7 дней',   days: 7 },
+  { id: '30d',   label: '30 дней',  days: 30 },
+];
 
 const StickerIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -40,6 +48,15 @@ const getBgCss = (bg) => {
 };
 
 const isUrlBg = (bg) => !!(bg && bg.startsWith('url:'));
+
+// [2.35.47] Граница периода — начало дня N назад
+const getSinceTs = (days) => {
+  if (days === null) return null;
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  d.setDate(d.getDate() - days);
+  return d.getTime();
+};
 
 const PrivateChat = ({
   userId,
@@ -70,6 +87,9 @@ const PrivateChat = ({
   const [bgLoaded, setBgLoaded] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(null);
 
+  // [2.35.47] Фильтр по дате
+  const [dateFilter, setDateFilter] = useState('all');
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -86,6 +106,18 @@ const PrivateChat = ({
     lastDx: 0,
   });
 
+  // [2.35.47] Отфильтрованный список
+  const filteredMessages = useMemo(() => {
+    const filter = DATE_FILTERS.find(f => f.id === dateFilter);
+    if (!filter || filter.days === null) return initialMessages;
+    const since = getSinceTs(filter.days);
+    return initialMessages.filter(m => {
+      if (!m.created_at) return false;
+      const t = new Date(m.created_at).getTime();
+      return t >= since;
+    });
+  }, [initialMessages, dateFilter]);
+
   useEffect(() => {
     setLocalTypingUser(typingUser);
   }, [typingUser]);
@@ -97,7 +129,7 @@ const PrivateChat = ({
   }, [pickerFor]);
 
   useEffect(() => {
-    const last = initialMessages[initialMessages.length - 1];
+    const last = filteredMessages[filteredMessages.length - 1];
     const lastId = last?.id ?? null;
     if (lastId === lastMsgIdRef.current) return;
     lastMsgIdRef.current = lastId;
@@ -107,7 +139,7 @@ const PrivateChat = ({
       if (el) el.scrollTop = el.scrollHeight;
     });
     return () => cancelAnimationFrame(id);
-  }, [initialMessages]);
+  }, [filteredMessages]);
 
   useEffect(() => {
     const isUrl = isUrlBg(dialogsBg);
@@ -168,7 +200,6 @@ const PrivateChat = ({
     };
   };
 
-  // ===== Свайп-закрытие окна =====
   const handlePanelTouchStart = (e) => {
     if (e.touches.length !== 1) return;
     if (e.target.closest('.private-msg')) return;
@@ -227,7 +258,6 @@ const PrivateChat = ({
     s.lastDx = 0;
   };
 
-  // ===== Long-press на сообщении =====
   const cancelLongPress = () => {
     if (longPressRef.current.timer) {
       clearTimeout(longPressRef.current.timer);
@@ -253,7 +283,6 @@ const PrivateChat = ({
     cancelLongPress();
   };
 
-  // ===== Отправка =====
   const handleSend = () => {
     if (!input.trim()) return;
     if (!sendMessage) return;
@@ -434,6 +463,21 @@ const PrivateChat = ({
         <div className="private-chat-header">
           <h4>Чат с {nickname}</h4>
         </div>
+
+        {/* [2.35.47] Чипы фильтра по дате */}
+        <div className="private-date-filters">
+          {DATE_FILTERS.map(f => (
+            <button
+              key={f.id}
+              type="button"
+              className={`private-date-chip ${dateFilter === f.id ? 'private-date-chip--active' : ''}`}
+              onClick={() => setDateFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <div className="private-typing">
           {localTypingUser ? `${localTypingUser} печатает...` : ''}
         </div>
@@ -445,7 +489,11 @@ const PrivateChat = ({
             </div>
           ) : (
             <>
-              {initialMessages.map((m, i) => {
+              {filteredMessages.length === 0 && (
+                <div className="private-empty">В этом периоде сообщений нет</div>
+              )}
+
+              {filteredMessages.map((m, i) => {
                 const isOwn = m.senderId === myId;
                 const forwardLabel = renderForwardLabel(m);
 
@@ -453,6 +501,7 @@ const PrivateChat = ({
                   return (
                     <div
                       key={m.id || i}
+                      data-msg-id={m.id}
                       className={`private-msg private-msg--sticker ${
                         isOwn ? 'private-msg--own' : 'private-msg--other'
                       }`}
@@ -483,6 +532,7 @@ const PrivateChat = ({
                 return (
                   <div
                     key={m.id || i}
+                    data-msg-id={m.id}
                     className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''}`}
                     onClick={(e) => handleMessageTap(m.id, e)}
                     onTouchStart={(e) => handleMsgTouchStart(e, m)}

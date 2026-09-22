@@ -44,6 +44,53 @@
   touch-action: manipulation;
 }
 
+/* ===== [2.35.47] Чипы фильтра по дате ===== */
+.private-date-filters {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.private-date-chip {
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: var(--input-bg);
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.private-date-chip:active {
+  transform: scale(0.94);
+}
+
+.private-date-chip--active {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+}
+
+body.dark .private-date-chip--active {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+}
+
+.private-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .private-typing {
   font-size: 11px;
   color: var(--nick-color);
