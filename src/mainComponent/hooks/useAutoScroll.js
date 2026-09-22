@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
-  [2.32.39] Второй ResizeObserver — запись scrollTop обёрнута в RAF,
-            чтобы не ловить layout thrashing.
-  [2.32.22] скролл вниз только при новом последнем сообщении —
-            реакции и редактирование больше не дёргают
-  [2.32.21] постоянный ResizeObserver: если юзер у низа — держим у низа
-  [2.32.8] первый скролл — мгновенный
-  [2.31.9] ResizeObserver на 2 секунды после mount для PWA
-  [2.18.6] подстраховка для картинок
+  [2.35.15] scrollToBottom — instant, без smooth.
+  [2.32.39] Второй ResizeObserver — запись scrollTop обёрнута в RAF.
+  [2.32.22] скролл вниз только при новом последнем сообщении.
+  [2.32.21] постоянный ResizeObserver: если юзер у низа — держим у низа.
+  [2.32.8] первый скролл — мгновенный.
+  [2.31.9] ResizeObserver на 2 секунды после mount для PWA.
+  [2.18.6] подстраховка для картинок.
 */
 
 export const useAutoScroll = ({ messages, resetKey }) => {
@@ -122,10 +121,20 @@ export const useAutoScroll = ({ messages, resetKey }) => {
     };
   }, [resetKey]);
 
+  // [2.35.15] Мгновенный скролл. Плюс прелоад картинок из DOM
+  // перед скроллом — чтобы «пустоты» не было.
   const scrollToBottom = () => {
     const el = messagesContainerRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+
+    // Прелоад: все <img> внутри контейнера получают src, браузер их качает.
+    const imgs = el.querySelectorAll('img');
+    imgs.forEach((img) => {
+      if (img.loading === 'lazy') img.loading = 'eager';
+    });
+
+    // Мгновенный скролл — без анимации, без промежуточных кадров.
+    el.scrollTop = el.scrollHeight;
   };
 
   return {

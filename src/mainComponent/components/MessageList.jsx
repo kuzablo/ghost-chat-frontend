@@ -3,7 +3,6 @@ import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNew
 import ConfirmModal from './ConfirmModal';
 
 const DOUBLE_TAP_MS = 250;
-const EAGER_TAIL_COUNT = 15;
 
 const MessageList = ({
   messages,
@@ -421,8 +420,6 @@ const MessageList = ({
     return true;
   };
 
-  const eagerFromIndex = Math.max(0, messages.length - EAGER_TAIL_COUNT);
-
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -433,7 +430,6 @@ const MessageList = ({
           const prevMessage = messages[i - 1];
           const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
-          const imgLoading = i >= eagerFromIndex ? 'eager' : 'lazy';
 
           const isGroupStart = !isGroupable(prevMessage, m);
           const isGroupEnd = !isGroupable(m, nextMessage);
@@ -496,8 +492,6 @@ const MessageList = ({
                         src={m.imageUrl}
                         alt="photo"
                         className="msg-image-only-img"
-                        loading={imgLoading}
-                        decoding="async"
                         draggable={false}
                         onError={(e) => {
                           console.error('❌ Ошибка загрузки фото:', m.imageUrl);
@@ -667,8 +661,6 @@ const MessageList = ({
                         src={m.imageUrl}
                         alt="photo"
                         className="msg-image"
-                        loading={imgLoading}
-                        decoding="async"
                         draggable={false}
                         onError={(e) => {
                           console.error('❌ Ошибка загрузки фото:', m.imageUrl);
