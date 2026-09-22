@@ -1,8 +1,10 @@
-import mascot from '../assets/mascot.png';
-
+/*
+  [2.35.8] Единый источник картинки — /public/mascot.png.
+           Убран импорт ../assets/mascot.png — два источника расходились.
+*/
 const Mascot = ({ size = 80, alt = 'banjoboy' }) => (
   <img
-    src={mascot}
+    src="/mascot.png"
     alt={alt}
     width={size}
     height={size}
