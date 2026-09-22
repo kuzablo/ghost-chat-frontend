@@ -29,6 +29,7 @@ import { usePrivateChat } from './hooks/usePrivateChat';
 import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import InstallPwaBanner from './components/InstallPwaBanner';
+import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
@@ -45,25 +46,15 @@ import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 
+// [2.35.12] Android PWA баннер установки
+// [2.35.11] boot-splash ждёт аватарки и скролл
+// [2.35.10] boot-splash снимается по __ready
+// [2.35.8] Mascot — единый источник
+// [2.35.4] дуэль: резолв clientId через userId
 // [2.35.0] Instagram-карточки в личных сообщениях
-// [2.34.4] fix: dialogsBg — единственный источник в useChat
+// [2.34.4] dialogsBg — единственный источник в useChat
 // [2.34.3] Кастомизация фона диалогов + крупнее аватарки
-// [2.34.1] Мои диалоги: разделители, мини-пульс, long-press → профиль
-// [2.34.0] Диалоги — редизайн + avatarUrl с бэка
-// [2.33.9] InfoPanel: актуализация + анонимные плейсхолдеры
-// [2.33.8] Пульс комнаты — полоска-дыхание под шапкой
-// [2.33.7] React.memo + useCallback: ввод в инпут не перерисовывает историю
-// [2.33.6] фото из файлов + фото в личке
-// [2.33.5] avatars_map — аватарки офлайн-юзеров
-// [2.33.4] блокировка: 🚫 в меню, список в InfoPanel
-// [2.33.3] rejectCount в ритуале; тост при отказе
-// [2.33.1] лимит загрузки 25 МБ
-// [2.33.0] Ритуал дружбы — огонь и вода
-// [2.32.42] avatarCache от useChat
-// [2.32.41] bannedUsers прокинут в MessageList
-// [2.32.40] ConfirmBanModal → ConfirmModal с danger
-// [2.32.39] useMemo для imageMessages
-const VERSION = '2.35.11';
+const VERSION = '2.35.12';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -513,7 +504,11 @@ const Chat = () => {
     }
   }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
 
-    // [2.35.11] Снимаем boot-splash только когда содержимое РЕАЛЬНО готово:
+  useEffect(() => {
+    setIsConnected(wsConnected);
+  }, [wsConnected]);
+
+  // [2.35.11] Снимаем boot-splash только когда содержимое РЕАЛЬНО готово:
   // аватарки загружены, скролл внизу. Иначе виден «дёрг».
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
@@ -557,10 +552,6 @@ const Chat = () => {
 
     return () => { cancelled = true; };
   }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
-
-  useEffect(() => {
-    setIsConnected(wsConnected);
-  }, [wsConnected]);
 
   useEffect(() => {
     if (wsError) {
@@ -1742,6 +1733,7 @@ const Chat = () => {
       )}
 
       <InstallPwaBanner />
+      <InstallPwaBannerAndroid />
       {isNewVersionAvailable && <LatestVersionLink />}
 
       {fullscreenImage && (
