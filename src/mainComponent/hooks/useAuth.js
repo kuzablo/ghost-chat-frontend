@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 const API_URL = 'https://api.banjoboy420.ru';
 
 /*
+  [2.35.4] forceLogout сбрасывает isAdmin и myId
   [2.34.4] dialogsBg убран — source of truth в useChat
   [2.16.0] adminUserId и adminNickname
 */
@@ -89,6 +90,11 @@ export const useAuth = () => {
   const forceLogout = (reason) => {
     setAuthError(reason || '');
     setIsAuth(false);
+    setIsAdmin(false);
+    setMyId(null);
+    setServerVersion('');
+    setAdminUserId(null);
+    setAdminNickname(null);
     localStorage.removeItem('ghost-chat-token');
     localStorage.removeItem('ghost-chat-nickname');
     setToken('');

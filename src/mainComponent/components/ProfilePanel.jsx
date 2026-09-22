@@ -3,6 +3,7 @@ import { getAvatarColor, getInitial } from '../utils';
 import ConfirmModal from './ConfirmModal';
 
 /*
+  [2.35.4] MAX_AVATAR_MB: 2 → 25, синхронизация с бэком и InfoPanel
   [2.32.40] bio: «Сохранено ✓» через локальный таймер, а не через data.
             Кнопка гаснет после сохранения.
             Удаление из друзей — через ConfirmModal (danger),
@@ -12,7 +13,7 @@ import ConfirmModal from './ConfirmModal';
 */
 
 const MAX_BIO = 200;
-const MAX_AVATAR_MB = 2;
+const MAX_AVATAR_MB = 25;
 const MAX_ROTATION = 15;
 
 const FONTS = [
