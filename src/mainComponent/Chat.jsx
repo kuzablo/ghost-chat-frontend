@@ -47,16 +47,12 @@ import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 
+// [2.35.21] input-icon-btn — единые SVG-кнопки стикеров и фото
+// [2.35.20] свайп вправо на стикере = удаление
 // [2.35.16] стикеры: панель, отправка в чат и личку
-// [2.35.15] instant scrollToBottom + все картинки eager
-// [2.35.14] eager загрузка последних 15 сообщений
-// [2.35.13] key={m.id} вместо key={i}
 // [2.35.12] Android PWA баннер
-// [2.35.11] boot-splash ждёт аватарки и скролл
-// [2.35.10] boot-splash снимается по __ready
-// [2.35.8] Mascot — единый источник
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.20';
+const VERSION = '2.35.21';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -101,6 +97,35 @@ const ThemeIcon = () => (
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   </span>
+);
+
+const StickerIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h7l7-7V6a3 3 0 0 0-3-3z" />
+    <path d="M13 21v-5a3 3 0 0 1 3-3h5" />
+  </svg>
+);
+
+const ClipIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+  </svg>
 );
 
 const Chat = () => {
@@ -514,7 +539,6 @@ const Chat = () => {
     setIsConnected(wsConnected);
   }, [wsConnected]);
 
-  // Снимаем boot-splash только когда содержимое РЕАЛЬНО готово
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
 
@@ -860,7 +884,6 @@ const Chat = () => {
     setProfileTarget(null);
   }, [profileTarget, handleRequestDuel]);
 
-  // [2.35.16] Отправка стикера в общий чат
   const handleStickerPick = useCallback((stickerUrl) => {
     sendSticker(stickerUrl);
     setStickerPanelOpen(false);
@@ -1628,21 +1651,24 @@ const Chat = () => {
               maxLength={2000}
             />
             <button
-              className="sticker-open-btn"
+              type="button"
+              className="input-icon-btn"
               onClick={() => setStickerPanelOpen(v => !v)}
               disabled={!isAuth}
               title="Стикеры"
-              type="button"
+              aria-label="Стикеры"
             >
-              🎨
+              <StickerIcon />
             </button>
             <button
-              className="attach-btn"
+              type="button"
+              className="input-icon-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={!isAuth || isUploading}
               title="Прикрепить фото"
+              aria-label="Прикрепить фото"
             >
-              📎
+              <ClipIcon />
             </button>
             <input
               type="file"

@@ -10,12 +10,42 @@ const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 /*
-  [2.35.16] стикеры в личке — отдельным сообщением, без ника/времени
+  [2.35.21] input-icon-btn вместо приватных стилей
+  [2.35.16] стикеры в личке
   [2.35.0] Instagram-карточка
   [2.33.6] загрузка фото
-  [2.32.20] скролл вниз только при новом последнем сообщении
   [2.26.1] ChatInput вместо <input>
 */
+
+const StickerIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h7l7-7V6a3 3 0 0 0-3-3z" />
+    <path d="M13 21v-5a3 3 0 0 1 3-3h5" />
+  </svg>
+);
+
+const ClipIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+  </svg>
+);
+
 const PrivateChat = ({
   userId,
   nickname,
@@ -221,7 +251,6 @@ const PrivateChat = ({
           {initialMessages.map((m, i) => {
             const isOwn = m.senderId === myId;
 
-            // [2.35.16] Стикер — чисто гифка, без ника/времени/статуса
             if (m.stickerUrl) {
               return (
                 <div
@@ -230,6 +259,9 @@ const PrivateChat = ({
                     isOwn ? 'private-msg--own' : 'private-msg--other'
                   }`}
                 >
+                  <div className="private-msg-sticker-nick">
+                    {isOwn ? 'Я' : nickname}
+                  </div>
                   <img
                     src={m.stickerUrl}
                     alt=""
@@ -334,20 +366,22 @@ const PrivateChat = ({
         <div className="private-input-row">
           <button
             type="button"
-            className="private-sticker-btn"
+            className="input-icon-btn input-icon-btn--compact"
             onClick={() => setStickerPanelOpen(v => !v)}
             title="Стикеры"
+            aria-label="Стикеры"
           >
-            🎨
+            <StickerIcon />
           </button>
           <button
             type="button"
-            className="private-attach-btn"
+            className="input-icon-btn input-icon-btn--compact"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             title="Прикрепить фото"
+            aria-label="Прикрепить фото"
           >
-            {isUploading ? '⏳' : '📎'}
+            {isUploading ? '⏳' : <ClipIcon />}
           </button>
           <input
             type="file"

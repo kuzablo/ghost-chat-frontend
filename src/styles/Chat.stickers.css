@@ -216,50 +216,63 @@ body.dark .sticker-menu-item-badge {
 }
 
 /* ============================================================= */
-/* [2.35.16] Стикеры: кнопка открытия и панель                    */
+/* [2.35.21] input-icon-btn — единая кнопка стикеров и фото       */
 /* ============================================================= */
 
-.sticker-open-btn {
-  background: transparent;
-  border: none;
-  font-size: 22px;
+.input-icon-btn {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 2.5px solid var(--card-border);
+  background: var(--input-bg);
+  color: var(--text);
   cursor: pointer;
-  touch-action: manipulation;
-  padding: 0 6px;
-  color: var(--nick-color);
-  line-height: 1;
-  transition: transform 0.12s;
-}
-.sticker-open-btn:active {
-  transform: scale(0.9);
-}
-.sticker-open-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.private-sticker-btn {
-  background: transparent;
-  border: 2px solid var(--input-border);
-  border-radius: var(--radius-sm);
-  color: var(--nick-color);
-  font-size: 18px;
-  line-height: 1;
-  width: 40px;
-  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  cursor: pointer;
-  flex-shrink: 0;
   touch-action: manipulation;
-  transition: transform 0.12s, background 0.15s;
+  transition: transform 0.12s ease, background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.private-sticker-btn:active {
-  transform: scale(0.94);
+.input-icon-btn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.input-icon-btn:hover {
   background: var(--messages-bg);
 }
+.input-icon-btn:active {
+  transform: scale(0.92);
+  background: var(--messages-bg);
+}
+.input-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+body.dark .input-icon-btn {
+  border-color: #2C3E5A;
+  color: #EAF2FA;
+}
+body.dark .input-icon-btn:hover {
+  background: #1D2A42;
+}
+
+/* Компактный вариант для лички */
+.input-icon-btn--compact {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+.input-icon-btn--compact svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ===== Панель стикеров ===== */
 
 .sticker-panel-overlay {
   position: fixed;
@@ -503,7 +516,6 @@ body.dark .sticker-panel-overlay {
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
-/* Подсветка и «готовность к удалению» при свайпе вправо */
 .msg--sticker .msg-sticker-wrap.msg-content--ready-delete {
   animation: msgReadyDelete 1s ease-in-out infinite;
 }
@@ -560,5 +572,14 @@ body.dark .sticker-panel-overlay {
   .private-msg--sticker .private-msg-sticker {
     width: 120px;
     height: 120px;
+  }
+  .input-icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .input-icon-btn svg {
+    width: 20px;
+    height: 20px;
   }
 }
