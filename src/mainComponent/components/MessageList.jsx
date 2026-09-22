@@ -87,7 +87,7 @@ const MessageList = ({
     const original = messages.find(m => m.id === messageId);
     const nextText = editText.trim();
     const changed = nextText !== (original?.text || '');
-    const allowed = nextText.length > 0 || !!original?.imageUrl;
+    const allowed = nextText.length > 0 || !!original?.imageUrl || !!original?.stickerUrl;
 
     if (changed && allowed) {
       onEditMessage(messageId, nextText);
@@ -417,6 +417,8 @@ const MessageList = ({
     const bImageOnly = !b.text?.trim() && !!b.imageUrl;
     if (aImageOnly || bImageOnly) return false;
 
+    if (a.stickerUrl || b.stickerUrl) return false;
+
     return true;
   };
 
@@ -426,7 +428,8 @@ const MessageList = ({
         {messages.map((m, i) => {
           const isOwn = m.userId === myId;
           const isEditingThis = editingMessageId === m.id;
-          const isImageOnly = !m.text?.trim() && !!m.imageUrl && !isEditingThis;
+          const isSticker = !!m.stickerUrl;
+          const isImageOnly = !isSticker && !m.text?.trim() && !!m.imageUrl && !isEditingThis;
           const prevMessage = messages[i - 1];
           const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
@@ -440,6 +443,27 @@ const MessageList = ({
               <span>{formatDateDivider(m.time)}</span>
             </div>
           ) : null;
+
+          // [2.35.16] Стикер — чисто гифка, без ника/времени/аватара
+          if (isSticker) {
+            return (
+              <React.Fragment key={m.id}>
+                {dateDivider}
+                <div
+                  className={`msg msg--sticker ${isOwn ? 'msg--sticker-own' : 'msg--sticker-other'}`}
+                  data-msg-id={m.id}
+                >
+                  <img
+                    src={m.stickerUrl}
+                    alt=""
+                    className="msg-sticker-img"
+                    draggable={false}
+                    loading="lazy"
+                  />
+                </div>
+              </React.Fragment>
+            );
+          }
 
           const replyBlock = m.replyTo ? (
             <div

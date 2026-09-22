@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.34.4] case 'auth_ok' — dialogsBg из auth_ok (source of truth здесь)
-  [2.34.3] dialogsBg — фон окна диалогов
-  [2.33.5] avatars_map — карта всех аватарок
-  [2.33.4] blockedUsers — список заблокированных
-  [2.33.3] rejectCount в ритуале
+  [2.35.16] stickers_list + state stickers
+  [2.34.4] dialogsBg из auth_ok
+  [2.33.5] avatars_map
+  [2.33.4] blockedUsers
+  [2.33.3] rejectCount
   [2.33.0] friendshipRitual
   [2.32.42] avatarCache
   [2.32.41] bannedUsers
@@ -22,7 +22,6 @@ export const useChat = ({
   nicknameRef,
   onNotice,
 }) => {
-  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const [messages, setMessages] = useState([]);
   const [players, setPlayers] = useState([]);
   const [friends, setFriends] = useState([]);
@@ -42,7 +41,9 @@ export const useChat = ({
   const [friendshipRitual, setFriendshipRitual] = useState(null);
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [dialogsBg, setDialogsBg] = useState(null);
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const [isAvatarsLoaded, setIsAvatarsLoaded] = useState(false);
+  const [stickers, setStickers] = useState([]);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -293,10 +294,25 @@ export const useChat = ({
     }
   }, []);
 
+  // [2.35.16] Отправка стикера в общий чат — отдельным сообщением
+  const sendSticker = useCallback((stickerUrl) => {
+    if (!stickerUrl) return;
+    if (!sendMessageRef.current || !isAuthRef.current) return;
+    sendMessageRef.current({
+      type: 'message',
+      data: { text: '', stickerUrl },
+    });
+    if (audioRef.current) audioRef.current.playSend();
+  }, []);
+
+  // [2.35.16] Обновление списка стикеров после загрузки админом
+  const setStickersList = useCallback((list) => {
+    setStickers(Array.isArray(list) ? list : []);
+  }, []);
+
   // ===== WS-фильтр =====
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
-      // [2.34.4] dialogsBg из auth_ok. return false — Chat.jsx продолжит обрабатывать
       case 'auth_ok':
         setDialogsBg(msg.data?.dialogsBg || null);
         return false;
@@ -361,6 +377,12 @@ export const useChat = ({
         mergeAvatars(msg.data?.avatars || []);
         setIsAvatarsLoaded(true);
         return true;
+
+      case 'stickers_list': {
+        const list = msg.data?.stickers || [];
+        setStickers(list);
+        return true;
+      }
 
       case 'blocks_list':
         setBlockedUsers(msg.data?.blocked || []);
@@ -435,6 +457,10 @@ export const useChat = ({
         return true;
       }
 
+      case 'friend_request_accepted':
+        setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
+        return true;
+
       case 'friend_requests_list':
         setFriendRequests(msg.data);
         return true;
@@ -478,8 +504,6 @@ export const useChat = ({
   }, [nicknameRef, mergeAvatars]);
 
   return {
-    isHistoryLoaded,
-    isAvatarsLoaded,
     messages,
     players,
     friends,
@@ -492,6 +516,7 @@ export const useChat = ({
     friendshipRitual,
     blockedUsers,
     dialogsBg,
+    stickers,
     errorMessage,
     setErrorMessage,
     input,
@@ -504,6 +529,8 @@ export const useChat = ({
     setReplyTo,
     profileData,
     setProfileData,
+    isHistoryLoaded,
+    isAvatarsLoaded,
     handleWs,
     handleSendMessage,
     handleEditMessage,
@@ -521,5 +548,7 @@ export const useChat = ({
     blockUser,
     unblockUser,
     saveDialogsBg,
+    sendSticker,
+    setStickersList,
   };
 };

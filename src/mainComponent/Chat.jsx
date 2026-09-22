@@ -13,6 +13,7 @@ import NotificationPermissionModal from './components/NotificationPermissionModa
 import ProfilePanel from './components/ProfilePanel';
 import FriendshipRitual from './components/FriendshipRitual';
 import RoomPulse from './components/RoomPulse';
+import StickerPanel from './components/StickerPanel';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -46,15 +47,16 @@ import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 
-// [2.35.12] Android PWA баннер установки
+// [2.35.16] стикеры: панель, отправка в чат и личку
+// [2.35.15] instant scrollToBottom + все картинки eager
+// [2.35.14] eager загрузка последних 15 сообщений
+// [2.35.13] key={m.id} вместо key={i}
+// [2.35.12] Android PWA баннер
 // [2.35.11] boot-splash ждёт аватарки и скролл
 // [2.35.10] boot-splash снимается по __ready
 // [2.35.8] Mascot — единый источник
 // [2.35.4] дуэль: резолв clientId через userId
-// [2.35.0] Instagram-карточки в личных сообщениях
-// [2.34.4] dialogsBg — единственный источник в useChat
-// [2.34.3] Кастомизация фона диалогов + крупнее аватарки
-const VERSION = '2.35.16';
+const VERSION = '2.35.17';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -149,6 +151,7 @@ const Chat = () => {
   const [showDialogs, setShowDialogs] = useState(false);
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
   const [profileTarget, setProfileTarget] = useState(null);
+  const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -354,6 +357,7 @@ const Chat = () => {
     friendshipRitual,
     blockedUsers,
     dialogsBg,
+    stickers,
     errorMessage,
     setErrorMessage,
     input,
@@ -384,6 +388,8 @@ const Chat = () => {
     blockUser,
     unblockUser,
     saveDialogsBg,
+    sendSticker,
+    setStickersList,
   } = chat;
 
   const priv = usePrivateChat({ sendMessage, myId, players });
@@ -508,8 +514,7 @@ const Chat = () => {
     setIsConnected(wsConnected);
   }, [wsConnected]);
 
-  // [2.35.11] Снимаем boot-splash только когда содержимое РЕАЛЬНО готово:
-  // аватарки загружены, скролл внизу. Иначе виден «дёрг».
+  // Снимаем boot-splash только когда содержимое РЕАЛЬНО готово
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
 
@@ -854,6 +859,12 @@ const Chat = () => {
     handleRequestDuel(profileTarget.userId);
     setProfileTarget(null);
   }, [profileTarget, handleRequestDuel]);
+
+  // [2.35.16] Отправка стикера в общий чат
+  const handleStickerPick = useCallback((stickerUrl) => {
+    sendSticker(stickerUrl);
+    setStickerPanelOpen(false);
+  }, [sendSticker]);
 
   const compareVersions = (v1, v2) => {
     const p1 = v1.split('.').map(Number);
@@ -1411,6 +1422,10 @@ const Chat = () => {
           initialMessages={privateChat.messages || []}
           typingUser={privateTypingUser}
           onClose={handleClosePrivate}
+          stickers={stickers}
+          isAdmin={isAdmin}
+          token={token}
+          onStickersUpdated={setStickersList}
         />
       )}
 
@@ -1613,6 +1628,15 @@ const Chat = () => {
               maxLength={2000}
             />
             <button
+              className="sticker-open-btn"
+              onClick={() => setStickerPanelOpen(v => !v)}
+              disabled={!isAuth}
+              title="Стикеры"
+              type="button"
+            >
+              🎨
+            </button>
+            <button
               className="attach-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={!isAuth || isUploading}
@@ -1731,6 +1755,16 @@ const Chat = () => {
           handleAuthSubmit={handleAuthSubmit}
         />
       )}
+
+      <StickerPanel
+        open={stickerPanelOpen}
+        onClose={() => setStickerPanelOpen(false)}
+        stickers={stickers}
+        onPick={handleStickerPick}
+        isAdmin={isAdmin}
+        token={token}
+        onUploaded={setStickersList}
+      />
 
       <InstallPwaBanner />
       <InstallPwaBannerAndroid />

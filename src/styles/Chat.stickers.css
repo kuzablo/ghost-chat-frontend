@@ -63,7 +63,6 @@ body.dark .sticker-menu-overlay {
   gap: 20px;
 }
 
-/* стикер 1-в-1 как в капсуле */
 .sticker-menu-item {
   position: relative;
   width: 56px;
@@ -140,8 +139,6 @@ body.dark .sticker-menu-item--danger {
   line-height: 1;
 }
 
-/* [2.29.0] Бейдж непрочитанных на стикере */
-
 .sticker-menu-item-badge {
   position: absolute;
   top: -6px;
@@ -172,7 +169,7 @@ body.dark .sticker-menu-item-badge {
   border-color: #172236;
 }
 
-/* ===== [2.31.3] Кольцо long-press (0.5с) — общие переменные ===== */
+/* ===== [2.31.3] Кольцо long-press (0.5с) ===== */
 
 @property --ring-progress {
   syntax: '<angle>';
@@ -194,7 +191,6 @@ body.dark .sticker-menu-item-badge {
   border-radius: calc(var(--radius-sm) + 3px);
   pointer-events: none;
   z-index: 5;
-  /* [2.31.7] толщина из переменной — единый источник */
   padding: var(--ring-thickness);
   background: conic-gradient(
     from -90deg,
@@ -217,4 +213,305 @@ body.dark .sticker-menu-item-badge {
 @keyframes playerRingFill {
   from { --ring-progress: 0deg; }
   to   { --ring-progress: 360deg; }
+}
+
+/* ============================================================= */
+/* [2.35.16] Стикеры: кнопка открытия, панель, сообщение-стикер   */
+/* ============================================================= */
+
+/* Кнопка 🎨 в основном чате — рядом с 📎 */
+.sticker-open-btn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  touch-action: manipulation;
+  padding: 0 6px;
+  color: var(--nick-color);
+  line-height: 1;
+  transition: transform 0.12s;
+}
+.sticker-open-btn:active {
+  transform: scale(0.9);
+}
+.sticker-open-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Кнопка 🎨 в личке */
+.private-sticker-btn {
+  background: transparent;
+  border: 2px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  color: var(--nick-color);
+  font-size: 18px;
+  line-height: 1;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+}
+.private-sticker-btn:active {
+  transform: scale(0.94);
+  background: var(--messages-bg);
+}
+
+/* ===== Панель стикеров ===== */
+
+.sticker-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.45);
+  z-index: 1900;
+  animation: stickerPanelOverlayIn 0.15s ease-out;
+}
+body.dark .sticker-panel-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+@keyframes stickerPanelOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sticker-panel {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 420px;
+  max-height: 56vh;
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-bottom: none;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 1901;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: stickerPanelIn 0.22s cubic-bezier(0.34, 1.4, 0.64, 1);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes stickerPanelIn {
+  from { transform: translateX(-50%) translateY(24px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.sticker-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sticker-panel-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+
+.sticker-panel-upload {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 2px solid var(--btn-border);
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  transition: transform 0.12s;
+}
+.sticker-panel-upload:active {
+  transform: scale(0.9);
+}
+.sticker-panel-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sticker-panel-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  transition: transform 0.12s;
+}
+.sticker-panel-close:active {
+  transform: scale(0.9);
+}
+
+.sticker-panel-error {
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 600;
+  padding: 4px 8px;
+  background: rgba(225, 29, 72, 0.1);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sticker-panel-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.sticker-panel-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 2px;
+}
+
+.sticker-panel-tile {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--card-border);
+  background: var(--messages-bg);
+  cursor: pointer;
+  padding: 4px;
+  overflow: hidden;
+  touch-action: manipulation;
+  transition: transform 0.12s, box-shadow 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sticker-panel-tile:hover {
+  box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.35);
+}
+.sticker-panel-tile:active {
+  transform: scale(0.94);
+}
+.sticker-panel-tile img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ===== Сообщение-стикер в общем чате ===== */
+
+.msg--sticker {
+  display: flex;
+  margin: 6px 0;
+  padding: 0;
+  background: none;
+  border: none;
+  max-width: 100%;
+  min-height: 0;
+}
+.msg--sticker-own {
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+.msg--sticker-other {
+  justify-content: flex-start;
+  padding-left: 6px;
+}
+
+.msg-sticker-img {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.18));
+  animation: stickerThrow 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+}
+
+@keyframes stickerThrow {
+  0%   { opacity: 0; transform: scale(0.35) rotate(-8deg); }
+  55%  { opacity: 1; transform: scale(1.08) rotate(3deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* ===== Сообщение-стикер в личке ===== */
+
+.private-msg--sticker {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 8px;
+  max-width: 160px;
+  cursor: default;
+}
+.private-msg--sticker .private-msg-sticker {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.18));
+  animation: stickerThrow 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ===== Мобильная адаптация ===== */
+
+@media (max-width: 600px) {
+  .sticker-panel {
+    max-width: 100vw;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding-top: 12px;
+    max-height: 60vh;
+  }
+  .sticker-panel-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .msg-sticker-img,
+  .private-msg--sticker .private-msg-sticker {
+    width: 120px;
+    height: 120px;
+  }
 }

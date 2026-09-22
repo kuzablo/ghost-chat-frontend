@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { formatTime } from '../utils';
 import ChatInput from './ChatInput';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
+import StickerPanel from './StickerPanel';
 
 const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
 const PICKER_AUTOHIDE_MS = 2000;
@@ -9,10 +10,10 @@ const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 /*
-  [2.35.0] Instagram-карточка, если в тексте есть IG-ссылка
-  [2.33.6] загрузка фото: 📎 + превью + лайтбокс
+  [2.35.16] стикеры в личке — отдельным сообщением, без ника/времени
+  [2.35.0] Instagram-карточка
+  [2.33.6] загрузка фото
   [2.32.20] скролл вниз только при новом последнем сообщении
-  [2.32.19] пикер реакций автоскрывается через 2 сек
   [2.26.1] ChatInput вместо <input>
 */
 const PrivateChat = ({
@@ -23,6 +24,10 @@ const PrivateChat = ({
   onClose,
   initialMessages = [],
   typingUser = null,
+  stickers = [],
+  isAdmin = false,
+  token = '',
+  onStickersUpdated,
 }) => {
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
@@ -32,6 +37,7 @@ const PrivateChat = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [fullscreenImage, setFullscreenImage] = useState(null);
+  const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -77,6 +83,19 @@ const PrivateChat = ({
       return;
     }
     setInput('');
+    sendMessage({
+      type: 'private_typing',
+      data: { recipientId: userId, isTyping: false },
+    });
+  };
+
+  const handleStickerPick = (stickerUrl) => {
+    if (!sendMessage || !stickerUrl) return;
+    sendMessage({
+      type: 'private_message',
+      data: { recipientId: userId, stickerUrl },
+    });
+    setStickerPanelOpen(false);
     sendMessage({
       type: 'private_typing',
       data: { recipientId: userId, isTyping: false },
@@ -139,6 +158,7 @@ const PrivateChat = ({
     if (e.target.closest('.private-msg-image')) return;
     if (e.target.closest('.private-attach-btn')) return;
     if (e.target.closest('.ig-card')) return;
+    if (e.target.closest('.private-msg-sticker')) return;
 
     if (pickerFor === id) {
       setPickerFor(null);
@@ -200,6 +220,27 @@ const PrivateChat = ({
         <div className="private-messages" ref={messagesContainerRef}>
           {initialMessages.map((m, i) => {
             const isOwn = m.senderId === myId;
+
+            // [2.35.16] Стикер — чисто гифка, без ника/времени/статуса
+            if (m.stickerUrl) {
+              return (
+                <div
+                  key={m.id || i}
+                  className={`private-msg private-msg--sticker ${
+                    isOwn ? 'private-msg--own' : 'private-msg--other'
+                  }`}
+                >
+                  <img
+                    src={m.stickerUrl}
+                    alt=""
+                    className="private-msg-sticker"
+                    draggable={false}
+                    loading="lazy"
+                  />
+                </div>
+              );
+            }
+
             const reactions = m.reactions || {};
             const reactionEntries = Object.entries(reactions);
             const hasReactions = reactionEntries.length > 0;
@@ -207,7 +248,7 @@ const PrivateChat = ({
 
             return (
               <div
-                key={i}
+                key={m.id || i}
                 className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''}`}
                 onClick={(e) => handleMessageTap(m.id, e)}
               >
@@ -293,6 +334,14 @@ const PrivateChat = ({
         <div className="private-input-row">
           <button
             type="button"
+            className="private-sticker-btn"
+            onClick={() => setStickerPanelOpen(v => !v)}
+            title="Стикеры"
+          >
+            🎨
+          </button>
+          <button
+            type="button"
             className="private-attach-btn"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
@@ -321,6 +370,16 @@ const PrivateChat = ({
           </button>
         </div>
       </div>
+
+      <StickerPanel
+        open={stickerPanelOpen}
+        onClose={() => setStickerPanelOpen(false)}
+        stickers={stickers}
+        onPick={handleStickerPick}
+        isAdmin={isAdmin}
+        token={token}
+        onUploaded={onStickersUpdated}
+      />
 
       {fullscreenImage && (
         <div
