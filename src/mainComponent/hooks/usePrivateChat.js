@@ -104,15 +104,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
         ));
         return true;
 
-      case 'unread_private_list': {
-        const newUnread = {};
-        (msg.data || []).forEach(senderId => {
-          newUnread[senderId] = true;
-        });
-        setUnreadByUser(prev => ({ ...prev, ...newUnread }));
-        return true;
-      }
-
       case 'private_message': {
         setPrivateChat(prev => {
           if (!prev || prev.userId !== msg.data.senderId) return prev;

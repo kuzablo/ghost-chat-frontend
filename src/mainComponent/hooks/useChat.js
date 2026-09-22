@@ -435,10 +435,6 @@ export const useChat = ({
         return true;
       }
 
-      case 'friend_request_accepted':
-        setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
-        return true;
-
       case 'friend_requests_list':
         setFriendRequests(msg.data);
         return true;

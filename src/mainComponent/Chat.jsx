@@ -54,7 +54,7 @@ import '../styles/Chat.instagram.css';
 // [2.35.0] Instagram-карточки в личных сообщениях
 // [2.34.4] dialogsBg — единственный источник в useChat
 // [2.34.3] Кастомизация фона диалогов + крупнее аватарки
-const VERSION = '2.35.12';
+const VERSION = '2.35.13';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
