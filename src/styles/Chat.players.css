@@ -1,7 +1,6 @@
 /* ===== Панель игроков =====
-   [2.32.39] unreadPulse: box-shadow → transform.
-             box-shadow в бесконечной анимации заставляет пересчитывать
-             paint каждый кадр. transform — на GPU.
+   [2.35.23] Убран -webkit-overflow-scrolling: touch — тормозит монтаж на iOS
+   [2.32.39] unreadPulse: box-shadow → transform
 */
 .players-overlay {
   position: fixed;
@@ -16,7 +15,6 @@
   max-height: 70vh;
   overflow-y: auto;
   touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   user-select: none;
   -webkit-user-drag: none;
@@ -136,7 +134,6 @@ body.dark .player-item {
   flex-shrink: 0;
 }
 
-/* [2.32.20] ник и статы — по центру */
 .player-name {
   flex: 1;
   display: flex;
@@ -199,10 +196,6 @@ body.dark .player-item {
   border-color: var(--danger);
 }
 
-/* ===== Непрочитанное личное — пульсация кнопки ✉️ =====
-   [2.32.39] box-shadow → transform.
-   box-shadow в бесконечной анимации заставляет paint каждый кадр,
-   transform — только compositor. */
 .player-action-btn--unread {
   background: var(--btn-bg);
   border-color: var(--btn-border);
@@ -313,9 +306,7 @@ body.dark .players-info-link {
   }
 }
 
-/* ============================================================= */
-/* [2.29.0] Свой профиль — обводка, подсказка long-press         */
-/* ============================================================= */
+/* ===== [2.29.0] Свой профиль ===== */
 
 .player-item--self {
   position: relative;

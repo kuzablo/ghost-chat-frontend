@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.35.16] stickers_list + state stickers
+  [2.35.23] samePlayerList / sameFriendList — не менять ссылку, если данные те же
+  [2.35.16] stickers_list
   [2.34.4] dialogsBg из auth_ok
   [2.33.5] avatars_map
   [2.33.4] blockedUsers
@@ -112,6 +113,41 @@ export const useChat = ({
       }, 4000);
     });
   }, [players, nicknameRef]);
+
+  // [2.35.23] Сравнение списков по значимым полям.
+  const samePlayerList = (a, b) => {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i], y = b[i];
+      if (
+        x.id !== y.id ||
+        x.userId !== y.userId ||
+        x.nickname !== y.nickname ||
+        x.role !== y.role ||
+        x.wins !== y.wins ||
+        x.losses !== y.losses ||
+        (x.avatarUrl || null) !== (y.avatarUrl || null)
+      ) return false;
+    }
+    return true;
+  };
+
+  const sameFriendList = (a, b) => {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i], y = b[i];
+      if (
+        x.userId !== y.userId ||
+        x.nickname !== y.nickname ||
+        (x.avatarUrl || null) !== (y.avatarUrl || null)
+      ) return false;
+    }
+    return true;
+  };
 
   const mergeAvatars = useCallback((items) => {
     setAvatarCache(prev => {
@@ -294,7 +330,6 @@ export const useChat = ({
     }
   }, []);
 
-  // [2.35.16] Отправка стикера в общий чат — отдельным сообщением
   const sendSticker = useCallback((stickerUrl) => {
     if (!stickerUrl) return;
     if (!sendMessageRef.current || !isAuthRef.current) return;
@@ -305,7 +340,6 @@ export const useChat = ({
     if (audioRef.current) audioRef.current.playSend();
   }, []);
 
-  // [2.35.16] Обновление списка стикеров после загрузки админом
   const setStickersList = useCallback((list) => {
     setStickers(Array.isArray(list) ? list : []);
   }, []);
@@ -318,7 +352,7 @@ export const useChat = ({
         return false;
 
       case 'friends_list':
-        setFriends(msg.data);
+        setFriends(prev => sameFriendList(prev, msg.data) ? prev : msg.data);
         mergeAvatars(msg.data);
         return true;
 
@@ -349,7 +383,7 @@ export const useChat = ({
         return true;
 
       case 'players':
-        setPlayers(msg.data);
+        setPlayers(prev => samePlayerList(prev, msg.data) ? prev : msg.data);
         mergeAvatars(msg.data);
         return true;
 

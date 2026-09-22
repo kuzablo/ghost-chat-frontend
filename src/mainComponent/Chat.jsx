@@ -52,7 +52,7 @@ import '../styles/Chat.instagram.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.21';
+const VERSION = '2.35.23';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -802,8 +802,9 @@ const Chat = () => {
     };
   }, [chatTogglePlayers, setShowPlayers, setShowInfo]);
 
+  // [2.35.22] Без chatTogglePlayers() — не шлём get_friends при каждом клике.
+  // Данные friends обновляются при auth_ok и friend_request_accept.
   const togglePlayers = () => {
-    chatTogglePlayers();
     setShowPlayers(prev => !prev);
   };
 
