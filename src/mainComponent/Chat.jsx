@@ -63,7 +63,7 @@ import '../styles/Chat.instagram.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.35.10';
+const VERSION = '2.35.11';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -375,6 +375,7 @@ const Chat = () => {
     setReplyTo,
     profileData,
     isHistoryLoaded,
+    isAvatarsLoaded,
     handleWs: handleChatWs,
     handleSendMessage,
     handleEditMessage,
@@ -512,13 +513,50 @@ const Chat = () => {
     }
   }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
 
-    // [2.35.10] Снимаем boot-splash только когда содержимое действительно готово.
-  // Не авторизован → сразу (AuthModal). Авторизован → ждём history.
+    // [2.35.11] Снимаем boot-splash только когда содержимое РЕАЛЬНО готово:
+  // аватарки загружены, скролл внизу. Иначе виден «дёрг».
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
-    const ready = !isAuth || isHistoryLoaded;
-    if (ready) window.__ready();
-  }, [isAuth, isHistoryLoaded]);
+
+    if (!isAuth) {
+      window.__ready();
+      return;
+    }
+    if (!isHistoryLoaded || !isAvatarsLoaded) return;
+
+    let cancelled = false;
+
+    const urls = Object.values(avatarCache).filter(Boolean);
+    const preload = (list, timeoutMs) => new Promise((resolve) => {
+      if (!list.length) return resolve();
+      let pending = list.length;
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      const t = setTimeout(finish, timeoutMs);
+      list.forEach((u) => {
+        const img = new Image();
+        img.onload = img.onerror = () => {
+          pending--;
+          if (pending === 0) { clearTimeout(t); finish(); }
+        };
+        img.src = u;
+      });
+    });
+
+    preload(urls, 1500).then(() => {
+      if (cancelled) return;
+      const el = messagesContainerRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        const el2 = messagesContainerRef.current;
+        if (el2) el2.scrollTop = el2.scrollHeight;
+        window.__ready();
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
 
   useEffect(() => {
     setIsConnected(wsConnected);

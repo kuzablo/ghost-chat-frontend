@@ -42,6 +42,7 @@ export const useChat = ({
   const [friendshipRitual, setFriendshipRitual] = useState(null);
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [dialogsBg, setDialogsBg] = useState(null);
+  const [isAvatarsLoaded, setIsAvatarsLoaded] = useState(false);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -358,6 +359,7 @@ export const useChat = ({
 
       case 'avatars_map':
         mergeAvatars(msg.data?.avatars || []);
+        setIsAvatarsLoaded(true);
         return true;
 
       case 'blocks_list':
@@ -481,6 +483,7 @@ export const useChat = ({
 
   return {
     isHistoryLoaded,
+    isAvatarsLoaded,
     messages,
     players,
     friends,
