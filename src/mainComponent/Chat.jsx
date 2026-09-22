@@ -15,7 +15,6 @@ import FriendshipRitual from './components/FriendshipRitual';
 import RoomPulse from './components/RoomPulse';
 import StickerPanel from './components/StickerPanel';
 import PrivateMessageToasts from './components/PrivateMessageToasts';
-import PrivateMessageToasts from './components/PrivateMessageToasts';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -48,7 +47,6 @@ import '../styles/Chat.profile.css';
 import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
-import '../styles/Chat.toasts.css';
 import '../styles/Chat.toasts.css';
 
 // style: спутники на индивидуальных орбитах — свой радиус, наклон, скорость → v2.35.32
