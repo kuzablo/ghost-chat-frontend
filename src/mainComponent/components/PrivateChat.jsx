@@ -5,7 +5,10 @@ import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
 
-const REACTIONS = ['👍', '👎', '❤️', '🔥', '😢'];
+// [2.35.50] Двухуровневый пикер
+const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
+const REACTIONS_EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
+
 const PICKER_AUTOHIDE_MS = 2000;
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
@@ -89,6 +92,7 @@ const PrivateChat = ({
   const [dateFilter, setDateFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [reactionsExpanded, setReactionsExpanded] = useState(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -105,6 +109,17 @@ const PrivateChat = ({
     direction: null,
     lastDx: 0,
   });
+
+  // [2.35.50] Совпадения поиска — для пульсации
+  const hitIds = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return new Set();
+    const s = new Set();
+    initialMessages.forEach(m => {
+      if (m.text && m.text.toLowerCase().includes(q)) s.add(m.id);
+    });
+    return s;
+  }, [initialMessages, searchQuery]);
 
   const filteredMessages = useMemo(() => {
     const filter = DATE_FILTERS.find(f => f.id === dateFilter);
@@ -134,6 +149,11 @@ const PrivateChat = ({
     if (!pickerFor) return;
     const t = setTimeout(() => setPickerFor(null), PICKER_AUTOHIDE_MS);
     return () => clearTimeout(t);
+  }, [pickerFor]);
+
+  // [2.35.50] Пикер закрыли — «＋» свернулся
+  useEffect(() => {
+    if (!pickerFor) setReactionsExpanded(false);
   }, [pickerFor]);
 
   useEffect(() => {
@@ -476,6 +496,23 @@ const PrivateChat = ({
     );
   };
 
+  const renderReactionRow = (m, emojis) => (
+    <div className="private-reaction-picker-row">
+      {emojis.map(emoji => {
+        const isActive = (m.reactions?.[emoji] || []).includes(myId);
+        return (
+          <button
+            key={emoji}
+            className={isActive ? 'active' : ''}
+            onClick={() => sendReaction(m.id, emoji)}
+          >
+            {emoji}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
   const bgIsUrl = isUrlBg(dialogsBg);
@@ -577,6 +614,7 @@ const PrivateChat = ({
               {filteredMessages.map((m, i) => {
                 const isOwn = m.senderId === myId;
                 const forwardLabel = renderForwardLabel(m);
+                const isHit = hitIds.has(m.id);
 
                 if (m.stickerUrl) {
                   return (
@@ -585,7 +623,7 @@ const PrivateChat = ({
                       data-msg-id={m.id}
                       className={`private-msg private-msg--sticker ${
                         isOwn ? 'private-msg--own' : 'private-msg--other'
-                      }`}
+                      } ${isHit ? 'private-msg--hit' : ''}`}
                       onTouchStart={(e) => handleMsgTouchStart(e, m)}
                       onTouchMove={handleMsgTouchMove}
                       onTouchEnd={handleMsgTouchEnd}
@@ -611,7 +649,7 @@ const PrivateChat = ({
                   <div
                     key={m.id || i}
                     data-msg-id={m.id}
-                    className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''}`}
+                    className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''} ${isHit ? 'private-msg--hit' : ''}`}
                     onClick={(e) => handleMessageTap(m.id, e)}
                     onTouchStart={(e) => handleMsgTouchStart(e, m)}
                     onTouchMove={handleMsgTouchMove}
@@ -660,21 +698,25 @@ const PrivateChat = ({
 
                     {pickerFor === m.id && (
                       <div
-                        className={`private-reaction-picker ${pickerAbove ? 'private-reaction-picker--top' : ''}`}
+                        className={`private-reaction-picker ${pickerAbove ? 'private-reaction-picker--top' : ''} ${reactionsExpanded ? 'private-reaction-picker--expanded' : ''}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {REACTIONS.map(emoji => {
-                          const isActive = reactions[emoji]?.includes(myId);
-                          return (
-                            <button
-                              key={emoji}
-                              className={isActive ? 'active' : ''}
-                              onClick={() => sendReaction(m.id, emoji)}
-                            >
-                              {emoji}
-                            </button>
-                          );
-                        })}
+                        <div className="private-reaction-picker-main">
+                          {renderReactionRow(m, REACTIONS_MAIN)}
+                          <button
+                            type="button"
+                            className="private-reaction-more"
+                            onClick={() => setReactionsExpanded(v => !v)}
+                            aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
+                          >
+                            {reactionsExpanded ? '−' : '＋'}
+                          </button>
+                        </div>
+                        {reactionsExpanded && (
+                          <div className="private-reaction-picker-extra">
+                            {renderReactionRow(m, REACTIONS_EXTRA)}
+                          </div>
+                        )}
                       </div>
                     )}
 

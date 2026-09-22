@@ -6,6 +6,10 @@ import MessageActionsMenu from './MessageActionsMenu';
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
 
+// [2.35.50] Двухуровневый пикер: 6 главных + 12 свежих под «＋»
+const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
+const REACTIONS_EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
+
 const MessageList = ({
   messages,
   isAdmin,
@@ -31,6 +35,7 @@ const MessageList = ({
   const [poppingId, setPoppingId] = useState(null);
   const [pickerAbove, setPickerAbove] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(null);
+  const [reactionsExpanded, setReactionsExpanded] = useState(false);
 
   const swipeRef = useRef({
     active: false,
@@ -65,6 +70,11 @@ const MessageList = ({
       if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
     };
   }, []);
+
+  // [2.35.50] Пикер закрыли — «＋» свернулся
+  useEffect(() => {
+    if (!activeMessageId) setReactionsExpanded(false);
+  }, [activeMessageId]);
 
   useEffect(() => {
     const el = editTextareaRef.current;
@@ -503,6 +513,26 @@ const MessageList = ({
     );
   };
 
+  const renderReactionRow = (m, emojis) => (
+    <div className="msg-reaction-picker-row">
+      {emojis.map(emoji => {
+        const isActive = didIReact(m, emoji);
+        return (
+          <button
+            key={emoji}
+            className={isActive ? 'active' : ''}
+            onClick={() => {
+              sendReaction(m.id, emoji);
+              toggleReactions(m.id);
+            }}
+          >
+            {emoji}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <>
       <div className="messages" ref={containerRef}>
@@ -774,24 +804,25 @@ const MessageList = ({
 
                   {activeMessageId === m.id && !isEditingThis && (
                     <div
-                      className={`msg-reaction-picker ${pickerAbove ? 'msg-reaction-picker--top' : ''}`}
+                      className={`msg-reaction-picker ${pickerAbove ? 'msg-reaction-picker--top' : ''} ${reactionsExpanded ? 'msg-reaction-picker--expanded' : ''}`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
-                        const isActive = didIReact(m, emoji);
-                        return (
-                          <button
-                            key={emoji}
-                            className={isActive ? 'active' : ''}
-                            onClick={() => {
-                              sendReaction(m.id, emoji);
-                              toggleReactions(m.id);
-                            }}
-                          >
-                            {emoji}
-                          </button>
-                        );
-                      })}
+                      <div className="msg-reaction-picker-main">
+                        {renderReactionRow(m, REACTIONS_MAIN)}
+                        <button
+                          type="button"
+                          className="msg-reaction-more"
+                          onClick={() => setReactionsExpanded(v => !v)}
+                          aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
+                        >
+                          {reactionsExpanded ? '−' : '＋'}
+                        </button>
+                      </div>
+                      {reactionsExpanded && (
+                        <div className="msg-reaction-picker-extra">
+                          {renderReactionRow(m, REACTIONS_EXTRA)}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
