@@ -1,16 +1,32 @@
 import { forwardRef, useState, useRef, useEffect, memo } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
+import OrbitNotification from './OrbitNotification';
 
 /*
+  [2.35.33] Кастомный фон из диалогов + плейсхолдер-маскот.
+            Если есть непрочитанные — в плейсхолдере крутится орбита,
+            клик → открыть диалоги.
   [2.35.25] visible — панель всегда в DOM, скрыта через CSS-класс.
-            Убирает фриз при первом монтаже на iOS PWA.
-  [2.35.4] дуэль: везде onRequestDuel(userId)
+  [2.35.4] дуэль: onRequestDuel(userId)
   [2.33.7] React.memo
-  [2.33.4] пункт «Заблокировать»
-  [2.20.0] пункт «Профиль»
-  [2.29.0] свой профиль
 */
+const LONG_PRESS_MS = 500;
+const MOVE_CANCEL_PX = 8;
+
+const getBgCss = (bg) => {
+  if (!bg) return null;
+  if (bg.startsWith('preset:')) {
+    return null; // presets в PlayersPanel не используем — только свой URL
+  }
+  if (bg.startsWith('url:')) {
+    return `url(${bg.slice('url:'.length)})`;
+  }
+  return null;
+};
+
+const isUrlBg = (bg) => !!(bg && bg.startsWith('url:'));
+
 const PlayersPanel = forwardRef(({
   visible = true,
   players,
@@ -22,6 +38,8 @@ const PlayersPanel = forwardRef(({
   unreadByUser,
   isAdmin,
   blockedIds = new Set(),
+  dialogsBg = null,
+  unreadUserObjects = [],
   onWatchChat,
   onBanConfirm,
   onRequestDuel,
@@ -59,8 +77,26 @@ const PlayersPanel = forwardRef(({
     catch { return false; }
   });
 
-  const LONG_PRESS_MS = 500;
-  const MOVE_CANCEL_PX = 8;
+  const [bgLoaded, setBgLoaded] = useState(false);
+
+  // [2.35.33] Преload URL-фона — показываем плейсхолдер пока картинка не загружена.
+  useEffect(() => {
+    const isUrl = isUrlBg(dialogsBg);
+    if (!isUrl) {
+      setBgLoaded(true);
+      return;
+    }
+    setBgLoaded(false);
+    const url = dialogsBg.slice('url:'.length);
+    const img = new Image();
+    img.onload = () => setBgLoaded(true);
+    img.onerror = () => setBgLoaded(true);
+    img.src = url;
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [dialogsBg]);
 
   const cancelPress = () => {
     if (pressRef.current.timer) {
@@ -190,12 +226,50 @@ const PlayersPanel = forwardRef(({
     </div>
   );
 
+  const bgCss = getBgCss(dialogsBg);
+  const hasBg = !!bgCss;
+  const bgIsUrl = isUrlBg(dialogsBg);
+  const showBgLoading = bgIsUrl && !bgLoaded;
+
+  const panelStyle = hasBg && !showBgLoading
+    ? {
+        backgroundImage: bgCss,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : undefined;
+
   return (
     <>
       <div
-        className={`players-overlay${visible ? '' : ' players-overlay--hidden'}`}
+        className={[
+          'players-overlay',
+          visible ? '' : 'players-overlay--hidden',
+          hasBg ? 'players-overlay--custom' : '',
+        ].filter(Boolean).join(' ')}
         ref={ref}
+        style={panelStyle}
       >
+        {showBgLoading && (
+          <div
+            className="players-bg-loading"
+            onClick={unreadUserObjects.length > 0 ? onOpenDialogs : undefined}
+            role={unreadUserObjects.length > 0 ? 'button' : undefined}
+            tabIndex={unreadUserObjects.length > 0 ? 0 : undefined}
+          >
+            {unreadUserObjects.length > 0 ? (
+              <OrbitNotification
+                users={unreadUserObjects}
+                onClick={onOpenDialogs}
+                className="pm-orbit--embedded"
+              />
+            ) : (
+              <div className="players-bg-loading-mascot" />
+            )}
+          </div>
+        )}
+
         <h4>banjoboy's crew</h4>
         <input
           className="search-input"

@@ -264,3 +264,31 @@ body.dark .pm-orbit-more {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ============================================================= */
+/* [2.35.33] Встроенный вариант орбиты (для PlayersPanel)         */
+/* ============================================================= */
+
+.pm-orbit.pm-orbit--embedded {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: scale(0.72);
+  transform-origin: center;
+  animation: none;
+  transition: none;
+  width: 260px;
+  height: 220px;
+  margin: 0 auto;
+}
+
+.pm-orbit.pm-orbit--embedded.pm-orbit--out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .pm-orbit.pm-orbit--embedded {
+    transform: scale(0.62);
+  }
+}

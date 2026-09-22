@@ -49,6 +49,7 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 
+// feat: фон диалогов в PlayersPanel + орбита непрочитанных в плейсхолдере → v2.35.33
 // style: спутники на индивидуальных орбитах — свой радиус, наклон, скорость → v2.35.32
 // feat: орбитальное уведомление о личных — маскот + аватарки → v2.35.30
 // [2.35.21] input-icon-btn — единые SVG-кнопки стикеров и фото
@@ -56,7 +57,7 @@ import '../styles/Chat.toasts.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.32';
+const VERSION = '2.35.33';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1394,6 +1395,9 @@ const Chat = () => {
           ref={playersOverlayRef}
           visible={showPlayers}
           players={players}
+          dialogsBg={dialogsBg}
+          unreadUserObjects={unreadUserObjects}
+          onOpenDialogs={handleOpenDialogs}
           friends={friends}
           friendRequests={friendRequests}
           myId={myId}
@@ -1801,10 +1805,12 @@ const Chat = () => {
         />
       )}
 
-      <PrivateMessageToasts
-        users={unreadUserObjects}
-        onOpenDialogs={handleOpenDialogs}
-      />
+      {!showPlayers && (
+        <PrivateMessageToasts
+          users={unreadUserObjects}
+          onOpenDialogs={handleOpenDialogs}
+        />
+      )}
 
       <StickerPanel
         open={stickerPanelOpen}

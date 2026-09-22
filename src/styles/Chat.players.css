@@ -371,3 +371,77 @@ body.dark .player-hint {
   border-color: #3BB5E8;
   background: rgba(59, 181, 232, 0.1);
 }
+
+/* ============================================================= */
+/* [2.35.33] Кастомный фон + плейсхолдер с орбитой                */
+/* ============================================================= */
+
+.players-overlay--custom {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Затемнение фона: как в DialogsPanel — единый стиль */
+.players-overlay--custom::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+body.dark .players-overlay--custom::before {
+  background: rgba(10, 15, 25, 0.5);
+}
+
+/* Контент панели — выше затемнения */
+.players-overlay--custom > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Плейсхолдер: маскот + орбита, пока URL-фон грузится */
+.players-bg-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border-radius: inherit;
+  pointer-events: auto;
+}
+
+.players-bg-loading-mascot {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  animation: playersBgMascotPulse 1.4s ease-in-out infinite;
+}
+
+body.dark .players-bg-loading-mascot {
+  border-color: #3BB5E8;
+}
+
+@keyframes playersBgMascotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+/* Орбита внутри плейсхолдера — уменьшенная версия */
+.players-bg-loading .pm-orbit--embedded {
+  cursor: pointer;
+}
