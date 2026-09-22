@@ -1,5 +1,5 @@
 /* ============================================================= */
-/* [2.35.30] Орбитальное уведомление: маскот + аватарки на орбите  */
+/* [2.35.32] Орбита v3 — спутники с индивидуальными орбитами       */
 /* ============================================================= */
 
 .pm-orbit {
@@ -7,39 +7,103 @@
   top: calc(env(safe-area-inset-top, 0px) + 110px);
   left: 50%;
   transform: translateX(-50%);
-  width: 180px;
-  height: 180px;
+  width: 260px;
+  height: 220px;
   z-index: 2600;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  animation: pmOrbitIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transition: opacity 0.32s ease-out, transform 0.32s ease-out;
+  animation: pmOrbitIn 0.62s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 0.34s ease-out, transform 0.34s ease-out;
   will-change: opacity, transform;
+  isolation: isolate;
+  pointer-events: auto;
 }
 
 .pm-orbit--out {
   opacity: 0;
-  transform: translateX(-50%) translateY(-14px) scale(0.9);
+  transform: translateX(-50%) translateY(-22px) scale(0.88);
   pointer-events: none;
 }
 
 @keyframes pmOrbitIn {
-  0%   { opacity: 0; transform: translateX(-50%) translateY(-24px) scale(0.7); }
-  55%  { opacity: 1; transform: translateX(-50%) translateY(4px) scale(1.06); }
-  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-30px) scale(0.68); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(4px)  scale(1.03); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
 }
 
-/* ===== Маскот в центре ===== */
+/* ===== Ореолы — дышат в разном ритме ===== */
+
+.pm-orbit-halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.pm-orbit-halo--outer {
+  width: 210px;
+  height: 210px;
+  background: radial-gradient(
+    circle,
+    rgba(59, 181, 232, 0.26) 0%,
+    rgba(59, 181, 232, 0.09) 42%,
+    rgba(59, 181, 232, 0)    74%
+  );
+  animation: pmHaloOuter 4.2s ease-in-out infinite;
+}
+
+.pm-orbit-halo--inner {
+  width: 124px;
+  height: 124px;
+  background: radial-gradient(
+    circle,
+    rgba(245, 169, 192, 0.62) 0%,
+    rgba(245, 169, 192, 0.14) 52%,
+    rgba(245, 169, 192, 0)    78%
+  );
+  animation: pmHaloInner 2.8s ease-in-out infinite;
+}
+
+body.dark .pm-orbit-halo--outer {
+  background: radial-gradient(
+    circle,
+    rgba(59, 181, 232, 0.42) 0%,
+    rgba(59, 181, 232, 0.13) 42%,
+    rgba(59, 181, 232, 0)    74%
+  );
+}
+body.dark .pm-orbit-halo--inner {
+  background: radial-gradient(
+    circle,
+    rgba(59, 181, 232, 0.55) 0%,
+    rgba(59, 181, 232, 0.16) 52%,
+    rgba(59, 181, 232, 0)    78%
+  );
+}
+
+@keyframes pmHaloOuter {
+  0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.85; }
+  50%      { transform: translate(-50%, -50%) scale(1.16); opacity: 1; }
+}
+@keyframes pmHaloInner {
+  0%, 100% { transform: translate(-50%, -50%) scale(1);    opacity: 0.95; }
+  50%      { transform: translate(-50%, -50%) scale(1.24); opacity: 0.45; }
+}
+
+/* ===== Маскот-планета в центре ===== */
 
 .pm-orbit-mascot-wrap {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 58px;
-  height: 58px;
-  z-index: 3;
+  width: 82px;
+  height: 82px;
+  z-index: 50;
 }
 
 .pm-orbit-mascot {
@@ -47,139 +111,91 @@
   height: 100%;
   border-radius: 50%;
   background: #FFF url('/mascot.png') center / cover no-repeat;
-  border: 3px solid var(--card-border);
-  animation: pmOrbitMascotPulse 1.9s ease-in-out infinite;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.24),
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 0 0 7px rgba(255, 255, 255, 0.52);
+  animation: pmMascot 2.6s ease-in-out infinite;
 }
 
 body.dark .pm-orbit-mascot {
-  border-color: #3BB5E8;
   background-color: #1D2A42;
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(59, 181, 232, 0.34),
+    0 0 0 7px rgba(23, 34, 54, 0.72);
 }
 
-@keyframes pmOrbitMascotPulse {
-  0%, 100% {
-    transform: scale(1);
-    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.22);
-  }
-  50% {
-    transform: scale(1.07);
-    box-shadow: 0 7px 26px rgba(59, 181, 232, 0.45);
-  }
+@keyframes pmMascot {
+  0%, 100% { transform: scale(1);     filter: brightness(1); }
+  50%      { transform: scale(1.05);  filter: brightness(1.07); }
 }
 
-/* ===== Кольцо орбиты ===== */
+/* ===== Сцена — точка в центре ===== */
 
-.pm-orbit-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 132px;
-  height: 132px;
-  margin: -66px 0 0 -66px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--card-border);
-  opacity: 0.35;
-  animation: pmOrbitRingSpin 34s linear infinite;
-  z-index: 1;
-}
-
-body.dark .pm-orbit-ring {
-  border-color: #3BB5E8;
-  opacity: 0.42;
-}
-
-@keyframes pmOrbitRingSpin {
-  to { transform: rotate(360deg); }
-}
-
-/* ===== Спиннер ===== */
-
-.pm-orbit-spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 132px;
-  height: 132px;
-  margin: -66px 0 0 -66px;
-  animation: pmOrbitSpin linear infinite;
-  z-index: 2;
-}
-
-@keyframes pmOrbitSpin {
-  to { transform: rotate(360deg); }
-}
-
-/* ===== Слот аватарки ===== */
-
-.pm-orbit-slot {
+.pm-orbit-stage {
   position: absolute;
   top: 50%;
   left: 50%;
   width: 0;
   height: 0;
-  transform-origin: 0 0;
-  transform: rotate(var(--angle)) translateY(-66px);
+  z-index: 30;
+  pointer-events: none;
 }
 
-/* ===== Влетание ===== */
+/* ===== Спутник ===== */
 
-.pm-orbit-entry {
-  animation: pmOrbitEnter 0.72s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+.pm-orbit-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+  pointer-events: none;
+  /* начальная позиция — переопределяется JS */
+  transform: translate(-50%, -50%) translate3d(0, 0, 0) scale(0.6);
+  opacity: 0;
+  animation: pmSlotFadeIn 0.5s ease-out both;
 }
 
-@keyframes pmOrbitEnter {
-  0%   { opacity: 0; transform: scale(0.15) rotate(-40deg); }
-  55%  { opacity: 1; transform: scale(1.2) rotate(8deg); }
-  80%  { transform: scale(0.95) rotate(-2deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+@keyframes pmSlotFadeIn {
+  from { filter: blur(3px); }
+  to   { filter: blur(0); }
 }
-
-/* ===== Контр-вращение — аватарка смотрит прямо ===== */
-
-.pm-orbit-counter {
-  position: relative;
-  width: 38px;
-  height: 38px;
-  margin: -19px 0 0 -19px;
-  animation: pmOrbitCounterSpin linear infinite;
-}
-
-@keyframes pmOrbitCounterSpin {
-  from { transform: rotate(calc(-1 * var(--angle))); }
-  to   { transform: rotate(calc(-1 * var(--angle) - 360deg)); }
-}
-
-/* ===== Аватарка ===== */
 
 .pm-orbit-avatar {
-  width: 100%;
-  height: 100%;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #FFF;
   font-weight: 800;
-  font-size: 13px;
-  border: 2.5px solid var(--card-border);
+  font-size: 15px;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   overflow: hidden;
-  animation: pmOrbitAvatarPulse 2.4s ease-in-out infinite;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.24),
+    0 0 0 2.5px rgba(255, 255, 255, 0.92);
+  animation: pmAvatarGlow 3.4s ease-in-out infinite;
 }
 
 body.dark .pm-orbit-avatar {
-  border-color: #2C3E5A;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.6),
+    0 0 0 2.5px rgba(23, 34, 54, 0.92);
 }
 
-@keyframes pmOrbitAvatarPulse {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22), 0 0 0 0 rgba(59, 181, 232, 0);
-  }
-  50% {
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22), 0 0 0 4px rgba(59, 181, 232, 0.28);
-  }
+@keyframes pmAvatarGlow {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.12) drop-shadow(0 0 8px rgba(59, 181, 232, 0.6)); }
 }
 
 /* ===== +N ===== */
@@ -189,37 +205,36 @@ body.dark .pm-orbit-avatar {
   bottom: 6px;
   left: 50%;
   transform: translateX(-50%);
-  min-width: 24px;
-  height: 24px;
-  padding: 0 7px;
-  border-radius: 12px;
-  background: var(--btn-bg);
-  color: var(--btn-text);
-  border: 2px solid var(--card-border);
-  font-size: 11px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #111;
+  font-size: 12px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 4;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
-  animation: pmOrbitMorePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
+  z-index: 60;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  animation: pmMorePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
 }
 
 body.dark .pm-orbit-more {
-  border-color: #2C3E5A;
+  background: rgba(29, 42, 66, 0.96);
+  color: #EAF2FA;
 }
 
-@keyframes pmOrbitMorePop {
+@keyframes pmMorePop {
   0%   { opacity: 0; transform: translateX(-50%) scale(0.3); }
   60%  { opacity: 1; transform: translateX(-50%) scale(1.15); }
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
-/* ===== Клик ===== */
+/* ===== Нажатие ===== */
 
 .pm-orbit:active .pm-orbit-mascot {
-  animation-play-state: paused;
   transform: scale(0.94);
   transition: transform 0.12s ease;
 }
@@ -228,23 +243,21 @@ body.dark .pm-orbit-more {
 
 @media (max-width: 600px) {
   .pm-orbit {
-    top: calc(env(safe-area-inset-top, 0px) + 130px);
-    width: 164px;
-    height: 164px;
+    top: calc(env(safe-area-inset-top, 0px) + 122px);
+    width: 236px;
+    height: 200px;
   }
-  .pm-orbit-mascot-wrap { width: 54px; height: 54px; }
-  .pm-orbit-ring { width: 120px; height: 120px; margin: -60px 0 0 -60px; }
-  .pm-orbit-spinner { width: 120px; height: 120px; margin: -60px 0 0 -60px; }
-  .pm-orbit-slot { transform: rotate(var(--angle)) translateY(-60px); }
-  .pm-orbit-counter { width: 34px; height: 34px; margin: -17px 0 0 -17px; }
-  .pm-orbit-avatar { font-size: 12px; border-width: 2px; }
-  .pm-orbit-more { min-width: 22px; height: 22px; font-size: 10px; bottom: 2px; }
+  .pm-orbit-halo--outer { width: 188px; height: 188px; }
+  .pm-orbit-halo--inner { width: 112px; height: 112px; }
+  .pm-orbit-mascot-wrap { width: 72px; height: 72px; }
+  .pm-orbit-slot { width: 38px; height: 38px; }
+  .pm-orbit-avatar { width: 38px; height: 38px; font-size: 13px; }
+  .pm-orbit-more { min-width: 24px; height: 24px; font-size: 11px; bottom: 2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pm-orbit-spinner,
-  .pm-orbit-counter,
-  .pm-orbit-ring,
+  .pm-orbit-halo--outer,
+  .pm-orbit-halo--inner,
   .pm-orbit-mascot,
   .pm-orbit-avatar {
     animation-duration: 0.001s !important;
