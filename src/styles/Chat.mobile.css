@@ -1,7 +1,14 @@
 /* ===== Мобильная версия ===== */
+
+/* [2.35.3] Скрываем плавающие кнопки на любом тач-устройстве,
+   чтобы не зависеть от ширины (ландшафт, планшет, iPad). */
+@media (hover: none) and (pointer: coarse) {
+  .theme-toggle, .players-toggle, .dialogs-toggle { display: none !important; }
+}
+
 @media (max-width: 600px) {
   .qr-wrap { display: none; }
-  .theme-toggle, .players-toggle { display: none !important; }
+  .theme-toggle, .players-toggle, .dialogs-toggle { display: none !important; }
 
   .mobile-capsule {
     display: block;
