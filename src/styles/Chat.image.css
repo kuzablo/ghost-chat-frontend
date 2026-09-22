@@ -4,6 +4,7 @@
   [2.31.6] Реакции переехали в правый верхний угол, выступая за границу.
            Размер ×2 для наглядности.
   [правка 2.14.18] история про реакция и wrap.
+  [2.35.46] overlay — колонка: ник, под ним метка пересылки.
 */
 
 .msg--image-only {
@@ -57,7 +58,7 @@
   transform: scale(0.99);
 }
 
-/* ===== Верхний оверлей: ник + действия ===== */
+/* ===== Верхний оверлей: ник + метка пересылки ===== */
 
 .msg-image-overlay {
   position: absolute;
@@ -65,8 +66,9 @@
   left: 0;
   right: 0;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   padding: 8px 12px;
   min-height: 44px;
   box-sizing: border-box;
@@ -79,6 +81,24 @@
   pointer-events: none;
   z-index: 2;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+/* [2.35.46] Метка пересылки внутри image-overlay */
+.msg-image-overlay .msg-forward-label {
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 10px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.msg-image-overlay .msg-forward-arrow {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.msg-image-overlay .msg-forward-nick,
+.msg-image-overlay .msg-forward-time {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .msg-nick--overlay {

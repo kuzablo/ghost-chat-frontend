@@ -604,10 +604,6 @@ const MessageList = ({
                     >
                       {editRingId === m.id && <div className="msg-edit-ring" />}
 
-                      {forwardLabel && (
-                        <div className="msg-image-only-forward">{forwardLabel}</div>
-                      )}
-
                       {replyBlock && (
                         <div className="msg-image-only-reply-wrap">{replyBlock}</div>
                       )}
@@ -626,6 +622,7 @@ const MessageList = ({
 
                       <div className="msg-image-overlay">
                         <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
+                        {forwardLabel}
                       </div>
 
                       <div className="msg-image-bottom-overlay">
