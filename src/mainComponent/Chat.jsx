@@ -449,7 +449,6 @@ const Chat = () => {
     [messages]
   );
 
-  // [2.35.30] Пользователи с непрочитанными личными — для орбитального уведомления
   // [2.35.32] Пользователи с непрочитанными личными — для орбитального уведомления
   const unreadUserObjects = useMemo(() => {
     const ids = Object.keys(unreadByUser).filter(id => unreadByUser[id]);
@@ -1416,7 +1415,6 @@ const Chat = () => {
           onDeclineRequest={handleDeclineRequest}
           onOpenInfo={handleOpenInfo}
           onLogout={handleLogoutClick}
-          onOpenDialogs={handleOpenDialogs}
           onOpenProfile={handleOpenProfile}
         />
       )}
@@ -1808,7 +1806,6 @@ const Chat = () => {
       {!showPlayers && (
         <PrivateMessageToasts
           users={unreadUserObjects}
-          onOpenDialogs={handleOpenDialogs}
         />
       )}
 
