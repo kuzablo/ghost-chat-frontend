@@ -8,7 +8,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
 
-    <!-- [2.35.10] Critical CSS + скелетон -->
+    <!-- [2.35.35] Critical CSS + boot-splash, который удаляется после готовности -->
     <style>
       *,
       *::before,
@@ -118,11 +118,12 @@
 
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- [2.35.10] Аварийная страховка: если чат не поднялся за 8с — показываем что есть. -->
+    <!-- [2.35.35] Аварийная страховка: снимаем splash за 8с, если React не смог -->
     <script>
       (function () {
         setTimeout(function () {
-          document.body.classList.add('app-ready');
+          var el = document.getElementById('boot-splash');
+          if (el && el.parentNode) el.parentNode.removeChild(el);
         }, 8000);
       })();
     </script>
