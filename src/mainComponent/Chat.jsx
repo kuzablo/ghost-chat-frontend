@@ -63,7 +63,7 @@ import '../styles/Chat.instagram.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.35.3';
+const VERSION = '2.35.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -800,17 +800,22 @@ const Chat = () => {
     openPrivateChat(userId, nick);
   }, [openPrivateChat]);
 
-  const handleProfileDuel = useCallback(() => {
-    if (!profileTarget) return;
-    const online = players.find(p => p.userId === profileTarget.userId);
+  const handleRequestDuel = useCallback((userId) => {
+    if (!userId) return;
+    const online = players.find(p => p.userId === userId);
     if (online) {
       duel.requestDuel(online.id);
-      setProfileTarget(null);
     } else {
       setDuelNotice('Игрок офлайн');
       setTimeout(() => setDuelNotice(''), 3000);
     }
-  }, [profileTarget, players, duel]);
+  }, [players, duel]);
+
+  const handleProfileDuel = useCallback(() => {
+    if (!profileTarget) return;
+    handleRequestDuel(profileTarget.userId);
+    setProfileTarget(null);
+  }, [profileTarget, handleRequestDuel]);
 
   const compareVersions = (v1, v2) => {
     const p1 = v1.split('.').map(Number);
@@ -1308,7 +1313,7 @@ const Chat = () => {
           blockedIds={blockedIds}
           onWatchChat={watchChat}
           onBanConfirm={handleBanConfirm}
-          onRequestDuel={duel.requestDuel}
+          onRequestDuel={handleRequestDuel}
           onOpenPrivateChat={openPrivateChat}
           onFriendRequest={handleFriendRequest}
           onBlockUser={blockUser}
