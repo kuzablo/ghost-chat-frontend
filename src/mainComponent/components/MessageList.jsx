@@ -72,6 +72,7 @@ const MessageList = ({
   }, [editText, editingMessageId]);
 
   const startEdit = (message) => {
+    if (message?.stickerUrl) return;
     setEditingMessageId(message.id);
     setEditText(message.text);
     setIsEditing(true);
@@ -87,7 +88,7 @@ const MessageList = ({
     const original = messages.find(m => m.id === messageId);
     const nextText = editText.trim();
     const changed = nextText !== (original?.text || '');
-    const allowed = nextText.length > 0 || !!original?.imageUrl || !!original?.stickerUrl;
+    const allowed = nextText.length > 0 || !!original?.imageUrl;
 
     if (changed && allowed) {
       onEditMessage(messageId, nextText);
@@ -251,7 +252,8 @@ const MessageList = ({
       card.style.transform = '';
     }
 
-    if (m.userId === myId) {
+    // [2.35.20] Стикер не редактируется — longPress не запускаем
+    if (m.userId === myId && !m.stickerUrl) {
       longPressRef.current.ringTimer = setTimeout(() => {
         longPressRef.current.ringTimer = null;
         setEditRingId(m.id);
@@ -285,6 +287,14 @@ const MessageList = ({
         r.cardEl = null;
         return;
       }
+
+      // [2.35.20] Стикер: только свайп вправо (delete). Влево — игнор.
+      if (dx < 0 && m.stickerUrl) {
+        r.active = false;
+        r.cardEl = null;
+        return;
+      }
+
       if (dx > 0 && !canDelete(m)) {
         r.active = false;
         r.cardEl = null;
@@ -356,7 +366,8 @@ const MessageList = ({
     r.ready = false;
     r.msg = null;
 
-    if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply) {
+    // [2.35.20] Стикер не поддерживает reply — только delete
+    if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply && !m.stickerUrl) {
       resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
       onReply(m);
     } else if (dir === 'delete' && dx >= SWIPE_THRESHOLD && canDelete(m)) {
@@ -444,7 +455,7 @@ const MessageList = ({
             </div>
           ) : null;
 
-          // [2.35.16] Стикер — чисто гифка, без ника/времени/аватара
+          // [2.35.20] Стикер — ник над гифкой, свайп вправо для удаления
           if (isSticker) {
             return (
               <React.Fragment key={m.id}>
@@ -453,13 +464,22 @@ const MessageList = ({
                   className={`msg msg--sticker ${isOwn ? 'msg--sticker-own' : 'msg--sticker-other'}`}
                   data-msg-id={m.id}
                 >
-                  <img
-                    src={m.stickerUrl}
-                    alt=""
-                    className="msg-sticker-img"
-                    draggable={false}
-                    loading="lazy"
-                  />
+                  <div className="msg-swipe-glow msg-swipe-glow--delete" />
+                  <div
+                    className="msg-sticker-wrap"
+                    onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                    onTouchMove={(e) => handleMsgTouchMove(e, m)}
+                    onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
+                  >
+                    <div className="msg-sticker-nick">{m.nickname}</div>
+                    <img
+                      src={m.stickerUrl}
+                      alt=""
+                      className="msg-sticker-img"
+                      draggable={false}
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
               </React.Fragment>
             );

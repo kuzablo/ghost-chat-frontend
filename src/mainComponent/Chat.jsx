@@ -56,7 +56,7 @@ import '../styles/Chat.instagram.css';
 // [2.35.10] boot-splash снимается по __ready
 // [2.35.8] Mascot — единый источник
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.17';
+const VERSION = '2.35.20';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
