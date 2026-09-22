@@ -8,7 +8,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
 
-    <!-- [2.35.9] Critical CSS + скелетон. Гасим FOUC на первом рендере. -->
+    <!-- [2.35.10] Critical CSS + скелетон -->
     <style>
       *,
       *::before,
@@ -38,7 +38,6 @@
         color: #EAF2FA;
       }
 
-      /* === Скелетон, видимый до готовности приложения === */
       #boot-splash {
         position: fixed;
         inset: 0;
@@ -47,7 +46,7 @@
         justify-content: center;
         background: #F5A9C0;
         z-index: 99999;
-        transition: opacity 0.28s ease-out;
+        transition: opacity 0.32s ease-out;
         pointer-events: none;
       }
       body.dark #boot-splash {
@@ -76,10 +75,6 @@
       #root {
         height: 100%;
         width: 100%;
-        visibility: hidden;
-      }
-      #root.ready {
-        visibility: visible;
       }
     </style>
 
@@ -93,12 +88,10 @@
     <meta name="apple-mobile-web-app-title" content="crew" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <!-- [2.35.9] Preconnect к API и шрифтам — быстрее устанавливаем соединение -->
     <link rel="preconnect" href="https://api.banjoboy420.ru" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- [2.35.9] display=block: браузер ждёт шрифт до показа. Нет «прыжка» метрик. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Caveat&family=Cormorant+Garamond:wght@400;700&family=Marck+Script&family=Neucha&family=Pacifico&family=Unbounded:wght@400;700&display=block"
       rel="stylesheet"
@@ -113,7 +106,6 @@
 
     <div id="root"></div>
 
-    <!-- [2.35.9] Тема ставится до бандла — не мигаем розовым при тёмной теме. -->
     <script>
       (function () {
         try {
@@ -126,14 +118,12 @@
 
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- [2.35.9] Аварийная страховка: если React не смонтировался за 5с — показываем что есть. -->
+    <!-- [2.35.10] Аварийная страховка: если чат не поднялся за 8с — показываем что есть. -->
     <script>
       (function () {
         setTimeout(function () {
           document.body.classList.add('app-ready');
-          var r = document.getElementById('root');
-          if (r && !r.classList.contains('ready')) r.classList.add('ready');
-        }, 5000);
+        }, 8000);
       })();
     </script>
   </body>

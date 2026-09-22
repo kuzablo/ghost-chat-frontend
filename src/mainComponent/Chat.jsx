@@ -63,7 +63,7 @@ import '../styles/Chat.instagram.css';
 // [2.32.41] bannedUsers прокинут в MessageList
 // [2.32.40] ConfirmBanModal → ConfirmModal с danger
 // [2.32.39] useMemo для imageMessages
-const VERSION = '2.35.9';
+const VERSION = '2.35.10';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -511,6 +511,14 @@ const Chat = () => {
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
   }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
+
+    // [2.35.10] Снимаем boot-splash только когда содержимое действительно готово.
+  // Не авторизован → сразу (AuthModal). Авторизован → ждём history.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.__ready) return;
+    const ready = !isAuth || isHistoryLoaded;
+    if (ready) window.__ready();
+  }, [isAuth, isHistoryLoaded]);
 
   useEffect(() => {
     setIsConnected(wsConnected);
@@ -1429,9 +1437,7 @@ const Chat = () => {
       />
 
       <div className="chat-container">
-        <div
-          className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''} ${isAuth && !isHistoryLoaded ? 'chat-main--loading' : ''}`}
-        >
+        <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
             <div className="chat-header-mascot-wrap">
               <img
