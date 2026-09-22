@@ -1,17 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
-  [2.35.26] theme-switching на время смены темы — гасим CSS transitions, нет фриза
+  [2.35.27] Тема вынесена из React state. Только DOM — нет ререндера при смене.
+            Круг через View Transition сохраняется.
+  [2.35.26] theme-switching гасит CSS transitions при смене темы
   [2.32.39] useCallback на toggleReactions/closeFullscreen
-  [2.32.34] toggleTheme: класс внутри callback View Transition
   [2.32.19] активная реакция-пикер автоскрывается через 2 сек
 */
 const PICKER_AUTOHIDE_MS = 2000;
 
 export const useChatUI = () => {
-  const storedTheme = localStorage.getItem('ghost-chat-theme') || 'light';
-
-  const [isDark, setIsDark] = useState(storedTheme === 'dark');
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [showPlayers, setShowPlayers] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -21,10 +19,13 @@ export const useChatUI = () => {
   const [showFullscreenReactions, setShowFullscreenReactions] = useState(false);
   const [showMobileInput, setShowMobileInput] = useState(false);
 
+  // [2.35.27] Один раз при mount — синхронизируем DOM с localStorage.
+  // Больше React к теме не прикасается.
   useEffect(() => {
-    document.body.classList.toggle('dark', isDark);
-    localStorage.setItem('ghost-chat-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
+    let stored = 'light';
+    try { stored = localStorage.getItem('ghost-chat-theme') || 'light'; } catch { /* noop */ }
+    document.body.classList.toggle('dark', stored === 'dark');
+  }, []);
 
   useEffect(() => {
     if (!activeMessageId) return;
@@ -33,12 +34,13 @@ export const useChatUI = () => {
   }, [activeMessageId]);
 
   const toggleTheme = useCallback((event) => {
-    const next = !isDark;
+    // [2.35.27] Никакого setIsDark. Ноль ререндеров React.
+    const isDarkNow = document.body.classList.contains('dark');
+    const next = !isDarkNow;
+
     const x = event?.clientX ?? window.innerWidth - 30;
     const y = event?.clientY ?? 30;
 
-    // [2.35.26] На время смены темы гасим CSS transitions.
-    // Иначе сотни цветовых интерполяций стартуют одновременно — фриз.
     const freeze = () => document.body.classList.add('theme-switching');
     const unfreeze = () => {
       requestAnimationFrame(() => {
@@ -48,19 +50,24 @@ export const useChatUI = () => {
       });
     };
 
+    const applyClass = () => {
+      document.body.classList.toggle('dark', next);
+      try {
+        localStorage.setItem('ghost-chat-theme', next ? 'dark' : 'light');
+      } catch { /* noop */ }
+    };
+
     if (typeof document.startViewTransition !== 'function') {
       freeze();
-      document.body.classList.toggle('dark', next);
-      setIsDark(next);
+      applyClass();
       unfreeze();
       return;
     }
 
     const transition = document.startViewTransition(() => {
       freeze();
-      document.body.classList.toggle('dark', next);
+      applyClass();
     });
-    setIsDark(next);
 
     transition.ready
       .then(() => {
@@ -87,7 +94,7 @@ export const useChatUI = () => {
     transition.finished
       .then(unfreeze)
       .catch(unfreeze);
-  }, [isDark]);
+  }, []);
 
   const toggleReactions = useCallback((messageId) => {
     setActiveMessageId(prev => (prev === messageId ? null : messageId));
@@ -99,7 +106,6 @@ export const useChatUI = () => {
   }, []);
 
   return {
-    isDark, setIsDark,
     toggleTheme,
     activeMessageId, setActiveMessageId,
     toggleReactions,
