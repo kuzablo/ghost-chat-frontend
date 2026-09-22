@@ -737,3 +737,44 @@ body.dark .private-loading-mascot {
     font-size: 18px;
   }
 }
+
+/* ============================================================= */
+/* [2.35.49] Аватар в шапке, ник у сообщений убран               */
+/* ============================================================= */
+
+.private-chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.private-chat-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #FFFFFF;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.private-chat-header h4 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ник над сообщением больше не показываем — и так понятно, с кем диалог */
+.private-msg .private-msg-nick {
+  display: none;
+}

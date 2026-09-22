@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import { formatTime, formatMessageDate } from '../utils';
+import { formatTime, formatMessageDate, getAvatarColor, getInitial } from '../utils';
 import ChatInput from './ChatInput';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
@@ -72,6 +72,7 @@ const PrivateChat = ({
   token = '',
   onStickersUpdated,
   onForward,
+  avatarUrl = null,
 }) => {
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
@@ -105,7 +106,6 @@ const PrivateChat = ({
     lastDx: 0,
   });
 
-  // [2.35.48] Дата + текстовый поиск
   const filteredMessages = useMemo(() => {
     const filter = DATE_FILTERS.find(f => f.id === dateFilter);
     let list = initialMessages;
@@ -164,7 +164,6 @@ const PrivateChat = ({
     return () => { img.onload = null; img.onerror = null; };
   }, [dialogsBg]);
 
-  // [2.35.48] Индикатор «вниз»
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
@@ -186,7 +185,6 @@ const PrivateChat = ({
     };
   }, [searchQuery, dateFilter]);
 
-  // [2.35.48] При поиске — скролл к началу списка (первое совпадение сверху)
   useEffect(() => {
     if (!searchQuery.trim()) return;
     const el = messagesContainerRef.current;
@@ -494,6 +492,10 @@ const PrivateChat = ({
 
   const hasSearch = !!searchQuery.trim();
 
+  const headerAvatarStyle = avatarUrl
+    ? { backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { background: getAvatarColor(nickname) };
+
   return (
     <>
       <div className="blur-overlay" onClick={onClose} />
@@ -507,10 +509,14 @@ const PrivateChat = ({
         onTouchCancel={handlePanelTouchEnd}
       >
         <div className="private-chat-header">
-          <h4>Чат с {nickname}</h4>
+          <div className="private-chat-header-left">
+            <div className="private-chat-avatar" style={headerAvatarStyle}>
+              {!avatarUrl && getInitial(nickname)}
+            </div>
+            <h4>{nickname}</h4>
+          </div>
         </div>
 
-        {/* [2.35.48] Поиск по сообщениям */}
         <div className="private-search-wrap">
           <input
             className="private-search-input"
@@ -538,7 +544,6 @@ const PrivateChat = ({
           )}
         </div>
 
-        {/* [2.35.47] Чипы фильтра по дате */}
         <div className="private-date-filters">
           {DATE_FILTERS.map(f => (
             <button
@@ -585,9 +590,6 @@ const PrivateChat = ({
                       onTouchMove={handleMsgTouchMove}
                       onTouchEnd={handleMsgTouchEnd}
                     >
-                      <div className="private-msg-sticker-nick">
-                        {isOwn ? 'Я' : nickname}
-                      </div>
                       {forwardLabel}
                       <img
                         src={m.stickerUrl}
@@ -615,10 +617,6 @@ const PrivateChat = ({
                     onTouchMove={handleMsgTouchMove}
                     onTouchEnd={handleMsgTouchEnd}
                   >
-                    <span className="private-msg-nick">
-                      {isOwn ? 'Я' : nickname}
-                    </span>
-
                     <div className="private-msg-text-wrap">
                       {forwardLabel}
 

@@ -479,6 +479,9 @@ const DialogsPanel = forwardRef(({
                               {d.unread > 99 ? '99+' : d.unread}
                             </span>
                           )}
+                          {!hasUnread && d.lastFromMe && d.lastIsRead === false && (
+                            <span className="dialog-sent-dot" aria-label="Отправлено" />
+                          )}
                         </div>
                       </div>
                     </button>

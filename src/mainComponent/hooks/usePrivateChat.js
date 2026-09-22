@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update
   [2.35.41] historyLoaded в privateChat — для маскота-загрузки в PrivateChat
   [2.28.7] восстанавливаем unreadByUser из dialogs_list
   [2.17.0] state dialogs
@@ -23,7 +24,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
 
   const openPrivateChat = useCallback((userId, nickname) => {
     if (userId === myIdRef.current) return;
-    // [2.35.41] historyLoaded: false — PrivateChat покажет маскота пока не придёт private_history
     setPrivateChat({ userId, nickname, messages: [], historyLoaded: false });
     setUnreadByUser(prev => {
       const { [userId]: _, ...rest } = prev;
@@ -59,7 +59,7 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
       }
 
       case 'dialog_update': {
-        const { userId, nickname, lastText, lastAt, unread } = msg.data;
+        const { userId, nickname, lastText, lastAt, unread, lastFromMe, lastIsRead } = msg.data;
         setDialogs(prev => {
           const existing = prev.find(d => d.userId === userId);
           let updated;
@@ -75,6 +75,8 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
                 lastText,
                 lastAt,
                 unread: nextUnread,
+                lastFromMe: typeof lastFromMe === 'boolean' ? lastFromMe : d.lastFromMe,
+                lastIsRead: typeof lastIsRead === 'boolean' ? lastIsRead : d.lastIsRead,
               };
             });
           } else {
@@ -86,6 +88,8 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
                 lastText,
                 lastAt,
                 unread: unread === 'increment' ? 1 : (typeof unread === 'number' ? unread : 0),
+                lastFromMe: !!lastFromMe,
+                lastIsRead: lastIsRead === true,
               },
             ];
           }
@@ -100,6 +104,13 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
         ));
         return true;
 
+      // [2.35.49] моё сообщение прочитано — точка гаснет
+      case 'dialog_read_update':
+        setDialogs(prev => prev.map(d =>
+          d.userId === msg.data.userId ? { ...d, lastIsRead: true } : d
+        ));
+        return true;
+
       case 'unread_private_list': {
         const newUnread = {};
         (msg.data || []).forEach(senderId => {
@@ -110,7 +121,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
       }
 
       case 'private_message': {
-        // [2.35.41] если open chat — добавляем к истории (сразу помечаем historyLoaded)
         setPrivateChat(prev => {
           if (!prev || prev.userId !== msg.data.senderId) return prev;
           return {
