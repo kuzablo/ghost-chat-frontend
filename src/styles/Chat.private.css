@@ -286,18 +286,6 @@ body.dark .private-reaction-count {
   flex-shrink: 0;
 }
 
-.private-input-row input {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--input-border);
-  background: var(--input-bg);
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  touch-action: manipulation;
-}
-
 .private-input-row .btn {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
