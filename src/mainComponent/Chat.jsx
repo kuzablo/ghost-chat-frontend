@@ -374,6 +374,7 @@ const Chat = () => {
     replyTo,
     setReplyTo,
     profileData,
+    isHistoryLoaded,
     handleWs: handleChatWs,
     handleSendMessage,
     handleEditMessage,
@@ -1428,7 +1429,9 @@ const Chat = () => {
       />
 
       <div className="chat-container">
-        <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
+        <div
+          className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''} ${isAuth && !isHistoryLoaded ? 'chat-main--loading' : ''}`}
+        >
           <div className="chat-header">
             <div className="chat-header-mascot-wrap">
               <img

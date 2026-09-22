@@ -103,6 +103,12 @@ body {
   overflow: hidden;
 }
 
+/* [2.35.9] Пока история не пришла — чат приглушён, чтобы не было «прыжка» сообщений. */
+.chat-main--loading {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .chat-main {
   flex: 1;
   min-width: 0;

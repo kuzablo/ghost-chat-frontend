@@ -3,8 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
 
-// [2.35.9] Тема уже стоит на <body> из inline-скрипта в index.html.
-// Дублируем для случая, когда inline не сработал (например, при прямом вызове).
+// [2.35.9] Тема уже стоит из inline-скрипта в index.html.
 try {
   if (localStorage.getItem('ghost-chat-theme') === 'dark') {
     document.body.classList.add('dark');
@@ -13,19 +12,51 @@ try {
 
 const rootEl = document.getElementById('root');
 
+// [2.35.9] Ждём: шрифты + все stylesheet + 1 кадр после монтирования React.
+// К этому моменту НЕ должно быть ни разъезда, ни «прыжка» текста.
+function waitForStylesheets() {
+  const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+  return Promise.allSettled(
+    links.map((link) =>
+      new Promise((resolve) => {
+        if (link.sheet) return resolve();
+        link.addEventListener('load', () => resolve(), { once: true });
+        link.addEventListener('error', () => resolve(), { once: true });
+      })
+    )
+  );
+}
+
+function waitForFonts() {
+  if (document.fonts && document.fonts.ready) {
+    return document.fonts.ready.catch(() => {});
+  }
+  return Promise.resolve();
+}
+
+function showApp() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.body.classList.add('app-ready');
+      rootEl.classList.add('ready');
+    });
+  });
+}
+
 createRoot(rootEl).render(
   <StrictMode>
     <App />
   </StrictMode>
 );
 
-// [2.35.9] Показать содержимое после первой отрисовки (два RAF — гарантия).
-// К этому моменту основной CSS уже применён, элементы на своих местах.
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    rootEl.classList.add('ready');
-  });
-});
+// Минимальная задержка показа — чтобы скелетон не мигал при быстрой загрузке.
+const MIN_SPLASH_MS = 250;
+
+Promise.all([
+  waitForFonts(),
+  waitForStylesheets(),
+  new Promise((r) => setTimeout(r, MIN_SPLASH_MS)),
+]).then(showApp);
 
 // Регистрация Service Worker для PWA
 if ('serviceWorker' in navigator) {

@@ -22,6 +22,7 @@ export const useChat = ({
   nicknameRef,
   onNotice,
 }) => {
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const [messages, setMessages] = useState([]);
   const [players, setPlayers] = useState([]);
   const [friends, setFriends] = useState([]);
@@ -306,6 +307,7 @@ export const useChat = ({
 
       case 'history':
         setMessages(msg.data);
+        setIsHistoryLoaded(true);
         return true;
 
       case 'message':
@@ -478,6 +480,7 @@ export const useChat = ({
   }, [nicknameRef, mergeAvatars]);
 
   return {
+    isHistoryLoaded,
     messages,
     players,
     friends,

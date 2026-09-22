@@ -8,7 +8,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
 
-    <!-- [2.35.9] Critical CSS — до основного бандла. Гасит FOUC на первом рендере. -->
+    <!-- [2.35.9] Critical CSS + скелетон. Гасим FOUC на первом рендере. -->
     <style>
       *,
       *::before,
@@ -37,16 +37,48 @@
         background: #0E1726;
         color: #EAF2FA;
       }
+
+      /* === Скелетон, видимый до готовности приложения === */
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #F5A9C0;
+        z-index: 99999;
+        transition: opacity 0.28s ease-out;
+        pointer-events: none;
+      }
+      body.dark #boot-splash {
+        background: #0E1726;
+      }
+      #boot-splash__inner {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 3px solid #111;
+        background: #FFF url('/mascot.png') center / cover no-repeat;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        animation: bootPulse 1.2s ease-in-out infinite;
+      }
+      body.dark #boot-splash__inner {
+        border-color: #3BB5E8;
+      }
+      @keyframes bootPulse {
+        0%, 100% { transform: scale(1); opacity: 0.85; }
+        50%      { transform: scale(1.05); opacity: 1; }
+      }
+      body.app-ready #boot-splash {
+        opacity: 0;
+      }
+
       #root {
         height: 100%;
         width: 100%;
         visibility: hidden;
       }
       #root.ready {
-        visibility: visible;
-      }
-      /* Страховка: если что-то пойдёт не так, через 4с показываем что есть. */
-      .no-js-fallback #root {
         visibility: visible;
       }
     </style>
@@ -61,19 +93,27 @@
     <meta name="apple-mobile-web-app-title" content="crew" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
+    <!-- [2.35.9] Preconnect к API и шрифтам — быстрее устанавливаем соединение -->
+    <link rel="preconnect" href="https://api.banjoboy420.ru" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- [2.35.9] display=block: браузер ждёт шрифт до показа. Нет «прыжка» метрик. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Caveat&family=Cormorant+Garamond:wght@400;700&family=Marck+Script&family=Neucha&family=Pacifico&family=Unbounded:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Amatic+SC&family=Caveat&family=Cormorant+Garamond:wght@400;700&family=Marck+Script&family=Neucha&family=Pacifico&family=Unbounded:wght@400;700&display=block"
       rel="stylesheet"
     />
 
     <title>banjoboy's crew</title>
   </head>
   <body>
+    <div id="boot-splash" aria-hidden="true">
+      <div id="boot-splash__inner"></div>
+    </div>
+
     <div id="root"></div>
 
-    <!-- [2.35.9] Тема ставится ДО модуля — иначе мигание розовым при тёмной теме. -->
+    <!-- [2.35.9] Тема ставится до бандла — не мигаем розовым при тёмной теме. -->
     <script>
       (function () {
         try {
@@ -86,15 +126,14 @@
 
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- [2.35.9] Аварийная страховка: если React не смонтируется за 4с — показываем root. -->
+    <!-- [2.35.9] Аварийная страховка: если React не смонтировался за 5с — показываем что есть. -->
     <script>
       (function () {
         setTimeout(function () {
+          document.body.classList.add('app-ready');
           var r = document.getElementById('root');
-          if (r && !r.classList.contains('ready')) {
-            r.classList.add('ready');
-          }
-        }, 4000);
+          if (r && !r.classList.contains('ready')) r.classList.add('ready');
+        }, 5000);
       })();
     </script>
   </body>
