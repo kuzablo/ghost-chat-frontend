@@ -2,10 +2,12 @@ import { useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.35.39] Орбита — полный блок long-press, contextmenu, drag.
-            touch-action: none, user-select: none на всех слоях.
+  [2.35.40] Клик по pointerdown — срабатывает мгновенно, до long-press.
+            Убирает сдвиг орбиты при удержании.
+            Двигаешь пальцем — не срабатывает (защита от случайного тапа).
 */
 const MAX_AVATARS = 5;
+const MOVE_CANCEL_PX = 12;
 
 const ORBITS = [
   { rx: 96,  ry: 42, speed: 0.72,  tilt: -10, phase: 0.15 },
@@ -24,6 +26,9 @@ const OrbitNotification = ({
 }) => {
   const orbitRef = useRef(null);
   const rafRef = useRef(null);
+
+  // [2.35.40] защита от случайного срабатывания при скролле/движении
+  const startPosRef = useRef({ x: 0, y: 0, fired: false });
 
   useEffect(() => {
     const stage = orbitRef.current;
@@ -73,17 +78,40 @@ const OrbitNotification = ({
   const shown = users.slice(0, MAX_AVATARS);
   const more = users.length - MAX_AVATARS;
 
+  const handlePointerDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    startPosRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      fired: true,
+    };
+    if (onClick) onClick();
+  };
+
+  const handlePointerMove = (e) => {
+    if (!startPosRef.current.fired) return;
+    const dx = Math.abs(e.clientX - startPosRef.current.x);
+    const dy = Math.abs(e.clientY - startPosRef.current.y);
+    if (dx > MOVE_CANCEL_PX || dy > MOVE_CANCEL_PX) {
+      startPosRef.current.fired = false;
+    }
+  };
+
+  const handlePointerUp = () => {
+    startPosRef.current.fired = false;
+  };
+
   return (
     <button
       type="button"
       className={`pm-orbit ${className}`.trim()}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (onClick) onClick();
-      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onContextMenu={prevent}
       onDragStart={prevent}
-      onMouseDown={prevent}
       aria-label="Новые личные сообщения"
     >
       <span className="pm-orbit-halo pm-orbit-halo--outer" aria-hidden="true" />
