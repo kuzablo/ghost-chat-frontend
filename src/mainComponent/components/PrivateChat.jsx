@@ -5,11 +5,15 @@ import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
 
-// [2.35.50] Двухуровневый пикер
+// [2.35.52] Радиальный пикер
 const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
 const REACTIONS_EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
 
-const PICKER_AUTOHIDE_MS = 2000;
+const WHEEL_R_MAIN = 64;
+const WHEEL_R_EXTRA = 112;
+const WHEEL_BTN = 36;
+
+const PICKER_AUTOHIDE_MS = 5000;
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
@@ -26,6 +30,11 @@ const DATE_FILTERS = [
   { id: '7d',    label: '7 дней',   days: 7 },
   { id: '30d',   label: '30 дней',  days: 30 },
 ];
+
+const polar = (r, angleDeg) => {
+  const rad = (angleDeg - 90) * (Math.PI / 180);
+  return { x: r * Math.cos(rad), y: r * Math.sin(rad) };
+};
 
 const StickerIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -80,8 +89,9 @@ const PrivateChat = ({
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const [pickerFor, setPickerFor] = useState(null);
+  const [pickerOrigin, setPickerOrigin] = useState(null);
+  const [reactionsExpanded, setReactionsExpanded] = useState(false);
   const [poppingId, setPoppingId] = useState(null);
-  const [pickerAbove, setPickerAbove] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [fullscreenImage, setFullscreenImage] = useState(null);
@@ -92,7 +102,6 @@ const PrivateChat = ({
   const [dateFilter, setDateFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showScrollDown, setShowScrollDown] = useState(false);
-  const [reactionsExpanded, setReactionsExpanded] = useState(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -110,7 +119,6 @@ const PrivateChat = ({
     lastDx: 0,
   });
 
-  // [2.35.50] Совпадения поиска — для пульсации
   const hitIds = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return new Set();
@@ -146,14 +154,13 @@ const PrivateChat = ({
   }, [typingUser]);
 
   useEffect(() => {
-    if (!pickerFor) return;
+    if (!pickerFor) {
+      setReactionsExpanded(false);
+      setPickerOrigin(null);
+      return;
+    }
     const t = setTimeout(() => setPickerFor(null), PICKER_AUTOHIDE_MS);
     return () => clearTimeout(t);
-  }, [pickerFor]);
-
-  // [2.35.50] Пикер закрыли — «＋» свернулся
-  useEffect(() => {
-    if (!pickerFor) setReactionsExpanded(false);
   }, [pickerFor]);
 
   useEffect(() => {
@@ -423,6 +430,7 @@ const PrivateChat = ({
     setPickerFor(null);
   };
 
+  // [2.35.52] Тап — origin пикера
   const handleMessageTap = (id, e) => {
     if (actionsMenu) {
       setActionsMenu(null);
@@ -430,7 +438,7 @@ const PrivateChat = ({
     }
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
 
-    if (e.target.closest('.private-reaction-picker')) return;
+    if (e.target.closest('.reaction-wheel')) return;
     if (e.target.closest('.private-msg-image')) return;
     if (e.target.closest('.private-attach-btn')) return;
     if (e.target.closest('.ig-card')) return;
@@ -445,15 +453,13 @@ const PrivateChat = ({
     setTimeout(() => setPoppingId(null), 380);
 
     const cardEl = e.currentTarget;
-    const containerEl = messagesContainerRef.current;
-    if (cardEl && containerEl) {
-      const cardRect = cardEl.getBoundingClientRect();
-      const containerRect = containerEl.getBoundingClientRect();
-      const pickerHeight = 54;
-      const spaceBelow = containerRect.bottom - cardRect.bottom;
-      setPickerAbove(spaceBelow < pickerHeight);
+    if (cardEl) {
+      const rect = cardEl.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setPickerOrigin({ x, y });
     } else {
-      setPickerAbove(false);
+      setPickerOrigin({ x: 0, y: 0 });
     }
 
     setPickerFor(id);
@@ -496,22 +502,58 @@ const PrivateChat = ({
     );
   };
 
-  const renderReactionRow = (m, emojis) => (
-    <div className="private-reaction-picker-row">
-      {emojis.map(emoji => {
-        const isActive = (m.reactions?.[emoji] || []).includes(myId);
-        return (
+  // [2.35.52] Радиальный рендер
+  const renderWheel = (m) => {
+    if (!pickerOrigin) return null;
+
+    const renderOrbit = (emojis, radius, isExtra) => (
+      <div className={`reaction-wheel-orbit ${isExtra ? 'reaction-wheel-orbit--extra' : 'reaction-wheel-orbit--main'}`}>
+        {emojis.map((emoji, i) => {
+          const angle = (360 / emojis.length) * i;
+          const pos = polar(radius, angle);
+          const isActive = (m.reactions?.[emoji] || []).includes(myId);
+          return (
+            <button
+              key={emoji}
+              type="button"
+              className={`reaction-wheel-btn ${isActive ? 'active' : ''}`}
+              style={{
+                left: pos.x - WHEEL_BTN / 2,
+                top: pos.y - WHEEL_BTN / 2,
+                animationDelay: `${i * 0.025}s`,
+              }}
+              onClick={() => sendReaction(m.id, emoji)}
+              aria-label={emoji}
+            >
+              {emoji}
+            </button>
+          );
+        })}
+      </div>
+    );
+
+    return (
+      <div
+        className={`reaction-wheel ${reactionsExpanded ? 'reaction-wheel--expanded' : ''}`}
+        style={{ left: pickerOrigin.x, top: pickerOrigin.y }}
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
+        <div className="reaction-wheel-center">
           <button
-            key={emoji}
-            className={isActive ? 'active' : ''}
-            onClick={() => sendReaction(m.id, emoji)}
+            type="button"
+            className="reaction-wheel-toggle"
+            onClick={() => setReactionsExpanded(v => !v)}
+            aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
           >
-            {emoji}
+            {reactionsExpanded ? '−' : '＋'}
           </button>
-        );
-      })}
-    </div>
-  );
+        </div>
+        {renderOrbit(REACTIONS_MAIN, WHEEL_R_MAIN, false)}
+        {reactionsExpanded && renderOrbit(REACTIONS_EXTRA, WHEEL_R_EXTRA, true)}
+      </div>
+    );
+  };
 
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
@@ -628,6 +670,9 @@ const PrivateChat = ({
                       onTouchMove={handleMsgTouchMove}
                       onTouchEnd={handleMsgTouchEnd}
                     >
+                      <div className="private-msg-sticker-nick">
+                        {isOwn ? 'Я' : nickname}
+                      </div>
                       {forwardLabel}
                       <img
                         src={m.stickerUrl}
@@ -696,29 +741,7 @@ const PrivateChat = ({
                       )}
                     </div>
 
-                    {pickerFor === m.id && (
-                      <div
-                        className={`private-reaction-picker ${pickerAbove ? 'private-reaction-picker--top' : ''} ${reactionsExpanded ? 'private-reaction-picker--expanded' : ''}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="private-reaction-picker-main">
-                          {renderReactionRow(m, REACTIONS_MAIN)}
-                          <button
-                            type="button"
-                            className="private-reaction-more"
-                            onClick={() => setReactionsExpanded(v => !v)}
-                            aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
-                          >
-                            {reactionsExpanded ? '−' : '＋'}
-                          </button>
-                        </div>
-                        {reactionsExpanded && (
-                          <div className="private-reaction-picker-extra">
-                            {renderReactionRow(m, REACTIONS_EXTRA)}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {pickerFor === m.id && renderWheel(m)}
 
                     <div className="private-msg-footer">
                       <span className="private-msg-time">{formatTime(m.created_at)}</span>

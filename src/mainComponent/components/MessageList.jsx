@@ -6,9 +6,19 @@ import MessageActionsMenu from './MessageActionsMenu';
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
 
-// [2.35.50] Двухуровневый пикер: 6 главных + 12 свежих под «＋»
+// [2.35.52] Радиальный пикер: 6 главных внутренним кругом + 12 свежих внешним
 const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
 const REACTIONS_EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
+
+const WHEEL_R_MAIN = 64;
+const WHEEL_R_EXTRA = 112;
+const WHEEL_BTN = 36;
+
+// [2.35.52] Точка на окружности. Верх — 12 часов.
+const polar = (r, angleDeg) => {
+  const rad = (angleDeg - 90) * (Math.PI / 180);
+  return { x: r * Math.cos(rad), y: r * Math.sin(rad) };
+};
 
 const MessageList = ({
   messages,
@@ -33,8 +43,8 @@ const MessageList = ({
   const [isEditing, setIsEditing] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
-  const [pickerAbove, setPickerAbove] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(null);
+  const [pickerOrigin, setPickerOrigin] = useState(null);
   const [reactionsExpanded, setReactionsExpanded] = useState(false);
 
   const swipeRef = useRef({
@@ -71,9 +81,11 @@ const MessageList = ({
     };
   }, []);
 
-  // [2.35.50] Пикер закрыли — «＋» свернулся
   useEffect(() => {
-    if (!activeMessageId) setReactionsExpanded(false);
+    if (!activeMessageId) {
+      setReactionsExpanded(false);
+      setPickerOrigin(null);
+    }
   }, [activeMessageId]);
 
   useEffect(() => {
@@ -167,6 +179,7 @@ const MessageList = ({
     }, DOUBLE_TAP_MS);
   };
 
+  // [2.35.52] Тап — точка origin пикера
   const handleMessageTap = (messageId, e) => {
     if (actionsMenu) {
       setActionsMenu(null);
@@ -182,15 +195,13 @@ const MessageList = ({
     setTimeout(() => setPoppingId(null), 380);
 
     const cardEl = e?.currentTarget;
-    const containerEl = containerRef?.current;
-    if (cardEl && containerEl) {
-      const cardRect = cardEl.getBoundingClientRect();
-      const containerRect = containerEl.getBoundingClientRect();
-      const pickerHeight = 54;
-      const spaceBelow = containerRect.bottom - cardRect.bottom;
-      setPickerAbove(spaceBelow < pickerHeight);
+    if (cardEl) {
+      const rect = cardEl.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setPickerOrigin({ x, y });
     } else {
-      setPickerAbove(false);
+      setPickerOrigin({ x: 0, y: 0 });
     }
 
     toggleReactions(messageId);
@@ -513,25 +524,61 @@ const MessageList = ({
     );
   };
 
-  const renderReactionRow = (m, emojis) => (
-    <div className="msg-reaction-picker-row">
-      {emojis.map(emoji => {
-        const isActive = didIReact(m, emoji);
-        return (
+  // [2.35.52] Радиальный рендер
+  const renderWheel = (m) => {
+    if (!pickerOrigin) return null;
+
+    const renderOrbit = (emojis, radius, isExtra) => (
+      <div className={`reaction-wheel-orbit ${isExtra ? 'reaction-wheel-orbit--extra' : 'reaction-wheel-orbit--main'}`}>
+        {emojis.map((emoji, i) => {
+          const angle = (360 / emojis.length) * i;
+          const pos = polar(radius, angle);
+          const isActive = didIReact(m, emoji);
+          return (
+            <button
+              key={emoji}
+              type="button"
+              className={`reaction-wheel-btn ${isActive ? 'active' : ''}`}
+              style={{
+                left: pos.x - WHEEL_BTN / 2,
+                top: pos.y - WHEEL_BTN / 2,
+                animationDelay: `${i * 0.025}s`,
+              }}
+              onClick={() => {
+                sendReaction(m.id, emoji);
+                toggleReactions(m.id);
+              }}
+              aria-label={emoji}
+            >
+              {emoji}
+            </button>
+          );
+        })}
+      </div>
+    );
+
+    return (
+      <div
+        className={`reaction-wheel ${reactionsExpanded ? 'reaction-wheel--expanded' : ''}`}
+        style={{ left: pickerOrigin.x, top: pickerOrigin.y }}
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
+        <div className="reaction-wheel-center">
           <button
-            key={emoji}
-            className={isActive ? 'active' : ''}
-            onClick={() => {
-              sendReaction(m.id, emoji);
-              toggleReactions(m.id);
-            }}
+            type="button"
+            className="reaction-wheel-toggle"
+            onClick={() => setReactionsExpanded(v => !v)}
+            aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
           >
-            {emoji}
+            {reactionsExpanded ? '−' : '＋'}
           </button>
-        );
-      })}
-    </div>
-  );
+        </div>
+        {renderOrbit(REACTIONS_MAIN, WHEEL_R_MAIN, false)}
+        {reactionsExpanded && renderOrbit(REACTIONS_EXTRA, WHEEL_R_EXTRA, true)}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -681,6 +728,8 @@ const MessageList = ({
                         ))}
                       </div>
                     )}
+
+                    {activeMessageId === m.id && !isEditingThis && renderWheel(m)}
                   </div>
                 </div>
               </React.Fragment>
@@ -802,29 +851,7 @@ const MessageList = ({
                     </div>
                   )}
 
-                  {activeMessageId === m.id && !isEditingThis && (
-                    <div
-                      className={`msg-reaction-picker ${pickerAbove ? 'msg-reaction-picker--top' : ''} ${reactionsExpanded ? 'msg-reaction-picker--expanded' : ''}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="msg-reaction-picker-main">
-                        {renderReactionRow(m, REACTIONS_MAIN)}
-                        <button
-                          type="button"
-                          className="msg-reaction-more"
-                          onClick={() => setReactionsExpanded(v => !v)}
-                          aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
-                        >
-                          {reactionsExpanded ? '−' : '＋'}
-                        </button>
-                      </div>
-                      {reactionsExpanded && (
-                        <div className="msg-reaction-picker-extra">
-                          {renderReactionRow(m, REACTIONS_EXTRA)}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {activeMessageId === m.id && !isEditingThis && renderWheel(m)}
                 </div>
               </div>
             </React.Fragment>
