@@ -2,6 +2,15 @@
    [2.35.23] Убран -webkit-overflow-scrolling: touch — тормозит монтаж на iOS
    [2.32.39] unreadPulse: box-shadow → transform
 */
+
+/* [2.35.25] Скрытое состояние — панель в DOM, но невидима.
+   Убирает фриз первого открытия. */
+.players-overlay--hidden {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .players-overlay {
   position: fixed;
   top: 60px;

@@ -3,13 +3,16 @@ import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 
 /*
-  [2.35.4] дуэль: везде onRequestDuel(userId), резолв clientId — в Chat.jsx
-  [2.33.7] обёрнут в React.memo — ввод в инпут не перерисовывает список
-  [2.33.4] Пункт «Заблокировать» в long-press меню (если ещё не заблокирован)
-  [2.20.0] пункт «Профиль» в long-press меню; аватары из avatarUrl
-  [2.29.0] свой профиль без заголовка «Вы»; подсказка «нажми и держи»
+  [2.35.25] visible — панель всегда в DOM, скрыта через CSS-класс.
+            Убирает фриз при первом монтаже на iOS PWA.
+  [2.35.4] дуэль: везде onRequestDuel(userId)
+  [2.33.7] React.memo
+  [2.33.4] пункт «Заблокировать»
+  [2.20.0] пункт «Профиль»
+  [2.29.0] свой профиль
 */
 const PlayersPanel = forwardRef(({
+  visible = true,
   players,
   friends,
   friendRequests,
@@ -189,7 +192,10 @@ const PlayersPanel = forwardRef(({
 
   return (
     <>
-      <div className="players-overlay" ref={ref}>
+      <div
+        className={`players-overlay${visible ? '' : ' players-overlay--hidden'}`}
+        ref={ref}
+      >
         <h4>banjoboy's crew</h4>
         <input
           className="search-input"
