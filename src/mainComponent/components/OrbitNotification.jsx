@@ -2,9 +2,8 @@ import { useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.35.34] Орбита-уведомление — переписано на <button> для надёжного клика.
-            У каждой аватарки своя орбита: радиус, наклон, скорость, направление.
-            Аватарка уходит за маскота и выходит спереди.
+  [2.35.39] Орбита — полный блок long-press, contextmenu, drag.
+            touch-action: none, user-select: none на всех слоях.
 */
 const MAX_AVATARS = 5;
 
@@ -15,6 +14,8 @@ const ORBITS = [
   { rx: 108, ry: 48, speed: -0.64, tilt: 8,   phase: 1.00 },
   { rx: 100, ry: 44, speed: 0.78,  tilt: -14, phase: 3.30 },
 ];
+
+const prevent = (e) => e.preventDefault();
 
 const OrbitNotification = ({
   users = [],
@@ -80,6 +81,9 @@ const OrbitNotification = ({
         e.stopPropagation();
         if (onClick) onClick();
       }}
+      onContextMenu={prevent}
+      onDragStart={prevent}
+      onMouseDown={prevent}
       aria-label="Новые личные сообщения"
     >
       <span className="pm-orbit-halo pm-orbit-halo--outer" aria-hidden="true" />

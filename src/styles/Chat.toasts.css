@@ -1,5 +1,7 @@
 /* ============================================================= */
-/* [2.35.38] Орбита — фикс дёрганья при клике (конфликт anim+transition) */
+/* [2.35.39] Орбита — блок long-press, callout, drag              */
+/* [2.35.38] Снят конфликт animation+transition при клике         */
+/* [2.35.34] Кнопка вместо div                                    */
 /* ============================================================= */
 
 .pm-orbit {
@@ -11,15 +13,22 @@
   height: 220px;
   z-index: 2600;
   cursor: pointer;
-  touch-action: manipulation;
+
+  /* [2.35.39] полный блок long-press, callout, drag */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
   -webkit-tap-highlight-color: transparent;
+
   animation: pmOrbitIn 0.62s cubic-bezier(0.34, 1.56, 0.64, 1);
   transition: opacity 0.34s ease-out, transform 0.34s ease-out;
   will-change: opacity, transform;
   isolation: isolate;
   pointer-events: auto;
 
-  /* button reset + iOS */
   background: transparent;
   border: 0;
   padding: 0;
@@ -35,7 +44,6 @@
   opacity: 0;
   transform: translateX(-50%) translateY(-22px) scale(0.88);
   pointer-events: none;
-  /* [2.35.38] снимаем анимацию входа — иначе конфликт с transition */
   animation: none;
 }
 
@@ -107,7 +115,7 @@ body.dark .pm-orbit-halo--inner {
   50%      { transform: translate(-50%, -50%) scale(1.24); opacity: 0.45; }
 }
 
-/* ===== Маскот ===== */
+/* ===== Маскот-планета в центре ===== */
 
 .pm-orbit-mascot-wrap {
   position: absolute;
@@ -146,7 +154,7 @@ body.dark .pm-orbit-mascot {
   50%      { transform: scale(1.05);  filter: brightness(1.07); }
 }
 
-/* ===== Сцена ===== */
+/* ===== Сцена — точка в центре ===== */
 
 .pm-orbit-stage {
   position: absolute;
@@ -157,6 +165,8 @@ body.dark .pm-orbit-mascot {
   z-index: 30;
   pointer-events: none;
 }
+
+/* ===== Спутник ===== */
 
 .pm-orbit-slot {
   position: absolute;
@@ -243,12 +253,6 @@ body.dark .pm-orbit-more {
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
-/* [2.35.38] :active только на маскоте, орбиту не дёргаем */
-.pm-orbit:active .pm-orbit-mascot {
-  transform: scale(0.94);
-  transition: transform 0.12s ease;
-}
-
 /* ===== Вариант для шапки PlayersPanel ===== */
 
 .pm-orbit.pm-orbit--header {
@@ -268,7 +272,7 @@ body.dark .pm-orbit-more {
   pointer-events: none;
 }
 
-/* ===== Мобильная ===== */
+/* ===== Мобильная версия ===== */
 
 @media (max-width: 600px) {
   .pm-orbit {
