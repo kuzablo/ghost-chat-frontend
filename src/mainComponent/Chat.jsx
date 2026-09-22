@@ -52,7 +52,7 @@ import '../styles/Chat.instagram.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.23';
+const VERSION = '2.35.24';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1706,7 +1706,7 @@ const Chat = () => {
           </div>
 
           <div
-            className={`mobile-capsule ${capsuleOpen ? 'mobile-capsule--open' : ''}`}
+            className={`mobile-capsule${capsuleOpen ? ' mobile-capsule--open' : ''}${!capsuleOpen && totalNotifications > 0 ? ' mobile-capsule--has-pulse' : ''}`}
             onClick={handleCapsuleTap}
             onTouchStart={handleCapsuleTouchStart}
             onTouchMove={handleCapsuleTouchMove}
