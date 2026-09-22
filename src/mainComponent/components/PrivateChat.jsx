@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { formatTime, formatMessageDate } from '../utils';
 import ChatInput from './ChatInput';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
@@ -17,7 +17,6 @@ const DIRECTION_LOCK = 10;
 const LONG_PRESS_MENU_MS = 500;
 const LONG_PRESS_IGNORE_MS = 500;
 
-// [2.35.47] Чипы фильтра по дате
 const DATE_FILTERS = [
   { id: 'all',   label: 'Всё',      days: null },
   { id: 'today', label: 'Сегодня',  days: 0 },
@@ -49,7 +48,6 @@ const getBgCss = (bg) => {
 
 const isUrlBg = (bg) => !!(bg && bg.startsWith('url:'));
 
-// [2.35.47] Граница периода — начало дня N назад
 const getSinceTs = (days) => {
   if (days === null) return null;
   const now = new Date();
@@ -87,8 +85,9 @@ const PrivateChat = ({
   const [bgLoaded, setBgLoaded] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(null);
 
-  // [2.35.47] Фильтр по дате
   const [dateFilter, setDateFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showScrollDown, setShowScrollDown] = useState(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -106,17 +105,26 @@ const PrivateChat = ({
     lastDx: 0,
   });
 
-  // [2.35.47] Отфильтрованный список
+  // [2.35.48] Дата + текстовый поиск
   const filteredMessages = useMemo(() => {
     const filter = DATE_FILTERS.find(f => f.id === dateFilter);
-    if (!filter || filter.days === null) return initialMessages;
-    const since = getSinceTs(filter.days);
-    return initialMessages.filter(m => {
-      if (!m.created_at) return false;
-      const t = new Date(m.created_at).getTime();
-      return t >= since;
-    });
-  }, [initialMessages, dateFilter]);
+    let list = initialMessages;
+
+    if (filter && filter.days !== null) {
+      const since = getSinceTs(filter.days);
+      list = list.filter(m => {
+        if (!m.created_at) return false;
+        return new Date(m.created_at).getTime() >= since;
+      });
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(m => (m.text || '').toLowerCase().includes(q));
+    }
+
+    return list;
+  }, [initialMessages, dateFilter, searchQuery]);
 
   useEffect(() => {
     setLocalTypingUser(typingUser);
@@ -155,6 +163,41 @@ const PrivateChat = ({
     img.src = url;
     return () => { img.onload = null; img.onerror = null; };
   }, [dialogsBg]);
+
+  // [2.35.48] Индикатор «вниз»
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+
+    let rafId = null;
+    const onScroll = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const d = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setShowScrollDown(d > 200);
+      });
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, [searchQuery, dateFilter]);
+
+  // [2.35.48] При поиске — скролл к началу списка (первое совпадение сверху)
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => { el.scrollTop = 0; });
+  }, [searchQuery]);
+
+  const scrollToBottom = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
 
   const openActionsMenuFor = (m, el) => {
     const containerEl = messagesContainerRef.current;
@@ -203,6 +246,7 @@ const PrivateChat = ({
   const handlePanelTouchStart = (e) => {
     if (e.touches.length !== 1) return;
     if (e.target.closest('.private-msg')) return;
+    if (e.target.closest('.private-search-wrap')) return;
     const t = e.touches[0];
     const s = swipeRef.current;
     s.active = true;
@@ -448,6 +492,8 @@ const PrivateChat = ({
       }
     : undefined;
 
+  const hasSearch = !!searchQuery.trim();
+
   return (
     <>
       <div className="blur-overlay" onClick={onClose} />
@@ -462,6 +508,34 @@ const PrivateChat = ({
       >
         <div className="private-chat-header">
           <h4>Чат с {nickname}</h4>
+        </div>
+
+        {/* [2.35.48] Поиск по сообщениям */}
+        <div className="private-search-wrap">
+          <input
+            className="private-search-input"
+            type="text"
+            placeholder="Поиск по сообщениям..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {hasSearch && (
+            <>
+              <span className="private-search-count">
+                {filteredMessages.length}
+              </span>
+              <button
+                type="button"
+                className="private-search-clear"
+                onClick={() => setSearchQuery('')}
+                aria-label="Очистить поиск"
+              >
+                ✕
+              </button>
+            </>
+          )}
         </div>
 
         {/* [2.35.47] Чипы фильтра по дате */}
@@ -490,7 +564,9 @@ const PrivateChat = ({
           ) : (
             <>
               {filteredMessages.length === 0 && (
-                <div className="private-empty">В этом периоде сообщений нет</div>
+                <div className="private-empty">
+                  {hasSearch ? 'Ничего не найдено' : 'В этом периоде сообщений нет'}
+                </div>
               )}
 
               {filteredMessages.map((m, i) => {
@@ -617,6 +693,17 @@ const PrivateChat = ({
             </>
           )}
         </div>
+
+        {showScrollDown && (
+          <button
+            type="button"
+            className="private-scroll-btn"
+            onClick={scrollToBottom}
+            aria-label="Вниз"
+          >
+            ↓
+          </button>
+        )}
 
         {uploadError && (
           <div className="private-upload-error">{uploadError}</div>

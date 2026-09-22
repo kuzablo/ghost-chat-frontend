@@ -1017,14 +1017,6 @@ body.dark .msg-actions-menu-btn--danger {
   white-space: nowrap;
 }
 
-.msg--own .msg-forward-label {
-  color: var(--btn-text);
-  opacity: 0.8;
-}
-.msg--own .msg-forward-arrow {
-  color: var(--btn-text);
-}
-
 .msg-image-only-forward {
   margin-bottom: 4px;
   padding: 2px 6px;

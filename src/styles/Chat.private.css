@@ -618,3 +618,122 @@ body.dark .private-loading-mascot {
   0%, 100% { transform: scale(1); opacity: 0.85; }
   50%      { transform: scale(1.08); opacity: 1; }
 }
+
+/* ============================================================= */
+/* [2.35.48] Поиск по личным сообщениям + кнопка «вниз»           */
+/* ============================================================= */
+
+.private-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 8px;
+  flex-shrink: 0;
+}
+
+.private-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+.private-search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.private-search-input:focus {
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.2);
+}
+.private-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.private-search-count {
+  flex-shrink: 0;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.private-search-clear {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+}
+.private-search-clear:active {
+  transform: scale(0.9);
+  background: var(--messages-bg);
+}
+
+/* Кнопка «вниз» — над полем ввода */
+.private-scroll-btn {
+  position: absolute;
+  right: 22px;
+  bottom: 74px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 2px solid var(--btn-border);
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 5;
+  touch-action: manipulation;
+  animation: privateScrollBtnIn 0.2s ease-out;
+  transition: transform 0.12s;
+}
+.private-scroll-btn:active {
+  transform: scale(0.92);
+}
+
+@keyframes privateScrollBtnIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .private-scroll-btn {
+    right: 14px;
+    bottom: 70px;
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+  }
+}
