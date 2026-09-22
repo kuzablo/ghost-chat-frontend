@@ -1,5 +1,5 @@
 /* ============================================================= */
-/* [2.35.34] Орбита — кнопка. Спутники на индивидуальных орбитах. */
+/* [2.35.38] Орбита — фикс дёрганья при клике (конфликт anim+transition) */
 /* ============================================================= */
 
 .pm-orbit {
@@ -19,6 +19,7 @@
   isolation: isolate;
   pointer-events: auto;
 
+  /* button reset + iOS */
   background: transparent;
   border: 0;
   padding: 0;
@@ -26,12 +27,16 @@
   font: inherit;
   color: inherit;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .pm-orbit--out {
   opacity: 0;
   transform: translateX(-50%) translateY(-22px) scale(0.88);
   pointer-events: none;
+  /* [2.35.38] снимаем анимацию входа — иначе конфликт с transition */
+  animation: none;
 }
 
 @keyframes pmOrbitIn {
@@ -39,6 +44,8 @@
   60%  { opacity: 1; transform: translateX(-50%) translateY(4px)  scale(1.03); }
   100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
 }
+
+/* ===== Ореолы ===== */
 
 .pm-orbit-halo {
   position: absolute;
@@ -100,6 +107,8 @@ body.dark .pm-orbit-halo--inner {
   50%      { transform: translate(-50%, -50%) scale(1.24); opacity: 0.45; }
 }
 
+/* ===== Маскот ===== */
+
 .pm-orbit-mascot-wrap {
   position: absolute;
   top: 50%;
@@ -136,6 +145,8 @@ body.dark .pm-orbit-mascot {
   0%, 100% { transform: scale(1);     filter: brightness(1); }
   50%      { transform: scale(1.05);  filter: brightness(1.07); }
 }
+
+/* ===== Сцена ===== */
 
 .pm-orbit-stage {
   position: absolute;
@@ -197,6 +208,8 @@ body.dark .pm-orbit-avatar {
   50%      { filter: brightness(1.12) drop-shadow(0 0 8px rgba(59, 181, 232, 0.6)); }
 }
 
+/* ===== +N ===== */
+
 .pm-orbit-more {
   position: absolute;
   bottom: 6px;
@@ -230,10 +243,13 @@ body.dark .pm-orbit-more {
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
+/* [2.35.38] :active только на маскоте, орбиту не дёргаем */
 .pm-orbit:active .pm-orbit-mascot {
   transform: scale(0.94);
   transition: transform 0.12s ease;
 }
+
+/* ===== Вариант для шапки PlayersPanel ===== */
 
 .pm-orbit.pm-orbit--header {
   position: absolute;
@@ -251,6 +267,8 @@ body.dark .pm-orbit-more {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ===== Мобильная ===== */
 
 @media (max-width: 600px) {
   .pm-orbit {

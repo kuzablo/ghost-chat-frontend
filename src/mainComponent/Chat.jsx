@@ -1803,7 +1803,7 @@ const Chat = () => {
         />
       )}
 
-      {!showPlayers && !showDialogs && (
+      {!showPlayers && !showDialogs && !privateChat && (
         <PrivateMessageToasts
           users={unreadUserObjects}
           onOpenDialogs={handleOpenDialogs}
