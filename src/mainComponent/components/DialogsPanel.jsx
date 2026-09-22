@@ -3,6 +3,7 @@ import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 import DialogsBgPicker, { PRESETS_MAP } from './DialogsBgPicker';
 
 /*
+  [2.35.28] Поиск по имени диалога + плейсхолдер для URL-фона.
   [2.34.4] URL-фон без двойного затемнения
   [2.34.3] Фон окна диалогов + кнопка кастомизации.
   [2.34.2] Аватарки 64px, сжатые отступы.
@@ -59,6 +60,8 @@ const DialogsPanel = forwardRef(({
   });
   const [pressingUserId, setPressingUserId] = useState(null);
   const [showBgPicker, setShowBgPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bgLoaded, setBgLoaded] = useState(false);
 
   useEffect(() => {
     if (typeof ref === 'function') ref(panelRef.current);
@@ -68,6 +71,25 @@ const DialogsPanel = forwardRef(({
   useEffect(() => () => {
     if (pressRef.current.timer) clearTimeout(pressRef.current.timer);
   }, []);
+
+  // [2.35.28] Преload URL-фона — показываем маскота пока картинка не загружена.
+  useEffect(() => {
+    const isUrl = isUrlBg(dialogsBg);
+    if (!isUrl) {
+      setBgLoaded(true);
+      return;
+    }
+    setBgLoaded(false);
+    const url = dialogsBg.slice('url:'.length);
+    const img = new Image();
+    img.onload = () => setBgLoaded(true);
+    img.onerror = () => setBgLoaded(true); // не крутим маскота вечно при ошибке
+    img.src = url;
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [dialogsBg]);
 
   const cancelPress = () => {
     if (pressRef.current.timer) {
@@ -127,11 +149,17 @@ const DialogsPanel = forwardRef(({
     old: 'Раньше',
   };
 
+  // [2.35.28] Фильтр по имени + отделяем себя
   const visibleDialogs = dialogs.filter(d => d.userId !== myId);
+
+  const query = searchQuery.trim().toLowerCase();
+  const filteredDialogs = query
+    ? visibleDialogs.filter(d => (d.nickname || '').toLowerCase().includes(query))
+    : visibleDialogs;
 
   const sections = [];
   let currentKey = null;
-  visibleDialogs.forEach(d => {
+  filteredDialogs.forEach(d => {
     const key = getSectionKey(d.lastAt);
     if (key !== currentKey) {
       sections.push({ key, label: sectionLabel[key], items: [] });
@@ -275,9 +303,10 @@ const DialogsPanel = forwardRef(({
   const hasBg = !!bgCss;
   const bgIsUrl = isUrlBg(dialogsBg);
 
-  // [2.34.4] для URL — только backgroundImage, затемняет ::before в CSS.
-  // Никакого второго linear-gradient.
-  const panelStyle = hasBg
+  // [2.35.28] Пока URL-фон грузится — фон не рисуем, показываем маскота-плейсхолдер
+  const showBgLoading = bgIsUrl && !bgLoaded;
+
+  const panelStyle = hasBg && !showBgLoading
     ? bgIsUrl
       ? {
           backgroundImage: bgCss,
@@ -365,7 +394,35 @@ const DialogsPanel = forwardRef(({
           </button>
         </header>
 
+        {/* [2.35.28] Поиск по имени */}
+        <div className="dialogs-search-wrap">
+          <input
+            className="dialogs-search-input"
+            type="text"
+            placeholder="Поиск по имени..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="dialogs-search-clear"
+              onClick={() => setSearchQuery('')}
+              aria-label="Очистить"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         <div className="dialogs-list">
+          {/* [2.35.28] Плейсхолдер-маскот пока URL-фон грузится */}
+          {showBgLoading && (
+            <div className="dialogs-bg-loading" aria-hidden="true">
+              <div className="dialogs-bg-loading-mascot" />
+            </div>
+          )}
+
           {visibleDialogs.length === 0 && (
             <div className="dialogs-empty">
               <div className="dialogs-empty-orbit">
@@ -378,6 +435,12 @@ const DialogsPanel = forwardRef(({
                 Открой панель игроков <b>👥</b>, найди кого-нибудь,
                 нажми <b>✉️</b> — и начнётся первый разговор.
               </div>
+            </div>
+          )}
+
+          {visibleDialogs.length > 0 && filteredDialogs.length === 0 && (
+            <div className="dialogs-search-empty">
+              Ничего не найдено
             </div>
           )}
 

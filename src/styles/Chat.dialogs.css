@@ -881,3 +881,126 @@ body.dark .dialogs-bg-overlay {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 }
+
+/* ============================================================= */
+/* [2.35.28] Поиск по имени + плейсхолдер URL-фона                */
+/* ============================================================= */
+
+.dialogs-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px 4px;
+  flex-shrink: 0;
+}
+
+.dialogs-search-input {
+  flex: 1;
+  padding: 8px 32px 8px 12px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  touch-action: manipulation;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dialogs-search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.dialogs-search-input:focus {
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.18);
+}
+.dialogs-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dialogs-search-clear {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  touch-action: manipulation;
+  transition: transform 0.12s, color 0.15s;
+}
+.dialogs-search-clear:active {
+  transform: translateY(-50%) scale(0.88);
+  color: var(--text);
+}
+
+.dialogs-panel--custom .dialogs-search-input {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #111;
+}
+body.dark .dialogs-panel--custom .dialogs-search-input {
+  background: rgba(20, 25, 40, 0.85);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #EAF2FA;
+}
+
+.dialogs-search-empty {
+  text-align: center;
+  padding: 32px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ===== Плейсхолдер: маскот пульсирует пока URL-фон грузится ===== */
+
+.dialogs-bg-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  pointer-events: none;
+}
+
+.dialogs-bg-loading-mascot {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  animation: dialogsBgMascotPulse 1.4s ease-in-out infinite;
+}
+
+body.dark .dialogs-bg-loading-mascot {
+  border-color: #3BB5E8;
+}
+
+@keyframes dialogsBgMascotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+/* Плейсхолдер живёт поверх списка, но не мешает поиску */
+.dialogs-panel--custom .dialogs-list {
+  position: relative;
+}
