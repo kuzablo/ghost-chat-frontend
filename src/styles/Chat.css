@@ -35,7 +35,6 @@
   --radius-md: 14px;
   --radius-sm: 10px;
 
-  /* [2.31.3] кольцо long-press — единый источник */
   --ring-color: #3BB5E8;
   --ring-color-faded: rgba(59, 181, 232, 0.15);
   --ring-duration-msg: 1s;
@@ -205,6 +204,7 @@ body {
 
 .msg {
   display: flex;
+  width: 100%;
   align-items: flex-start;
   gap: 8px;
   margin-bottom: 10px;
@@ -231,8 +231,6 @@ body {
   box-shadow: 0 2px 0 rgba(0,0,0,0.15);
 }
 
-/* [2.32.41] метка забаненного навсегда: красная обводка + бейдж 🚫
-   overflow: visible — чтобы бейдж в углу не обрезался */
 .msg-avatar--banned {
   overflow: visible;
   border-color: var(--danger) !important;
@@ -266,7 +264,6 @@ body {
   transition: background 0.2s, border-color 0.2s;
 }
 
-/* [2.32.23] при редактировании — на всю ширину */
 .msg-content--editing {
   max-width: 100%;
   width: 100%;
@@ -476,9 +473,7 @@ body.dark .msg-reaction-count {
   opacity: 1;
 }
 
-/* ============================================================= */
-/* [2.32.23] Панель редактирования — textarea + кнопки снизу     */
-/* ============================================================= */
+/* ===== Панель редактирования ===== */
 
 .msg-edit-area {
   display: flex;
@@ -1133,8 +1128,6 @@ button:active {
   position: relative;
 }
 
-/* ===== Подсветка сообщения, к которому перепрыгнули по цитате ===== */
-
 .msg--highlight .msg-content:not(.msg-content--image-only),
 .msg--highlight .msg-image-only-wrap {
   animation: msgHighlightPulse 1.6s ease-out;
@@ -1155,8 +1148,6 @@ button:active {
   }
 }
 
-/* ===== Реакции поверх пикера ===== */
-
 .msg-reactions--above-picker {
   z-index: 20;
   transform: translateY(65%) scale(1.15);
@@ -1176,7 +1167,7 @@ button:active {
 }
 
 /* ============================================================= */
-/* [2.21.0] Плавное переключение темы                             */
+/* Плавное переключение темы                                     */
 /* ============================================================= */
 
 ::view-transition-old(root),
@@ -1248,9 +1239,7 @@ body.dark .theme-icon-moon {
   transform: rotate(120deg) scale(0.4);
 }
 
-/* ============================================================= */
-/* [2.32.19] бурст ❤️ — кружок как у реакции, в точке клика       */
-/* ============================================================= */
+/* ===== бурст ❤️ ===== */
 
 .msg-heart-burst {
   position: absolute;
@@ -1278,9 +1267,7 @@ body.dark .theme-icon-moon {
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
 }
 
-/* ============================================================= */
-/* [2.32.36] Свайп-подсветка сообщения (управляется через DOM)    */
-/* ============================================================= */
+/* ===== Свайп-подсветка ===== */
 
 .msg-swipe-glow {
   position: absolute;
@@ -1340,16 +1327,12 @@ body.dark .theme-icon-moon {
   }
 }
 
-/* ============================================================= */
-/* [2.32.28] Склейка подряд от одного автора                     */
-/* ============================================================= */
+/* ===== Склейка подряд от одного автора ===== */
 
-/* placeholder под аватар у не-first сообщений */
 .msg-avatar--placeholder {
   visibility: hidden;
 }
 
-/* между склеенными — 0 отступ, бордеры накладываются */
 .msg--in-group {
   margin-bottom: 0;
 }
@@ -1358,7 +1341,6 @@ body.dark .theme-icon-moon {
   margin-top: -2px;
 }
 
-/* внутренние (смежные) углы — плоские */
 .msg--in-group:not(.msg--group-start) .msg-content {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
@@ -1369,12 +1351,10 @@ body.dark .theme-icon-moon {
   border-bottom-right-radius: 0;
 }
 
-/* последний в группе отбит от следующей карточки */
 .msg--group-end {
   margin-bottom: 10px;
 }
 
-/* плавный переход при распаде группы во время редактирования */
 .msg-content {
   transition:
     border-radius 0.18s ease,
@@ -1383,15 +1363,12 @@ body.dark .theme-icon-moon {
     border-color 0.2s;
 }
 
-/* в image-only склейки нет */
 .msg--image-only {
   margin-bottom: 10px;
 }
 
 /* ============================================================= */
-/* [2.35.26] theme-switching — гасим transitions на время смены    */
-/*           темы. Иначе сотни элементов одновременно начинают     */
-/*           анимировать цвет → фриз на iOS.                       */
+/* theme-switching — гасим transitions на время смены темы         */
 /* ============================================================= */
 
 body.theme-switching,
@@ -1404,12 +1381,10 @@ body.theme-switching *::after {
 }
 
 /* ============================================================= */
-/* [2.35.41] Свои сообщения в общем чате — справа, как в личке    */
+/* [2.35.44] Свои сообщения — только справа. Цвет не трогаем      */
 /* ============================================================= */
 
-/* Свои — выравнивание вправо, аватар скрыт, карточка синяя */
 .msg--own {
-  flex-direction: row-reverse;
   justify-content: flex-end;
 }
 
@@ -1418,63 +1393,16 @@ body.theme-switching *::after {
   display: none;
 }
 
-.msg--own .msg-content {
-  background: var(--btn-bg);
-  border-color: var(--btn-border);
-  color: var(--btn-text);
-}
-
-.msg--own .msg-text {
-  color: var(--btn-text);
-}
-
-.msg--own .msg-nick {
-  color: var(--btn-text);
-  opacity: 0.9;
-}
-
-.msg--own .msg-time {
-  color: var(--btn-text);
-  opacity: 0.7;
-}
-
-/* Reply-цитата у своих — чуть прозрачнее */
-.msg--own .msg-reply-quote {
-  background: rgba(255, 255, 255, 0.15);
-  border-left-color: rgba(255, 255, 255, 0.7);
-}
-.msg--own .msg-reply-quote-nick {
-  color: rgba(255, 255, 255, 0.9);
-}
-.msg--own .msg-reply-quote-text {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-/* Реакции у своих — позиция правая */
 .msg--own .msg-reactions {
   left: auto;
   right: 8px;
 }
 
-/* Пикер реакций у своих — справа */
 .msg--own .msg-reaction-picker {
   left: auto;
   right: 0;
 }
 
-/* Edit у своих — сохранение контраста */
-.msg--own .msg-edit-input {
-  background: rgba(255, 255, 255, 0.95);
-  color: #111;
-}
-
-.msg--own .msg-edit-btn--cancel {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--btn-text);
-  border-color: rgba(255, 255, 255, 0.6);
-}
-
-/* image-only у своих — тоже справа, аватар скрыт */
 .msg--own.msg--image-only .msg-avatar {
   display: none;
 }

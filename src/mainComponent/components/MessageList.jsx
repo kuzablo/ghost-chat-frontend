@@ -252,7 +252,6 @@ const MessageList = ({
       card.style.transform = '';
     }
 
-    // [2.35.20] Стикер не редактируется — longPress не запускаем
     if (m.userId === myId && !m.stickerUrl) {
       longPressRef.current.ringTimer = setTimeout(() => {
         longPressRef.current.ringTimer = null;
@@ -288,7 +287,6 @@ const MessageList = ({
         return;
       }
 
-      // [2.35.20] Стикер: только свайп вправо (delete). Влево — игнор.
       if (dx < 0 && m.stickerUrl) {
         r.active = false;
         r.cardEl = null;
@@ -366,7 +364,6 @@ const MessageList = ({
     r.ready = false;
     r.msg = null;
 
-    // [2.35.20] Стикер не поддерживает reply — только delete
     if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply && !m.stickerUrl) {
       resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
       onReply(m);
@@ -455,13 +452,12 @@ const MessageList = ({
             </div>
           ) : null;
 
-          // [2.35.20] Стикер — ник над гифкой, свайп вправо для удаления
           if (isSticker) {
             return (
               <React.Fragment key={m.id}>
                 {dateDivider}
                 <div
-                  className={`msg msg--sticker ${isOwn ? 'msg--sticker-own' : 'msg--sticker-other'}`}
+                  className={`msg msg--sticker ${isOwn ? 'msg--own' : 'msg--other'}`}
                   data-msg-id={m.id}
                 >
                   <div className="msg-swipe-glow msg-swipe-glow--delete" />
@@ -514,7 +510,10 @@ const MessageList = ({
             return (
               <React.Fragment key={m.id}>
                 {dateDivider}
-                <div className={`msg msg--image-only ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
+                <div
+                  className={`msg msg--image-only ${isOwn ? 'msg--own' : 'msg--other'}`}
+                  data-msg-id={m.id}
+                >
                   {renderMsgAvatar(m.userId, m.nickname)}
 
                   <div className="msg-swipe-glow msg-swipe-glow--reply" />

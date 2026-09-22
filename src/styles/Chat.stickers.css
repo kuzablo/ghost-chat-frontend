@@ -261,7 +261,6 @@ body.dark .input-icon-btn:hover {
   background: #1D2A42;
 }
 
-/* Компактный вариант для лички */
 .input-icon-btn--compact {
   width: 42px;
   height: 42px;
@@ -445,7 +444,8 @@ body.dark .sticker-panel-overlay {
 }
 
 /* ============================================================= */
-/* [2.35.20] Стикер в общем чате — ник + свайп вправо = удалить   */
+/* [2.35.44] Стикер в общем чате — крупнее (220×220)              */
+/*           выравнивание через msg--own / msg--other             */
 /* ============================================================= */
 
 .msg--sticker {
@@ -459,11 +459,13 @@ body.dark .sticker-panel-overlay {
   position: relative;
   touch-action: pan-y;
 }
-.msg--sticker-own {
+
+.msg--sticker.msg--own {
   justify-content: flex-end;
   padding-right: 6px;
 }
-.msg--sticker-other {
+
+.msg--sticker.msg--other {
   justify-content: flex-start;
   padding-left: 6px;
 }
@@ -477,7 +479,8 @@ body.dark .sticker-panel-overlay {
   touch-action: pan-y;
   will-change: transform;
 }
-.msg--sticker-own .msg-sticker-wrap {
+
+.msg--sticker.msg--own .msg-sticker-wrap {
   align-items: flex-end;
 }
 
@@ -488,18 +491,19 @@ body.dark .sticker-panel-overlay {
   padding: 0 4px;
   line-height: 1;
   opacity: 0.85;
-  max-width: 140px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.msg--sticker-own .msg-sticker-nick {
+
+.msg--sticker.msg--own .msg-sticker-nick {
   color: var(--btn-bg);
 }
 
 .msg-sticker-img {
-  width: 140px;
-  height: 140px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
   display: block;
   user-select: none;
@@ -527,7 +531,7 @@ body.dark .sticker-panel-overlay {
   border: none;
   padding: 0;
   margin-bottom: 8px;
-  max-width: 160px;
+  max-width: 200px;
   cursor: default;
 }
 .private-msg--sticker .private-msg-sticker-nick {
@@ -543,8 +547,8 @@ body.dark .sticker-panel-overlay {
   text-align: right;
 }
 .private-msg--sticker .private-msg-sticker {
-  width: 140px;
-  height: 140px;
+  width: 180px;
+  height: 180px;
   object-fit: contain;
   display: block;
   user-select: none;
@@ -568,10 +572,16 @@ body.dark .sticker-panel-overlay {
     grid-template-columns: repeat(4, 1fr);
     gap: 6px;
   }
-  .msg-sticker-img,
+  .msg-sticker-img {
+    width: 180px;
+    height: 180px;
+  }
+  .msg-sticker-nick {
+    max-width: 180px;
+  }
   .private-msg--sticker .private-msg-sticker {
-    width: 120px;
-    height: 120px;
+    width: 150px;
+    height: 150px;
   }
   .input-icon-btn {
     width: 42px;
