@@ -6,7 +6,7 @@ import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
-import VoiceRecordingBar from './VoiceRecordingBar';
+import VoiceRecordingOverlay from './VoiceRecordingOverlay';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 
 const PICKER_AUTOHIDE_MS = 5000;
@@ -81,7 +81,7 @@ const PrivateChat = ({
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   const [voiceRecActive, setVoiceRecActive] = useState(false);
-  const [voiceRecCancel, setVoiceRecCancel] = useState(false);
+  const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
   const voiceLongPressTimerRef = useRef(null);
   const voiceStartXRef = useRef(0);
 
@@ -431,41 +431,50 @@ const PrivateChat = ({
     }
   }, []);
 
-  const finishVoice = useCallback(async () => {
+  const cancelVoice = useCallback(async () => {
+    stopVoicePressTimer();
+    voiceRec.cancel();
+    await voiceRec.stop();
+    setVoiceRecActive(false);
+    setVoiceRecFrozen(false);
+  }, [voiceRec, stopVoicePressTimer]);
+
+  const finalizeVoice = useCallback(async () => {
     stopVoicePressTimer();
     if (!voiceRecActive) return;
-    if (voiceRecCancel) voiceRec.cancel();
     const result = await voiceRec.stop();
     setVoiceRecActive(false);
-    setVoiceRecCancel(false);
+    setVoiceRecFrozen(false);
     if (result) await uploadAndSendVoice(result);
-  }, [voiceRecActive, voiceRecCancel, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
+  }, [voiceRecActive, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
 
-  sendVoiceMessageRef.current = finishVoice;
+  const sendVoiceNow = useCallback(async () => { await finalizeVoice(); }, [finalizeVoice]);
+  const cancelVoiceNow = useCallback(async () => { await cancelVoice(); }, [cancelVoice]);
+
+  sendVoiceMessageRef.current = () => {
+    if (!voiceRecActive) return;
+    voiceRec.pause();
+    setVoiceRecFrozen(true);
+  };
 
   const handleVoicePointerDown = useCallback((e) => {
     if (input.trim()) return;
     if (isUploading) return;
     voiceStartXRef.current = e.clientX;
-    setVoiceRecCancel(false);
     stopVoicePressTimer();
     voiceLongPressTimerRef.current = setTimeout(async () => {
       voiceLongPressTimerRef.current = null;
       const ok = await voiceRec.start();
-      if (ok) setVoiceRecActive(true);
+      if (ok) {
+        setVoiceRecActive(true);
+        setVoiceRecFrozen(false);
+      }
     }, 280);
   }, [input, isUploading, voiceRec, stopVoicePressTimer]);
 
-  const handleVoicePointerMove = useCallback((e) => {
-    if (!voiceRecActive) return;
-    const dx = e.clientX - voiceStartXRef.current;
-    if (dx < -80) setVoiceRecCancel(true);
-  }, [voiceRecActive]);
-
   const handleVoicePointerUp = useCallback(() => {
-    if (!voiceRecActive) { stopVoicePressTimer(); return; }
-    finishVoice();
-  }, [voiceRecActive, finishVoice, stopVoicePressTimer]);
+    stopVoicePressTimer();
+  }, [stopVoicePressTimer]);
 
   // ===== /VOICE =====
 
@@ -486,8 +495,6 @@ const PrivateChat = ({
   const activeMessage = pickerFor
     ? filteredMessages.find(x => x.id === pickerFor)
     : null;
-
-  const voiceRecording = voiceRecActive || voiceRec.recording;
 
   return (
     <>
@@ -648,12 +655,8 @@ const PrivateChat = ({
 
         {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
-        {voiceRecording ? (
-          <VoiceRecordingBar
-            duration={voiceRec.duration}
-            level={voiceRec.level}
-            cancelled={voiceRecCancel}
-          />
+        {voiceRecActive ? (
+          <div className="private-input-row private-input-row--voice-placeholder" aria-hidden="true" />
         ) : (
           <div className="private-input-row">
             <button
@@ -693,7 +696,6 @@ const PrivateChat = ({
               className="btn"
               onClick={input.trim() ? handleSend : undefined}
               onPointerDown={handleVoicePointerDown}
-              onPointerMove={handleVoicePointerMove}
               onPointerUp={handleVoicePointerUp}
               onPointerCancel={handleVoicePointerUp}
               title={input.trim() ? 'Отправить' : 'Удерживай для записи'}
@@ -705,6 +707,18 @@ const PrivateChat = ({
           </div>
         )}
       </div>
+
+      <VoiceRecordingOverlay
+        open={voiceRecActive}
+        duration={voiceRec.duration}
+        level={voiceRec.level}
+        paused={voiceRec.paused}
+        frozen={voiceRecFrozen}
+        onPause={voiceRec.pause}
+        onResume={voiceRec.resume}
+        onSend={sendVoiceNow}
+        onCancel={cancelVoiceNow}
+      />
 
       {activeMessage && pickerAnchor && (
         <ReactionWheel

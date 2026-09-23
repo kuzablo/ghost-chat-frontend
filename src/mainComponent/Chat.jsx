@@ -33,7 +33,7 @@ import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
-import VoiceRecordingBar from './components/VoiceRecordingBar';
+import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
 import { useVoiceRecorder, extFromMime } from './hooks/useVoiceRecorder';
 
 import '../styles/Chat.css';
@@ -52,19 +52,13 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 
+// feat(voice): оверлей записи с маскотом (v2.35.58)
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
 // [2.35.44] свои сообщения справа без синего + стикер 220px
-// [2.35.33] фон диалогов в PlayersPanel + орбита непрочитанных
-// [2.35.32] спутники на индивидуальных орбитах
-// [2.35.30] орбитальное уведомление о личных
-// [2.35.21] input-icon-btn — единые SVG-кнопки стикеров и фото
-// [2.35.16] стикеры: панель, отправка в чат и личку
-// [2.35.12] Android PWA баннер
-// [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.57';
+const VERSION = '2.35.58';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -183,7 +177,7 @@ const Chat = () => {
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [voiceRecActive, setVoiceRecActive] = useState(false);
-  const [voiceRecCancel, setVoiceRecCancel] = useState(false);
+  const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
   const voiceLongPressTimerRef = useRef(null);
   const voiceStartXRef = useRef(0);
 
@@ -1193,44 +1187,50 @@ const Chat = () => {
     }
   }, []);
 
-  const finishVoice = useCallback(async () => {
+  const cancelVoice = useCallback(async () => {
+    stopVoicePressTimer();
+    voiceRec.cancel();
+    await voiceRec.stop();
+    setVoiceRecActive(false);
+    setVoiceRecFrozen(false);
+  }, [voiceRec, stopVoicePressTimer]);
+
+  const finalizeVoice = useCallback(async () => {
     stopVoicePressTimer();
     if (!voiceRecActive) return;
-    if (voiceRecCancel) voiceRec.cancel();
     const result = await voiceRec.stop();
     setVoiceRecActive(false);
-    setVoiceRecCancel(false);
+    setVoiceRecFrozen(false);
     if (result) await uploadAndSendVoice(result);
-  }, [voiceRecActive, voiceRecCancel, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
+  }, [voiceRecActive, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
 
-  sendVoiceMessageRef.current = finishVoice;
+  const sendVoiceNow = useCallback(async () => { await finalizeVoice(); }, [finalizeVoice]);
+  const cancelVoiceNow = useCallback(async () => { await cancelVoice(); }, [cancelVoice]);
+
+  sendVoiceMessageRef.current = () => {
+    if (!voiceRecActive) return;
+    voiceRec.pause();
+    setVoiceRecFrozen(true);
+  };
 
   const handleVoicePointerDown = useCallback((e) => {
     if (input.trim()) return;
     if (isUploading) return;
     voiceStartXRef.current = e.clientX;
-    setVoiceRecCancel(false);
     stopVoicePressTimer();
     voiceLongPressTimerRef.current = setTimeout(async () => {
       voiceLongPressTimerRef.current = null;
       const ok = await voiceRec.start();
-      if (ok) setVoiceRecActive(true);
+      if (ok) {
+        setVoiceRecActive(true);
+        setVoiceRecFrozen(false);
+      }
     }, 280);
   }, [input, isUploading, voiceRec, stopVoicePressTimer]);
 
-  const handleVoicePointerMove = useCallback((e) => {
-    if (!voiceRecActive) return;
-    const dx = e.clientX - voiceStartXRef.current;
-    if (dx < -80) setVoiceRecCancel(true);
-  }, [voiceRecActive]);
-
   const handleVoicePointerUp = useCallback(() => {
-    if (!voiceRecActive) {
-      stopVoicePressTimer();
-      return;
-    }
-    finishVoice();
-  }, [voiceRecActive, finishVoice, stopVoicePressTimer]);
+    stopVoicePressTimer();
+  }, [stopVoicePressTimer]);
 
   // ===== /VOICE =====
 
@@ -1491,7 +1491,7 @@ const Chat = () => {
     setLogoutConfirm(false);
   }, []);
 
-  const voiceRecording = voiceRecActive || voiceRec.recording;
+  const voiceRecording = voiceRecActive;
 
   return (
     <>
@@ -1797,12 +1797,8 @@ const Chat = () => {
             </div>
           )}
 
-          {voiceRecording ? (
-            <VoiceRecordingBar
-              duration={voiceRec.duration}
-              level={voiceRec.level}
-              cancelled={voiceRecCancel}
-            />
+          {voiceRecActive ? (
+            <div className="input-row input-row--voice-placeholder" aria-hidden="true" />
           ) : (
             <div
               className="input-row"
@@ -1854,7 +1850,6 @@ const Chat = () => {
                 className={`send-btn ${sending ? 'sending' : ''}`}
                 onClick={input.trim() ? handleSendMessage : undefined}
                 onPointerDown={handleVoicePointerDown}
-                onPointerMove={handleVoicePointerMove}
                 onPointerUp={handleVoicePointerUp}
                 onPointerCancel={handleVoicePointerUp}
                 disabled={!isAuth || isUploading || sending}
@@ -1944,6 +1939,18 @@ const Chat = () => {
           />
         </div>
       </div>
+
+      <VoiceRecordingOverlay
+        open={voiceRecActive}
+        duration={voiceRec.duration}
+        level={voiceRec.level}
+        paused={voiceRec.paused}
+        frozen={voiceRecFrozen}
+        onPause={voiceRec.pause}
+        onResume={voiceRec.resume}
+        onSend={sendVoiceNow}
+        onCancel={cancelVoiceNow}
+      />
 
       {!isAuth && (
         <AuthModal

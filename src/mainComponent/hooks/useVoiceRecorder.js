@@ -1,9 +1,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.35.57] Запись голосового. MediaRecorder + Analyser для индикатора.
-  Приоритет форматов: mp4/aac → webm/opus (по поддержке).
-  Waveform считается из AudioBuffer после записи.
+  [2.35.58] Запись голосового с pause/resume.
+            mp4/aac → webm/opus (по поддержке).
 */
 
 const PREFERRED_MIMES = [
@@ -50,6 +49,7 @@ const computeWaveform = async (blob, samples = 40) => {
 
 export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [level, setLevel] = useState(0);
 
@@ -58,6 +58,8 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
   const startTimeRef = useRef(0);
+  const accumulatedMsRef = useRef(0);
+  const pauseStartedAtRef = useRef(0);
   const analyserRef = useRef(null);
   const audioCtxRef = useRef(null);
   const rafRef = useRef(null);
@@ -66,6 +68,11 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
   const onAutoStopRef = useRef(onAutoStop);
 
   useEffect(() => { onAutoStopRef.current = onAutoStop; }, [onAutoStop]);
+
+  const getElapsedMs = () => {
+    if (paused) return accumulatedMsRef.current;
+    return accumulatedMsRef.current + (Date.now() - startTimeRef.current);
+  };
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -80,6 +87,8 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
     }
     recorderRef.current = null;
     analyserRef.current = null;
+    accumulatedMsRef.current = 0;
+    pauseStartedAtRef.current = 0;
   }, []);
 
   const start = useCallback(async () => {
@@ -124,34 +133,66 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
       const data = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
         if (!analyserRef.current) return;
-        analyserRef.current.getByteTimeDomainData(data);
-        let peak = 0;
-        for (let i = 0; i < data.length; i++) {
-          const v = Math.abs(data[i] - 128) / 128;
-          if (v > peak) peak = v;
+        if (!pausedRefCurrent()) {
+          analyserRef.current.getByteTimeDomainData(data);
+          let peak = 0;
+          for (let i = 0; i < data.length; i++) {
+            const v = Math.abs(data[i] - 128) / 128;
+            if (v > peak) peak = v;
+          }
+          setLevel(peak);
+        } else {
+          setLevel(0);
         }
-        setLevel(peak);
         rafRef.current = requestAnimationFrame(tick);
       };
       rafRef.current = requestAnimationFrame(tick);
     } catch { /* analyser — необязателен */ }
 
+    accumulatedMsRef.current = 0;
     startTimeRef.current = Date.now();
     setDuration(0);
+    setPaused(false);
     setRecording(true);
 
     rec.start();
 
     timerRef.current = setInterval(() => {
-      const d = (Date.now() - startTimeRef.current) / 1000;
+      const dMs = getElapsedMs();
+      const d = dMs / 1000;
       setDuration(d);
       if (d >= maxDurationSec) {
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
         if (onAutoStopRef.current) onAutoStopRef.current();
       }
     }, 100);
 
     return true;
   }, [cleanup, maxDurationSec]);
+
+  // [2.35.58] ref-обёртка, чтобы анализатор знал текущее paused без пересоздания
+  const pausedRefCurrent = () => pausedRef.current;
+  const pausedRef = useRef(false);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+  const pause = useCallback(() => {
+    const rec = recorderRef.current;
+    if (!rec || pausedRef.current) return;
+    try { rec.pause(); } catch { /* noop */ }
+    accumulatedMsRef.current += Date.now() - startTimeRef.current;
+    pauseStartedAtRef.current = Date.now();
+    setPaused(true);
+    setLevel(0);
+  }, []);
+
+  const resume = useCallback(() => {
+    const rec = recorderRef.current;
+    if (!rec || !pausedRef.current) return;
+    try { rec.resume(); } catch { /* noop */ }
+    startTimeRef.current = Date.now();
+    pauseStartedAtRef.current = 0;
+    setPaused(false);
+  }, []);
 
   const cancel = useCallback(() => {
     cancelledRef.current = true;
@@ -162,18 +203,24 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
     if (!rec) {
       cleanup();
       setRecording(false);
+      setPaused(false);
       return null;
     }
     const wasCancelled = cancelledRef.current;
-    const startedAt = startTimeRef.current;
-    const durMs = Date.now() - startedAt;
+    const wasPaused = pausedRef.current;
+    const durMs = wasPaused
+      ? accumulatedMsRef.current
+      : accumulatedMsRef.current + (Date.now() - startTimeRef.current);
 
     await new Promise((resolve) => {
       let done = false;
       const finish = () => { if (!done) { done = true; resolve(); } };
       rec.onstop = finish;
       setTimeout(finish, 1500);
-      try { rec.stop(); } catch { finish(); }
+      try {
+        if (wasPaused) { try { rec.resume(); } catch { /* noop */ } }
+        rec.stop();
+      } catch { finish(); }
     });
 
     const chunks = chunksRef.current.slice();
@@ -181,6 +228,7 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
 
     cleanup();
     setRecording(false);
+    setPaused(false);
     setLevel(0);
 
     if (wasCancelled) return null;
@@ -201,7 +249,7 @@ export const useVoiceRecorder = ({ maxDurationSec = 60, onAutoStop } = {}) => {
 
   useEffect(() => () => { cleanup(); }, [cleanup]);
 
-  return { recording, duration, level, start, cancel, stop };
+  return { recording, paused, duration, level, start, pause, resume, cancel, stop };
 };
 
 export const extFromMime = (mime = '') => {
