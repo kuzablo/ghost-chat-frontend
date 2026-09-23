@@ -59,6 +59,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// feat(mascot): каркас полёта через WAAPI (v2.37.7)
 // refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
 // refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
 // refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
@@ -206,10 +207,9 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-    // [2.37.7] Шаг 1: ref на маскота в шапке и на цель полёта (пока — кнопка диалогов).
+  // [2.37.7] Полёт маскота: ref на источник (маскот шапки) и цель (кнопка диалогов).
   const headerMascotRef = useRef(null);
   const dialogsToggleRef = useRef(null);
-  const [mascotInFlight, setMascotInFlight] = useState(false);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -239,18 +239,12 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  // [2.37.7] Каркас полёта. Пока триггер тестовый — кнопка в шапке.
-  // В Шаге 2 свяжем с unreadUserObjects.length.
-  const {
-    flying: mascotFlying,
-    flyingStyle: mascotFlyingStyle,
-    startFlight: startMascotFlight,
-  } = useMascotFlight({
+  // [2.37.7] Каркас полёта. Триггер пока — двойной клик по маскоту.
+  // В Шаге 2 свяжем с unreadUserObjects.length и заменим цель на орбиту.
+  const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
     toRef: dialogsToggleRef,
     duration: 600,
-    onTakeoff: () => setMascotInFlight(true),
-    onLand: () => setMascotInFlight(false),
   });
 
   const sendVoiceMessageRef = useRef(null);
@@ -490,8 +484,7 @@ const Chat = () => {
     ? avatarCache[fullscreenMessage.userId]
     : null;
 
-  // [2.37.6] Жесты fullscreen: свайпы между фото, свайп вниз — закрыть,
-  // двойной тап — ❤️. Плюс toggle/close/pick для ReactionWheel.
+  // [2.37.6] Жесты fullscreen.
   const {
     fsImgRef,
     fsOverlayRef,
@@ -1273,32 +1266,6 @@ const Chat = () => {
         </button>
       )}
 
-      {/* [2.37.7] ТЕСТ Шаг 1: кнопка «Полёт маскота». Уберём в Шаге 2. */}
-      {isAuth && (
-        <button
-          onClick={startMascotFlight}
-          disabled={mascotFlying}
-          title="Тест: полёт маскота"
-          style={{
-            position: 'fixed',
-            top: 10,
-            left: 114,
-            zIndex: 2200,
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'var(--card-bg)',
-            border: '3px solid var(--card-border)',
-            color: 'var(--text)',
-            fontSize: 16,
-            cursor: 'pointer',
-            opacity: mascotFlying ? 0.5 : 1,
-          }}
-        >
-          ✈️
-        </button>
-      )}
-
       {isAuth && (
         <PlayersPanel
           ref={playersOverlayRef}
@@ -1454,7 +1421,7 @@ const Chat = () => {
                 className={
                   `chat-header-logo` +
                   (yt.isPlaying || voiceRecording ? ' mascot-playing' : '') +
-                  (mascotInFlight ? ' mascot-in-flight' : '')
+                  (mascotFlying ? ' mascot-in-flight' : '')
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
@@ -1462,6 +1429,7 @@ const Chat = () => {
                 onPointerUp={handleMascotPointerUp}
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
+                onDoubleClick={startMascotFlight}
               />
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
@@ -1950,11 +1918,6 @@ const Chat = () => {
               </div>
             )}
         </div>
-      )}
-
-      {/* [2.37.7] Летающий маскот: показывается пока mascotFlying === true */}
-      {mascotFlying && mascotFlyingStyle && (
-        <div className="mascot-flying" style={mascotFlyingStyle} aria-hidden="true" />
       )}
 
       <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>

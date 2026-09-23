@@ -1,15 +1,15 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.37.7] Каркас полёта маскота. FLIP-техника:
-  замер from/to, отрисовка летающего элемента в стартовой точке,
-  transform к целевой точке за duration, завершение по таймауту.
+  [2.37.7] Полёт маскота через Web Animations API.
 
-  Пока без привязки к unread — триггерится вручную для теста.
-  В Шаге 2 свяжем с unreadUserObjects.length.
+  Элемент создаётся императивно (document.createElement) и
+  анимируется браузером через element.animate(). React в полёт
+  не вмешивается — state flying нужен только чтобы погасить
+  оригинал в шапке.
 
-  flyingStyle — стиль для летающего <div>, приходит в ready-виде,
-  родителю нужно только разложить его по элементу.
+  Почему не FLIP через setState: transition: none → 600ms после
+  двух RAF не всегда срабатывает (батчинг setState). WAAPI надёжнее.
 */
 
 const DEFAULT_DURATION = 600;
@@ -33,96 +33,84 @@ export const useMascotFlight = ({
   onTakeoff,
 } = {}) => {
   const [flying, setFlying] = useState(false);
-  const [style, setStyle] = useState(null);
 
-  const timerRef = useRef(null);
-  const mountedRef = useRef(true);
   const flyingRef = useRef(false);
+  const nodeRef = useRef(null);
+  const animRef = useRef(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
+      // Чистим всё, что осталось от полёта
+      try { animRef.current?.cancel(); } catch { /* noop */ }
+      try { nodeRef.current?.remove(); } catch { /* noop */ }
+      nodeRef.current = null;
+      animRef.current = null;
+      flyingRef.current = false;
     };
-  }, []);
-
-  const cancelFlight = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    flyingRef.current = false;
-    if (!mountedRef.current) return;
-    setFlying(false);
-    setStyle(null);
   }, []);
 
   const startFlight = useCallback(() => {
     if (flyingRef.current) return;
 
-    const from = getRect(fromRef?.current);
-    const to = getRect(toRef?.current);
-    if (!from || !to) {
-      console.warn('[useMascotFlight] from или to ref не навешан');
+    const fromEl = fromRef?.current;
+    const toEl = toRef?.current;
+    if (!fromEl || !toEl) {
+      console.warn('[useMascotFlight] fromRef или toRef не навешан');
       return;
     }
 
-    if (onTakeoff) onTakeoff();
+    const from = getRect(fromEl);
+    const to = getRect(toEl);
+    if (!from || !to) return;
+
+    // Создаём летающий элемент
+    const el = document.createElement('div');
+    el.className = 'mascot-flying';
+    el.style.left = `${from.left}px`;
+    el.style.top = `${from.top}px`;
+    el.style.width = `${from.width}px`;
+    el.style.height = `${from.height}px`;
+    document.body.appendChild(el);
+    nodeRef.current = el;
+
     flyingRef.current = true;
-
-    // Стартовая геометрия: летающий элемент стоит ровно на from.
-    // transform — точка отсчёта, без смещения.
-    setStyle({
-      left: `${from.left}px`,
-      top: `${from.top}px`,
-      width: `${from.width}px`,
-      height: `${from.height}px`,
-      transform: 'translate3d(0, 0, 0) scale(1)',
-      opacity: 1,
-      transition: 'none',
-    });
     setFlying(true);
+    if (onTakeoff) onTakeoff();
 
-    // Смещение центра from → центр to, и коэффициент роста.
-    // transform-origin: center (в CSS), поэтому считаем по центрам.
-    const dx = to.left - from.left + (to.width - from.width) / 2;
-    const dy = to.top - from.top + (to.height - from.height) / 2;
+    // Смещение по центрам + коэффициент роста
+    const dx = (to.left - from.left) + (to.width - from.width) / 2;
+    const dy = (to.top - from.top) + (to.height - from.height) / 2;
     const scale = from.width > 0 ? to.width / from.width : 1;
 
-    // Двойной RAF — даём браузеру отрисовать стартовое состояние,
-    // потом меняем transform. Так transition сработает плавно.
-    requestAnimationFrame(() => {
-      if (!mountedRef.current) return;
-      requestAnimationFrame(() => {
-        if (!mountedRef.current) return;
-        setStyle({
-          left: `${from.left}px`,
-          top: `${from.top}px`,
-          width: `${from.width}px`,
-          height: `${from.height}px`,
-          transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})`,
-          opacity: 1,
-          transition: `transform ${duration}ms cubic-bezier(0.34, 1.2, 0.64, 1), opacity ${duration}ms ease-out`,
-        });
-      });
-    });
+    const anim = el.animate(
+      [
+        { transform: 'translate3d(0, 0, 0) scale(1)' },
+        { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})` },
+      ],
+      {
+        duration,
+        easing: 'cubic-bezier(0.34, 1.2, 0.64, 1)',
+        fill: 'forwards',
+      }
+    );
+    animRef.current = anim;
 
-    // Завершение по таймауту (надёжнее transitionend).
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
+    anim.onfinish = () => {
+      if (!mountedRef.current) {
+        el.remove();
+        return;
+      }
+      el.remove();
+      nodeRef.current = null;
+      animRef.current = null;
       flyingRef.current = false;
-      if (!mountedRef.current) return;
       setFlying(false);
-      setStyle(null);
       if (onLand) onLand();
-    }, duration + 30);
-  }, [fromRef, toRef, duration, onLand, onTakeoff]);
+    };
+  }, [fromRef, toRef, duration, onTakeoff, onLand]);
 
-  return {
-    flying,
-    flyingStyle: style,
-    startFlight,
-    cancelFlight,
-  };
+  return { flying, startFlight };
 };

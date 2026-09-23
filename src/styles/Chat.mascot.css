@@ -1,8 +1,9 @@
 /*
   [2.37.7] Добавлен .mascot-flying — летающий элемент для анимации
-           перемещения маскота между шапкой и орбитой.
-  [2.32.13] без изменений по логике; правка только в Chat.jsx (моментальное скрытие)
-  [2.32.12] добавлен стиль .mascot-start-hint — подсказка «зажми» над маскотом
+           перемещения маскота. Класс навешивается из JS на элемент,
+           который создаёт useMascotFlight императивно.
+  [2.32.13] без изменений по логике; правка только в Chat.jsx
+  [2.32.12] добавлен стиль .mascot-start-hint
   [2.32.10] откат к рабочей версии — оверлей убран
   [2.15.23] Стили маскота-радио.
 */
@@ -66,7 +67,7 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  transition: transform 0.15s ease-out;
+  transition: transform 0.15s ease-out, opacity 120ms ease-out;
 }
 
 .chat-header-logo.mascot-playing {
@@ -85,6 +86,12 @@
 
 .chat-header-logo:active {
   cursor: grabbing;
+}
+
+/* Пока маскот летит — оригинал в шапке гаснет */
+.chat-header-logo.mascot-in-flight {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .mascot-equalizer {
@@ -176,7 +183,7 @@
 }
 
 /* ============================================================= */
-/* [2.37.7] Летающий маскот — FLIP-анимация между шапкой и орбитой */
+/* [2.37.7] Летающий маскот                                        */
 /* ============================================================= */
 
 .mascot-flying {
@@ -187,17 +194,11 @@
   border: 2px solid var(--card-border);
   background: #FFF url('/mascot.png') center / cover no-repeat;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-  will-change: transform, opacity;
+  will-change: transform;
   transform-origin: center;
 }
 
 body.dark .mascot-flying {
   border-color: #3BB5E8;
   background-color: #1D2A42;
-}
-
-/* Пока летит — прячем оба «конца», чтобы не было дубля */
-.chat-header-logo.mascot-in-flight {
-  opacity: 0;
-  transition: opacity 120ms ease-out;
 }
