@@ -71,7 +71,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.9';
+const VERSION = '2.37.10';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -228,6 +228,9 @@ const Chat = () => {
   const inputDragYRef = useRef(0);
 
   const titleTimeoutRef = useRef(null);
+    // [2.37.10] Детектор двойного тапа: onDoubleClick на мобиле не срабатывает.
+  // Работаем через onClick + окно 350мс.
+  const lastTitleTapRef = useRef(0);
 
   const yt = useYouTubePlayer();
   const versionCheck = useVersionCheck();
@@ -1206,6 +1209,17 @@ const Chat = () => {
     setTimeout(() => setUpdateDeferred(false), UPDATE_DEFER_MS);
   }, []);
 
+    // [2.37.10] Двойной клик/тап по заголовку → полёт. Работает на ПК и мобиле.
+  const handleTitleTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTitleTapRef.current < 350) {
+      lastTitleTapRef.current = 0;
+      startMascotFlight();
+    } else {
+      lastTitleTapRef.current = now;
+    }
+  }, [startMascotFlight]);
+
   const voiceRecording = voiceRecActive;
 
   // [2.37.0] Занят ли юзер чем-то важным
@@ -1442,7 +1456,7 @@ const Chat = () => {
 
             <div
               className="chat-header-text"
-              onDoubleClick={startMascotFlight}
+              onClick={handleTitleTap}
               title="Двойной клик — тест: полёт маскота"
             >
               {trackTitleVisible && yt.trackTitle ? (
