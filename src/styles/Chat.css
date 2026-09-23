@@ -251,6 +251,10 @@ body {
   pointer-events: none;
 }
 
+/* [2.37.1] Объединены два блока .msg-content (было разнесено):
+   - position: relative нужен для .msg-reactions, .msg-edit-ring
+   - z-index: 1 — базовый слой, picker-open поднимается до 100
+   - display/max-width/padding — базовая карточка сообщения */
 .msg-content {
   display: inline-flex;
   flex-direction: column;
@@ -262,6 +266,8 @@ body {
   border-radius: var(--radius-md);
   padding: 1.5px 10px 6px;
   transition: background 0.2s, border-color 0.2s;
+  position: relative;
+  z-index: 1;
 }
 
 .msg-content--editing {
@@ -321,11 +327,6 @@ body {
 }
 
 /* ===== Реакции в общем чате ===== */
-.msg-content {
-  position: relative;
-  z-index: 1;
-}
-
 .msg-content--picker-open {
   z-index: 100;
 }
