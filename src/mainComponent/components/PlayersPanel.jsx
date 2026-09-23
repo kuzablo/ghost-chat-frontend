@@ -259,18 +259,23 @@ const PlayersPanel = forwardRef(({
           </div>
         )}
 
-        {/* [2.38.0] Орбита непрочитанных. Пока маскот летит сюда — orbitHidden=true,
-            орбита не рендерится, чтобы в центре не было двух маскотов. */}
-        {unreadUserObjects.length > 0 && !orbitHidden ? (
+        {/* [2.38.1] Узел орбиты рендерится всегда, когда есть непрочитанные.
+            Ref должен быть валиден — иначе маскот не знает координаты цели
+            и полёт не стартует. Внутри — OrbitNotification условно:
+            пока маскот летит (orbitHidden=true), орбиты нет —
+            иначе было бы два маскота одновременно. */}
+        {unreadUserObjects.length > 0 ? (
           <div
             ref={orbitSlotRef}
             className="players-header players-header--orbit"
           >
-            <OrbitNotification
-              users={unreadUserObjects}
-              onClick={onOpenDialogs}
-              className="pm-orbit--header"
-            />
+            {!orbitHidden && (
+              <OrbitNotification
+                users={unreadUserObjects}
+                onClick={onOpenDialogs}
+                className="pm-orbit--header"
+              />
+            )}
           </div>
         ) : (
           <h4 className="players-title">banjoboy's crew</h4>
