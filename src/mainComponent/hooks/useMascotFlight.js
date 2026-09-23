@@ -1,18 +1,18 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.6] Плавнее: duration 600→700, easing cubic-bezier(0.4, 0, 0.2, 1)
-           без отскока. Летающий маскот появляется через opacity 0→1
-           за первые ~10% времени — без резкого «выскакивания».
-  [2.39.5] Анимация через left/top/width/height вместо transform: scale —
-           border не масштабируется вместе с маскотом, обводка 2px везде.
-  [2.39.4] fromLanded — старт из lastLandedRect в новую цель.
+  [2.39.7] Убран fade-in летающего (opacity 0→1). Раньше оригинал гас
+           через transition 240мс — параллельно с летящим получалось два
+           маскота на экране. Теперь подмена мгновенная.
+           LANDED_HOLD_MS убран — удаление через двойной RAF после
+           setFlying(false). React успевает показать целевой элемент.
+  [2.39.5] Анимация через left/top/width/height — border 2px не растёт.
+  [2.39.4] fromLanded — старт из lastLandedRect.
   [2.39.3] Целевая точка = центр элемента + размер size.
 */
 
 const DEFAULT_DURATION = 700;
 const CENTER_SIZE = 82;
-const LANDED_HOLD_MS = 260;
 
 const getRect = (el) => {
   if (!el) return null;
@@ -115,7 +115,6 @@ export const useMascotFlight = ({
     el.style.top = `${from.top}px`;
     el.style.width = `${from.width}px`;
     el.style.height = `${from.height}px`;
-    el.style.opacity = '0';
     document.body.appendChild(el);
     nodeRef.current = el;
 
@@ -129,22 +128,12 @@ export const useMascotFlight = ({
           top: `${from.top}px`,
           width: `${from.width}px`,
           height: `${from.height}px`,
-          opacity: 0,
-        },
-        {
-          left: `${from.left}px`,
-          top: `${from.top}px`,
-          width: `${from.width}px`,
-          height: `${from.height}px`,
-          opacity: 1,
-          offset: 0.1,
         },
         {
           left: `${to.left}px`,
           top: `${to.top}px`,
           width: `${to.width}px`,
           height: `${to.height}px`,
-          opacity: 1,
         },
       ],
       {
@@ -164,9 +153,13 @@ export const useMascotFlight = ({
       flyingRef.current = false;
       setFlying(false);
       if (onLand) onLand();
-      setTimeout(() => {
-        try { el.remove(); } catch { /* noop */ }
-      }, LANDED_HOLD_MS);
+      // Двойной RAF — даём React отрисовать целевой элемент, потом
+      // убираем летающий. Он визуально окажется ровно под целевым.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try { el.remove(); } catch { /* noop */ }
+        });
+      });
     };
   }, [fromRef, toRef, duration, onLand]);
 
