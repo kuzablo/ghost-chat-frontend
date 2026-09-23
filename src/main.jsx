@@ -1,5 +1,7 @@
 // [2.37.2] Диагностика: chat-render-start в Chat.jsx + ErrorBoundary
 // + перехват console.error в index.html.
+// [2.37.3] Метка версии фронта — прилетит в логи Amvera через client-error.
+window.__frontVersion = '2.37.3';
 
 if (typeof window !== 'undefined' && typeof window.__clientLog === 'function') {
   window.__clientLog('module-load-start', 'main.jsx top reached');
