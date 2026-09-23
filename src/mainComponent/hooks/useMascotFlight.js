@@ -1,14 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.37.9] Fallback: если toRef скрыт (0x0) или не навешан — летим
-           в центр экрана с размером CENTER_SIZE. Нужно для мобилы:
-           .dialogs-toggle на мобиле display: none, getBoundingClientRect
-           возвращает 0x0, полёт уходил в угол.
+  [2.38.0] Двусторонний полёт: startFlight({ reverse }) летит обратно.
+           lastLandedRectRef запоминает точку посадки, чтобы обратный
+           полёт знал, откуда стартовать. toRef необязателен — при
+           отсутствии/скрытости цели летим в центр экрана.
+  [2.37.9] Fallback на центр экрана для мобилы.
   [2.37.7] Полёт маскота через Web Animations API.
-           Элемент создаётся императивно и анимируется браузером.
-           React в полёт не вмешивается — state flying нужен только
-           чтобы погасить оригинал в шапке.
 */
 
 const DEFAULT_DURATION = 600;
@@ -47,6 +45,7 @@ export const useMascotFlight = ({
   const nodeRef = useRef(null);
   const animRef = useRef(null);
   const mountedRef = useRef(true);
+  const lastLandedRectRef = useRef(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -60,25 +59,27 @@ export const useMascotFlight = ({
     };
   }, []);
 
-  const startFlight = useCallback(() => {
+  const startFlight = useCallback((options = {}) => {
+    const { reverse = false } = options;
+
     if (flyingRef.current) return;
 
-    const fromEl = fromRef?.current;
-    if (!fromEl) {
-      console.warn('[useMascotFlight] fromRef не навешан');
-      return;
+    let from = null;
+    let to = null;
+
+    if (reverse) {
+      from = lastLandedRectRef.current;
+      to = getRect(fromRef?.current);
+    } else {
+      from = getRect(fromRef?.current);
+      to = getRect(toRef?.current);
     }
 
-    const from = getRect(fromEl);
     if (!isUsableRect(from)) {
-      console.warn('[useMascotFlight] маскот-источник имеет 0x0');
+      console.warn('[useMascotFlight] нет источника — не летим');
       return;
     }
 
-    // [2.37.9] Целевая точка. Приоритет:
-    // 1) toRef видимый → летим туда
-    // 2) toRef скрыт / отсутствует → центр экрана (мобильный кейс)
-    let to = getRect(toRef?.current);
     if (!isUsableRect(to)) {
       to = getCenterRect(CENTER_SIZE);
     }
@@ -114,6 +115,7 @@ export const useMascotFlight = ({
     animRef.current = anim;
 
     anim.onfinish = () => {
+      lastLandedRectRef.current = to;
       if (!mountedRef.current) {
         el.remove();
         return;

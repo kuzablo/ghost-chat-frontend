@@ -59,8 +59,8 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
-// feat(mascot): fallback на центр экрана для мобилы (v2.37.9)
-// feat(mascot): каркас полёта через WAAPI (v2.37.7)
+// feat(mascot): полёт связан с непрочитанными (v2.38.0)
+// feat(mascot): двусторонний полёт + fallback на центр (v2.37.10)
 // refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
 // refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
 // refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
@@ -71,7 +71,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.10';
+const VERSION = '2.38.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -208,9 +208,10 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-  // [2.37.7] Полёт маскота: ref на источник (маскот шапки) и цель (кнопка диалогов).
+  // [2.38.0] Полёт маскота: источник — маскот в шапке.
   const headerMascotRef = useRef(null);
-  const dialogsToggleRef = useRef(null);
+  // [2.38.0] Предыдущее значение unread — чтобы поймать переход.
+  const prevUnreadCountRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -228,9 +229,6 @@ const Chat = () => {
   const inputDragYRef = useRef(0);
 
   const titleTimeoutRef = useRef(null);
-    // [2.37.10] Детектор двойного тапа: onDoubleClick на мобиле не срабатывает.
-  // Работаем через onClick + окно 350мс.
-  const lastTitleTapRef = useRef(0);
 
   const yt = useYouTubePlayer();
   const versionCheck = useVersionCheck();
@@ -243,10 +241,10 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  // [2.37.9] Полёт. Если dialogs-toggle на мобиле скрыт — уйдём в центр.
+  // [2.38.0] Полёт. Без toRef — цель всегда центр экрана.
+  // Сюда попадает место, где потом появится орбита непрочитанных.
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
-    toRef: dialogsToggleRef,
     duration: 600,
   });
 
@@ -515,6 +513,24 @@ const Chat = () => {
     nickname,
     sendReaction,
   });
+
+  // [2.38.0] Связка полёта с непрочитанными.
+  // 0 → >0: маскот уходит из шапки. >0 → 0: возвращается.
+  // Первый рендер без полёта — иначе при загрузке со «счётчиком»
+  // маскот дёрнется.
+  useEffect(() => {
+    const count = unreadUserObjects.length;
+    const prev = prevUnreadCountRef.current;
+    prevUnreadCountRef.current = count;
+
+    if (prev === null) return;
+
+    if (prev === 0 && count > 0) {
+      startMascotFlight();
+    } else if (prev > 0 && count === 0) {
+      startMascotFlight({ reverse: true });
+    }
+  }, [unreadUserObjects.length, startMascotFlight]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -1209,17 +1225,6 @@ const Chat = () => {
     setTimeout(() => setUpdateDeferred(false), UPDATE_DEFER_MS);
   }, []);
 
-    // [2.37.10] Двойной клик/тап по заголовку → полёт. Работает на ПК и мобиле.
-  const handleTitleTap = useCallback(() => {
-    const now = Date.now();
-    if (now - lastTitleTapRef.current < 350) {
-      lastTitleTapRef.current = 0;
-      startMascotFlight();
-    } else {
-      lastTitleTapRef.current = now;
-    }
-  }, [startMascotFlight]);
-
   const voiceRecording = voiceRecActive;
 
   // [2.37.0] Занят ли юзер чем-то важным
@@ -1245,6 +1250,11 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
+  // [2.38.0] Пока маскот летит или пока есть непрочитанные — оригинал
+  // в шапке скрыт. Возвращается после reverse полёта.
+  const hideHeaderMascot =
+    mascotFlying || unreadUserObjects.length > 0;
+
   return (
     <>
       <button
@@ -1268,7 +1278,6 @@ const Chat = () => {
 
       {isAuth && (
         <button
-          ref={dialogsToggleRef}
           className="dialogs-toggle"
           onClick={handleOpenDialogs}
           title="Диалоги"
@@ -1435,7 +1444,7 @@ const Chat = () => {
                 className={
                   `chat-header-logo` +
                   (yt.isPlaying || voiceRecording ? ' mascot-playing' : '') +
-                  (mascotFlying ? ' mascot-in-flight' : '')
+                  (hideHeaderMascot ? ' mascot-in-flight' : '')
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
@@ -1454,11 +1463,7 @@ const Chat = () => {
               )}
             </div>
 
-            <div
-              className="chat-header-text"
-              onClick={handleTitleTap}
-              title="Двойной клик — тест: полёт маскота"
-            >
+            <div className="chat-header-text">
               {trackTitleVisible && yt.trackTitle ? (
                 <div className="chat-header-track-title" title={yt.trackTitle}>
                   ♫ {yt.trackTitle}
@@ -1731,7 +1736,9 @@ const Chat = () => {
         />
       )}
 
-      {!showPlayers && !showDialogs && !privateChat && (
+      {/* [2.38.0] Орбиту показываем только когда маскот уже прилетел.
+          Пока летит — прячем, чтобы не было двух маскотов. */}
+      {!showPlayers && !showDialogs && !privateChat && !mascotFlying && (
         <PrivateMessageToasts
           users={unreadUserObjects}
           onOpenDialogs={handleOpenDialogs}
