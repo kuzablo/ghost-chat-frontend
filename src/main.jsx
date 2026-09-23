@@ -44,6 +44,9 @@ if ('serviceWorker' in navigator) {
       .register('/sw.js')
       .then((reg) => {
         console.log('[PWA] Service Worker зарегистрирован:', reg.scope);
+        // [2.36.5] Явно просим браузер проверить новую версию SW.
+        // Без этого Chrome может ждать до 24 часов.
+        reg.update().catch(() => { /* noop */ });
       })
       .catch((err) => {
         console.warn('[PWA] Service Worker не зарегистрирован:', err);

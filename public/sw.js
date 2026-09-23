@@ -1,10 +1,12 @@
 /*
+  [2.36.5] Сетевой fetch для навигаций (HTML) в обход кэша +
+           очистка всех старых кэшей на activate.
+           Закрывает класс багов «застряли на boot splash из-за
+           устаревшего Service Worker / disk cache у Android Chrome».
   [2.32.18] push → postMessage всем живым окнам PWA, чтобы поставили бейдж
             (iOS не даёт setAppBadge из SW — только из окна)
   [2.19.0] Web Push: слушаем push, показываем уведомление, обновляем бейдж.
   [2.28.0] Service Worker для PWA.
-  Пока без кеша — нужен только для установки в Chrome/Android.
-  В следующей итерации добавим офлайн-кеш.
 */
 
 self.addEventListener('install', () => {
@@ -12,12 +14,40 @@ self.addEventListener('install', () => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    // [2.36.5] Сносим все старые кэши без исключений.
+    // Раньше кэша не было, но если что-то завалялось от старых
+    // версий — оно мешает. Удаление чужого кэша безопасно.
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch { /* noop */ }
+
+    await self.clients.claim();
+  })());
 });
 
-/* Пустой fetch — Chrome это устраивает, установка доступна */
-self.addEventListener('fetch', () => {
-  /* пропускаем — браузер работает как обычно */
+/*
+  [2.36.5] Для HTML-навигаций — fetch с no-store.
+  Chrome не отдаёт HTML из кэша, а идёт в сеть. Остальные запросы
+  пропускаем как раньше — браузер работает штатно.
+*/
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  const isNavigate =
+    req.mode === 'navigate' ||
+    req.destination === 'document';
+
+  if (isNavigate) {
+    event.respondWith(
+      fetch(req, { cache: 'no-store' }).catch(() => fetch(req))
+    );
+    return;
+  }
+
+  // Прочие запросы — как есть, без вмешательства.
 });
 
 /* ===== [2.19.0] PUSH ===== */
@@ -36,7 +66,6 @@ self.addEventListener('push', (event) => {
   const tag = data.tag || 'crew-msg';
 
   event.waitUntil((async () => {
-    // 1. Показываем уведомление
     await self.registration.showNotification(title, {
       body,
       tag,
@@ -46,9 +75,6 @@ self.addEventListener('push', (event) => {
       renotify: true,
     });
 
-    // 2. [2.32.18] Сообщаем всем живым окнам PWA — пусть поставят бейдж.
-    //    iOS не даёт setAppBadge из service worker. Если PWA в фоне (не убита) —
-    //    окно само увеличит счётчик и бейдж встанет. Если убита — не встанет.
     try {
       const clientList = await self.clients.matchAll({
         type: 'window',

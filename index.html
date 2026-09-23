@@ -8,7 +8,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
 
-    <!-- [2.35.35] Critical CSS + boot-splash, который удаляется после готовности -->
+    <!-- [2.36.6] Critical CSS + boot-splash + аварийный сценарий с прогрессом -->
     <style>
       *,
       *::before,
@@ -42,8 +42,10 @@
         position: fixed;
         inset: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 18px;
         background: #F5A9C0;
         z-index: 99999;
         transition: opacity 0.32s ease-out;
@@ -52,6 +54,10 @@
       body.dark #boot-splash {
         background: #0E1726;
       }
+      body.app-ready #boot-splash {
+        opacity: 0;
+      }
+
       #boot-splash__inner {
         width: 64px;
         height: 64px;
@@ -65,12 +71,39 @@
         border-color: #3BB5E8;
       }
       @keyframes bootPulse {
-        0%, 100% { transform: scale(1); opacity: 0.85; }
+        0%, 100% { transform: scale(1);    opacity: 0.85; }
         50%      { transform: scale(1.05); opacity: 1; }
       }
-      body.app-ready #boot-splash {
+
+      /* [2.36.6] Аварийный текст и кнопка. Скрыты, пока грузится нормально */
+      #boot-splash__status {
+        font-size: 13px;
+        font-weight: 700;
+        color: #111;
         opacity: 0;
+        transition: opacity 0.3s;
+        max-width: 280px;
+        text-align: center;
+        line-height: 1.4;
       }
+      body.dark #boot-splash__status { color: #EAF2FA; }
+      #boot-splash__status.visible { opacity: 0.85; }
+
+      #boot-splash__reload {
+        display: none;
+        padding: 10px 22px;
+        border-radius: 20px;
+        background: #3BB5E8;
+        color: #FFF;
+        border: 3px solid #111;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        pointer-events: auto;
+        touch-action: manipulation;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      }
+      #boot-splash__reload.visible { display: block; }
 
       #root {
         height: 100%;
@@ -102,6 +135,8 @@
   <body>
     <div id="boot-splash" aria-hidden="true">
       <div id="boot-splash__inner"></div>
+      <div id="boot-splash__status"></div>
+      <button id="boot-splash__reload" type="button">Перезагрузить</button>
     </div>
 
     <div id="root"></div>
@@ -118,13 +153,62 @@
 
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- [2.35.35] Аварийная страховка: снимаем splash за 8с, если React не смог -->
+    <!--
+      [2.36.6] Аварийный сценарий. Молчаливый fallback 8с заменён
+      на прогрессивную диагностику. Пользователь видит, что происходит,
+      и может перезагрузить принудительно.
+    -->
     <script>
       (function () {
+        var splashEl = document.getElementById('boot-splash');
+        if (!splashEl) return;
+
+        var statusEl = document.getElementById('boot-splash__status');
+        var reloadEl = document.getElementById('boot-splash__reload');
+        var bootStart = Date.now();
+
+        try {
+          sessionStorage.setItem('boot-start-at', String(bootStart));
+        } catch (e) { /* noop */ }
+
+        // Шаг 1: через 8с — мягкое сообщение
         setTimeout(function () {
-          var el = document.getElementById('boot-splash');
-          if (el && el.parentNode) el.parentNode.removeChild(el);
+          if (!statusEl) return;
+          if (document.body.classList.contains('app-ready')) return;
+          statusEl.textContent = 'Долго грузится. Не закрывай…';
+          statusEl.classList.add('visible');
         }, 8000);
+
+        // Шаг 2: через 20с — предлагаем перезагрузить
+        setTimeout(function () {
+          if (document.body.classList.contains('app-ready')) return;
+          if (statusEl) {
+            statusEl.textContent = 'Что-то пошло не так. Нажми кнопку ниже.';
+            statusEl.classList.add('visible');
+          }
+          if (reloadEl) reloadEl.classList.add('visible');
+        }, 20000);
+
+        // Кнопка
+        if (reloadEl) {
+          reloadEl.addEventListener('click', function () {
+            location.reload();
+          });
+        }
+
+        // Шаг 3: через 40с — автоперезагрузка, но один раз (флаг в sessionStorage)
+        setTimeout(function () {
+          if (document.body.classList.contains('app-ready')) return;
+          var tried = false;
+          try { tried = sessionStorage.getItem('boot-auto-reload') === '1'; } catch (e) {}
+          if (tried) return;
+          try { sessionStorage.setItem('boot-auto-reload', '1'); } catch (e) {}
+          location.reload();
+        }, 40000);
+
+        // Если приложение загрузится нормально — статус и кнопка исчезнут
+        // автоматически вместе со сплешем (body.app-ready → opacity 0,
+        // затем Chat.jsx удалит #boot-splash из DOM).
       })();
     </script>
   </body>
