@@ -4,14 +4,7 @@ import ChatInput from './ChatInput';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
-
-// [2.35.52] Радиальный пикер
-const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
-const REACTIONS_EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
-
-const WHEEL_R_MAIN = 64;
-const WHEEL_R_EXTRA = 112;
-const WHEEL_BTN = 36;
+import ReactionWheel from './ReactionWheel';
 
 const PICKER_AUTOHIDE_MS = 5000;
 const MAX_UPLOAD_MB = 25;
@@ -20,7 +13,6 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const SWIPE_THRESHOLD = 90;
 const SWIPE_MAX = 220;
 const DIRECTION_LOCK = 10;
-
 const LONG_PRESS_MENU_MS = 500;
 const LONG_PRESS_IGNORE_MS = 500;
 
@@ -30,11 +22,6 @@ const DATE_FILTERS = [
   { id: '7d',    label: '7 дней',   days: 7 },
   { id: '30d',   label: '30 дней',  days: 30 },
 ];
-
-const polar = (r, angleDeg) => {
-  const rad = (angleDeg - 90) * (Math.PI / 180);
-  return { x: r * Math.cos(rad), y: r * Math.sin(rad) };
-};
 
 const StickerIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -69,28 +56,15 @@ const getSinceTs = (days) => {
 };
 
 const PrivateChat = ({
-  userId,
-  nickname,
-  myId,
-  myNickname,
-  sendMessage,
-  onClose,
-  initialMessages = [],
-  historyLoaded = true,
-  dialogsBg = null,
-  typingUser = null,
-  stickers = [],
-  isAdmin = false,
-  token = '',
-  onStickersUpdated,
-  onForward,
-  avatarUrl = null,
+  userId, nickname, myId, myNickname, sendMessage, onClose,
+  initialMessages = [], historyLoaded = true, dialogsBg = null,
+  typingUser = null, stickers = [], isAdmin = false, token = '',
+  onStickersUpdated, onForward, avatarUrl = null,
 }) => {
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const [pickerFor, setPickerFor] = useState(null);
-  const [pickerOrigin, setPickerOrigin] = useState(null);
-  const [reactionsExpanded, setReactionsExpanded] = useState(false);
+  const [pickerAnchor, setPickerAnchor] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -111,28 +85,19 @@ const PrivateChat = ({
   const panelRef = useRef(null);
   const longPressRef = useRef({ timer: null, completedAt: 0 });
 
-  const swipeRef = useRef({
-    active: false,
-    startX: 0,
-    startY: 0,
-    direction: null,
-    lastDx: 0,
-  });
+  const swipeRef = useRef({ active: false, startX: 0, startY: 0, direction: null, lastDx: 0 });
 
   const hitIds = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return new Set();
     const s = new Set();
-    initialMessages.forEach(m => {
-      if (m.text && m.text.toLowerCase().includes(q)) s.add(m.id);
-    });
+    initialMessages.forEach(m => { if (m.text && m.text.toLowerCase().includes(q)) s.add(m.id); });
     return s;
   }, [initialMessages, searchQuery]);
 
   const filteredMessages = useMemo(() => {
     const filter = DATE_FILTERS.find(f => f.id === dateFilter);
     let list = initialMessages;
-
     if (filter && filter.days !== null) {
       const since = getSinceTs(filter.days);
       list = list.filter(m => {
@@ -140,23 +105,16 @@ const PrivateChat = ({
         return new Date(m.created_at).getTime() >= since;
       });
     }
-
     const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter(m => (m.text || '').toLowerCase().includes(q));
-    }
-
+    if (q) list = list.filter(m => (m.text || '').toLowerCase().includes(q));
     return list;
   }, [initialMessages, dateFilter, searchQuery]);
 
-  useEffect(() => {
-    setLocalTypingUser(typingUser);
-  }, [typingUser]);
+  useEffect(() => { setLocalTypingUser(typingUser); }, [typingUser]);
 
   useEffect(() => {
     if (!pickerFor) {
-      setReactionsExpanded(false);
-      setPickerOrigin(null);
+      setPickerAnchor(null);
       return;
     }
     const t = setTimeout(() => setPickerFor(null), PICKER_AUTOHIDE_MS);
@@ -168,7 +126,6 @@ const PrivateChat = ({
     const lastId = last?.id ?? null;
     if (lastId === lastMsgIdRef.current) return;
     lastMsgIdRef.current = lastId;
-
     const id = requestAnimationFrame(() => {
       const el = messagesContainerRef.current;
       if (el) el.scrollTop = el.scrollHeight;
@@ -178,10 +135,7 @@ const PrivateChat = ({
 
   useEffect(() => {
     const isUrl = isUrlBg(dialogsBg);
-    if (!isUrl) {
-      setBgLoaded(true);
-      return;
-    }
+    if (!isUrl) { setBgLoaded(true); return; }
     setBgLoaded(false);
     const url = dialogsBg.slice('url:'.length);
     const img = new Image();
@@ -194,7 +148,6 @@ const PrivateChat = ({
   useEffect(() => {
     const el = messagesContainerRef.current;
     if (!el) return;
-
     let rafId = null;
     const onScroll = () => {
       if (rafId) cancelAnimationFrame(rafId);
@@ -203,7 +156,6 @@ const PrivateChat = ({
         setShowScrollDown(d > 200);
       });
     };
-
     el.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => {
@@ -231,17 +183,10 @@ const PrivateChat = ({
     const rect = (target || containerEl).getBoundingClientRect();
     const containerRect = containerEl.getBoundingClientRect();
     setActionsMenu({
-      anchor: {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      },
+      anchor: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
       container: {
-        top: containerRect.top,
-        left: containerRect.left,
-        right: containerRect.right,
-        bottom: containerRect.bottom,
+        top: containerRect.top, left: containerRect.left,
+        right: containerRect.right, bottom: containerRect.bottom,
       },
       msg: m,
     });
@@ -274,11 +219,7 @@ const PrivateChat = ({
     if (e.target.closest('.private-search-wrap')) return;
     const t = e.touches[0];
     const s = swipeRef.current;
-    s.active = true;
-    s.startX = t.clientX;
-    s.startY = t.clientY;
-    s.direction = null;
-    s.lastDx = 0;
+    s.active = true; s.startX = t.clientX; s.startY = t.clientY; s.direction = null; s.lastDx = 0;
     if (panelRef.current) panelRef.current.style.transition = 'none';
   };
 
@@ -289,13 +230,11 @@ const PrivateChat = ({
     const t = e.touches[0];
     const dx = t.clientX - s.startX;
     const dy = t.clientY - s.startY;
-
     if (!s.direction) {
       if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
       s.direction = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
     }
     if (s.direction === 'vertical') return;
-
     const off = Math.min(Math.abs(dx), SWIPE_MAX);
     s.lastDx = off;
     if (panelRef.current) {
@@ -310,28 +249,19 @@ const PrivateChat = ({
     const s = swipeRef.current;
     if (!s.active) return;
     s.active = false;
-
-    if (s.direction === 'horizontal' && s.lastDx > SWIPE_THRESHOLD) {
-      onClose();
-      return;
-    }
+    if (s.direction === 'horizontal' && s.lastDx > SWIPE_THRESHOLD) { onClose(); return; }
     if (panelRef.current) {
       panelRef.current.style.transition = 'transform 0.24s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.24s';
       panelRef.current.style.transform = 'translateX(-50%)';
       panelRef.current.style.opacity = '1';
-      setTimeout(() => {
-        if (panelRef.current) panelRef.current.style.transition = '';
-      }, 260);
+      setTimeout(() => { if (panelRef.current) panelRef.current.style.transition = ''; }, 260);
     }
     s.direction = null;
     s.lastDx = 0;
   };
 
   const cancelLongPress = () => {
-    if (longPressRef.current.timer) {
-      clearTimeout(longPressRef.current.timer);
-      longPressRef.current.timer = null;
-    }
+    if (longPressRef.current.timer) { clearTimeout(longPressRef.current.timer); longPressRef.current.timer = null; }
   };
 
   const handleMsgTouchStart = (e, m) => {
@@ -344,122 +274,73 @@ const PrivateChat = ({
     }, LONG_PRESS_MENU_MS);
   };
 
-  const handleMsgTouchMove = () => {
-    cancelLongPress();
-  };
-
-  const handleMsgTouchEnd = () => {
-    cancelLongPress();
-  };
+  const handleMsgTouchMove = () => { cancelLongPress(); };
+  const handleMsgTouchEnd = () => { cancelLongPress(); };
 
   const handleSend = () => {
     if (!input.trim()) return;
     if (!sendMessage) return;
-    const ok = sendMessage({
-      type: 'private_message',
-      data: { recipientId: userId, text: input.trim() },
-    });
+    const ok = sendMessage({ type: 'private_message', data: { recipientId: userId, text: input.trim() } });
     if (!ok) return;
     setInput('');
-    sendMessage({
-      type: 'private_typing',
-      data: { recipientId: userId, isTyping: false },
-    });
+    sendMessage({ type: 'private_typing', data: { recipientId: userId, isTyping: false } });
   };
 
   const handleStickerPick = (stickerUrl) => {
     if (!sendMessage || !stickerUrl) return;
-    sendMessage({
-      type: 'private_message',
-      data: { recipientId: userId, stickerUrl },
-    });
+    sendMessage({ type: 'private_message', data: { recipientId: userId, stickerUrl } });
     setStickerPanelOpen(false);
-    sendMessage({
-      type: 'private_typing',
-      data: { recipientId: userId, isTyping: false },
-    });
+    sendMessage({ type: 'private_typing', data: { recipientId: userId, isTyping: false } });
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Только изображения');
-      setTimeout(() => setUploadError(''), 4000);
-      return;
-    }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      setUploadError(`Файл больше ${MAX_UPLOAD_MB} МБ`);
-      setTimeout(() => setUploadError(''), 4000);
-      return;
-    }
+    if (!file.type.startsWith('image/')) { setUploadError('Только изображения'); setTimeout(() => setUploadError(''), 4000); return; }
+    if (file.size > MAX_UPLOAD_BYTES) { setUploadError(`Файл больше ${MAX_UPLOAD_MB} МБ`); setTimeout(() => setUploadError(''), 4000); return; }
 
     setIsUploading(true);
     setUploadError('');
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('https://api.banjoboy420.ru/api/upload', {
-        method: 'POST',
-        body: fd,
-      });
+      const res = await fetch('https://api.banjoboy420.ru/api/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-      sendMessage({
-        type: 'private_message',
-        data: { recipientId: userId, text: '', imageUrl: data.imageUrl },
-      });
+      sendMessage({ type: 'private_message', data: { recipientId: userId, text: '', imageUrl: data.imageUrl } });
     } catch (err) {
       console.error('Ошибка загрузки фото:', err);
       setUploadError('Не удалось загрузить');
       setTimeout(() => setUploadError(''), 4000);
-    } finally {
-      setIsUploading(false);
-    }
+    } finally { setIsUploading(false); }
   };
 
   const sendReaction = (messageId, emoji) => {
     if (!sendMessage) return;
-    sendMessage({
-      type: 'private_reaction',
-      data: { messageId, emoji },
-    });
+    sendMessage({ type: 'private_reaction', data: { messageId, emoji } });
     setPickerFor(null);
   };
 
-  // [2.35.52] Тап — origin пикера
   const handleMessageTap = (id, e) => {
-    if (actionsMenu) {
-      setActionsMenu(null);
-      return;
-    }
+    if (actionsMenu) { setActionsMenu(null); return; }
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
-
     if (e.target.closest('.reaction-wheel')) return;
+    if (e.target.closest('.reaction-wheel-anchor')) return;
     if (e.target.closest('.private-msg-image')) return;
     if (e.target.closest('.private-attach-btn')) return;
     if (e.target.closest('.ig-card')) return;
     if (e.target.closest('.private-msg-sticker')) return;
 
-    if (pickerFor === id) {
-      setPickerFor(null);
-      return;
-    }
+    if (pickerFor === id) { setPickerFor(null); return; }
 
     setPoppingId(id);
     setTimeout(() => setPoppingId(null), 380);
 
-    const cardEl = e.currentTarget;
-    if (cardEl) {
-      const rect = cardEl.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      setPickerOrigin({ x, y });
+    if (e && typeof e.clientX === 'number') {
+      setPickerAnchor({ x: e.clientX, y: e.clientY });
     } else {
-      setPickerOrigin({ x: 0, y: 0 });
+      setPickerAnchor(null);
     }
 
     setPickerFor(id);
@@ -469,22 +350,13 @@ const PrivateChat = ({
     setInput(text);
     if (!sendMessage) return;
     if (text.trim()) {
-      sendMessage({
-        type: 'private_typing',
-        data: { recipientId: userId, isTyping: true },
-      });
+      sendMessage({ type: 'private_typing', data: { recipientId: userId, isTyping: true } });
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        sendMessage({
-          type: 'private_typing',
-          data: { recipientId: userId, isTyping: false },
-        });
+        sendMessage({ type: 'private_typing', data: { recipientId: userId, isTyping: false } });
       }, 1500);
     } else {
-      sendMessage({
-        type: 'private_typing',
-        data: { recipientId: userId, isTyping: false },
-      });
+      sendMessage({ type: 'private_typing', data: { recipientId: userId, isTyping: false } });
     }
   };
 
@@ -502,78 +374,23 @@ const PrivateChat = ({
     );
   };
 
-  // [2.35.52] Радиальный рендер
-  const renderWheel = (m) => {
-    if (!pickerOrigin) return null;
-
-    const renderOrbit = (emojis, radius, isExtra) => (
-      <div className={`reaction-wheel-orbit ${isExtra ? 'reaction-wheel-orbit--extra' : 'reaction-wheel-orbit--main'}`}>
-        {emojis.map((emoji, i) => {
-          const angle = (360 / emojis.length) * i;
-          const pos = polar(radius, angle);
-          const isActive = (m.reactions?.[emoji] || []).includes(myId);
-          return (
-            <button
-              key={emoji}
-              type="button"
-              className={`reaction-wheel-btn ${isActive ? 'active' : ''}`}
-              style={{
-                left: pos.x - WHEEL_BTN / 2,
-                top: pos.y - WHEEL_BTN / 2,
-                animationDelay: `${i * 0.025}s`,
-              }}
-              onClick={() => sendReaction(m.id, emoji)}
-              aria-label={emoji}
-            >
-              {emoji}
-            </button>
-          );
-        })}
-      </div>
-    );
-
-    return (
-      <div
-        className={`reaction-wheel ${reactionsExpanded ? 'reaction-wheel--expanded' : ''}`}
-        style={{ left: pickerOrigin.x, top: pickerOrigin.y }}
-        onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-      >
-        <div className="reaction-wheel-center">
-          <button
-            type="button"
-            className="reaction-wheel-toggle"
-            onClick={() => setReactionsExpanded(v => !v)}
-            aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
-          >
-            {reactionsExpanded ? '−' : '＋'}
-          </button>
-        </div>
-        {renderOrbit(REACTIONS_MAIN, WHEEL_R_MAIN, false)}
-        {reactionsExpanded && renderOrbit(REACTIONS_EXTRA, WHEEL_R_EXTRA, true)}
-      </div>
-    );
-  };
-
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
   const bgIsUrl = isUrlBg(dialogsBg);
   const showBgLoading = bgIsUrl && !bgLoaded;
 
   const panelStyle = hasBg && !showBgLoading
-    ? {
-        backgroundImage: bgCss,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }
+    ? { backgroundImage: bgCss, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
     : undefined;
 
   const hasSearch = !!searchQuery.trim();
-
   const headerAvatarStyle = avatarUrl
     ? { backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { background: getAvatarColor(nickname) };
+
+  const activeMessage = pickerFor
+    ? filteredMessages.find(x => x.id === pickerFor)
+    : null;
 
   return (
     <>
@@ -608,17 +425,8 @@ const PrivateChat = ({
           />
           {hasSearch && (
             <>
-              <span className="private-search-count">
-                {filteredMessages.length}
-              </span>
-              <button
-                type="button"
-                className="private-search-clear"
-                onClick={() => setSearchQuery('')}
-                aria-label="Очистить поиск"
-              >
-                ✕
-              </button>
+              <span className="private-search-count">{filteredMessages.length}</span>
+              <button type="button" className="private-search-clear" onClick={() => setSearchQuery('')} aria-label="Очистить поиск">✕</button>
             </>
           )}
         </div>
@@ -663,24 +471,14 @@ const PrivateChat = ({
                     <div
                       key={m.id || i}
                       data-msg-id={m.id}
-                      className={`private-msg private-msg--sticker ${
-                        isOwn ? 'private-msg--own' : 'private-msg--other'
-                      } ${isHit ? 'private-msg--hit' : ''}`}
+                      className={`private-msg private-msg--sticker ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${isHit ? 'private-msg--hit' : ''}`}
                       onTouchStart={(e) => handleMsgTouchStart(e, m)}
                       onTouchMove={handleMsgTouchMove}
                       onTouchEnd={handleMsgTouchEnd}
                     >
-                      <div className="private-msg-sticker-nick">
-                        {isOwn ? 'Я' : nickname}
-                      </div>
+                      <div className="private-msg-sticker-nick">{isOwn ? 'Я' : nickname}</div>
                       {forwardLabel}
-                      <img
-                        src={m.stickerUrl}
-                        alt=""
-                        className="private-msg-sticker"
-                        draggable={false}
-                        loading="lazy"
-                      />
+                      <img src={m.stickerUrl} alt="" className="private-msg-sticker" draggable={false} loading="lazy" />
                     </div>
                   );
                 }
@@ -702,7 +500,6 @@ const PrivateChat = ({
                   >
                     <div className="private-msg-text-wrap">
                       {forwardLabel}
-
                       {m.imageUrl && (
                         <img
                           src={m.imageUrl}
@@ -710,44 +507,27 @@ const PrivateChat = ({
                           className="private-msg-image"
                           loading="lazy"
                           draggable={false}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFullscreenImage(m.imageUrl);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); setFullscreenImage(m.imageUrl); }}
                         />
                       )}
-                      {m.text && (
-                        <span className="private-msg-text">{m.text}</span>
-                      )}
-
-                      {igUrl && (
-                        <InstagramCard url={igUrl} />
-                      )}
+                      {m.text && <span className="private-msg-text">{m.text}</span>}
+                      {igUrl && <InstagramCard url={igUrl} />}
 
                       {hasReactions && (
                         <div className="private-msg-reactions">
                           {reactionEntries.map(([emoji, users]) => (
-                            <span
-                              key={`${emoji}-${users.length}`}
-                              className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}
-                            >
+                            <span key={`${emoji}-${users.length}`} className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}>
                               {emoji}
-                              {users.length > 1 && (
-                                <span className="private-reaction-count">{users.length}</span>
-                              )}
+                              {users.length > 1 && (<span className="private-reaction-count">{users.length}</span>)}
                             </span>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    {pickerFor === m.id && renderWheel(m)}
-
                     <div className="private-msg-footer">
                       <span className="private-msg-time">{formatTime(m.created_at)}</span>
-                      <span className="private-msg-status">
-                        {m.is_read ? 'прочитано' : 'не прочитано'}
-                      </span>
+                      <span className="private-msg-status">{m.is_read ? 'прочитано' : 'не прочитано'}</span>
                     </div>
                   </div>
                 );
@@ -758,19 +538,10 @@ const PrivateChat = ({
         </div>
 
         {showScrollDown && (
-          <button
-            type="button"
-            className="private-scroll-btn"
-            onClick={scrollToBottom}
-            aria-label="Вниз"
-          >
-            ↓
-          </button>
+          <button type="button" className="private-scroll-btn" onClick={scrollToBottom} aria-label="Вниз">↓</button>
         )}
 
-        {uploadError && (
-          <div className="private-upload-error">{uploadError}</div>
-        )}
+        {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
         <div className="private-input-row">
           <button
@@ -814,6 +585,19 @@ const PrivateChat = ({
         </div>
       </div>
 
+      {activeMessage && pickerAnchor && (
+        <ReactionWheel
+          open
+          anchorX={pickerAnchor.x}
+          anchorY={pickerAnchor.y}
+          boundsRef={messagesContainerRef}
+          reactions={activeMessage.reactions || {}}
+          nickname={myId}
+          onPick={(emoji) => sendReaction(activeMessage.id, emoji)}
+          onClose={() => setPickerFor(null)}
+        />
+      )}
+
       <MessageActionsMenu
         open={!!actionsMenu}
         anchor={actionsMenu?.anchor}
@@ -823,11 +607,7 @@ const PrivateChat = ({
         isOwn={false}
         isAdmin={isAdmin}
         isSticker={!!actionsMenu?.msg?.stickerUrl}
-        onForward={() => {
-          if (actionsMenu?.msg && onForward) {
-            onForward(buildForwardData(actionsMenu.msg));
-          }
-        }}
+        onForward={() => { if (actionsMenu?.msg && onForward) onForward(buildForwardData(actionsMenu.msg)); }}
         onEdit={() => {}}
         onDelete={() => {}}
         onClose={closeActionsMenu}
@@ -844,24 +624,9 @@ const PrivateChat = ({
       />
 
       {fullscreenImage && (
-        <div
-          className="private-image-overlay"
-          onClick={() => setFullscreenImage(null)}
-        >
-          <img
-            src={fullscreenImage}
-            alt=""
-            className="private-image-full"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            type="button"
-            className="private-image-close"
-            onClick={() => setFullscreenImage(null)}
-            aria-label="Закрыть"
-          >
-            ✕
-          </button>
+        <div className="private-image-overlay" onClick={() => setFullscreenImage(null)}>
+          <img src={fullscreenImage} alt="" className="private-image-full" onClick={(e) => e.stopPropagation()} />
+          <button type="button" className="private-image-close" onClick={() => setFullscreenImage(null)} aria-label="Закрыть">✕</button>
         </div>
       )}
     </>

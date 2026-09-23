@@ -392,14 +392,14 @@ body.dark .msg-reaction-count {
 }
 
 /* ============================================================= */
-/* [2.35.52] Радиальный пикер реакций                            */
+/* [2.35.53] Радиальный пикер реакций (fixed + anchor)           */
 /* ============================================================= */
 
 .reaction-wheel {
-  position: absolute;
+  position: fixed;
   width: 0;
   height: 0;
-  z-index: 30;
+  z-index: 3000;
   pointer-events: none;
 }
 
@@ -445,9 +445,7 @@ body.dark .msg-reaction-count {
   transition: transform 0.12s, background 0.15s, border-color 0.15s;
 }
 
-.reaction-wheel-btn:active {
-  transform: scale(0.85);
-}
+.reaction-wheel-btn:active { transform: scale(0.85); }
 
 .reaction-wheel-btn.active {
   background: rgba(59, 181, 232, 0.28);
@@ -456,18 +454,9 @@ body.dark .msg-reaction-count {
 }
 
 @keyframes reactionWheelIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-  60% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%   { opacity: 0; transform: scale(0.2); }
+  60%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .reaction-wheel-toggle {
@@ -497,14 +486,69 @@ body.dark .msg-reaction-count {
   z-index: 2;
 }
 
-.reaction-wheel-toggle:active {
-  transform: scale(0.85);
-}
+.reaction-wheel-toggle:active { transform: scale(0.85); }
 
-/* [2.35.52] Раскрыт — внутренний круг гаснет, но остаётся видимым */
 .reaction-wheel--expanded .reaction-wheel-orbit--main {
   opacity: 0.35;
   pointer-events: none;
+}
+
+/* [2.35.53] Анкер-нить от точки тапа к сдвинутому центру */
+.reaction-wheel-anchor {
+  position: fixed;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2999;
+}
+
+.reaction-wheel-anchor-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--rw-len, 0);
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(59, 181, 232, 0.05) 0%,
+    rgba(59, 181, 232, 0.55) 100%
+  );
+  transform-origin: 0 50%;
+  transform: rotate(var(--rw-angle, 0deg)) translateY(-50%);
+  animation: reactionAnchorLineIn 0.3s ease-out;
+}
+
+.reaction-wheel-anchor-dot {
+  position: absolute;
+  left: var(--rw-tx, 0);
+  top: var(--rw-ty, 0);
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  border: 2px solid var(--card-bg);
+  box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.22);
+  animation: reactionAnchorPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes reactionAnchorLineIn {
+  from { opacity: 0; transform: rotate(var(--rw-angle, 0deg)) translateY(-50%) scaleX(0.2); }
+  to   { opacity: 1; transform: rotate(var(--rw-angle, 0deg)) translateY(-50%) scaleX(1); }
+}
+
+@keyframes reactionAnchorPulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.35); opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction-wheel-btn,
+  .reaction-wheel-toggle {
+    animation-duration: 0.001s !important;
+  }
+  .reaction-wheel-anchor-dot { animation: none; }
 }
 
 /* ===== Действия с сообщением ===== */
@@ -1472,11 +1516,6 @@ body.theme-switching *::after {
 .msg--own .msg-reactions {
   left: auto;
   right: 8px;
-}
-
-.msg--own .msg-reaction-picker {
-  left: auto;
-  right: 0;
 }
 
 .msg--own.msg--image-only .msg-avatar {

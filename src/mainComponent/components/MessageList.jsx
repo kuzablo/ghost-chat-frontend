@@ -2,23 +2,10 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNewDay } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import MessageActionsMenu from './MessageActionsMenu';
+import ReactionWheel from './ReactionWheel';
 
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
-
-// [2.35.52] Радиальный пикер: 6 главных внутренним кругом + 12 свежих внешним
-const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
-const REACTIONS_EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
-
-const WHEEL_R_MAIN = 64;
-const WHEEL_R_EXTRA = 112;
-const WHEEL_BTN = 36;
-
-// [2.35.52] Точка на окружности. Верх — 12 часов.
-const polar = (r, angleDeg) => {
-  const rad = (angleDeg - 90) * (Math.PI / 180);
-  return { x: r * Math.cos(rad), y: r * Math.sin(rad) };
-};
 
 const MessageList = ({
   messages,
@@ -44,8 +31,7 @@ const MessageList = ({
   const [confirmData, setConfirmData] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
   const [actionsMenu, setActionsMenu] = useState(null);
-  const [pickerOrigin, setPickerOrigin] = useState(null);
-  const [reactionsExpanded, setReactionsExpanded] = useState(false);
+  const [pickerAnchor, setPickerAnchor] = useState(null);
 
   const swipeRef = useRef({
     active: false,
@@ -61,11 +47,7 @@ const MessageList = ({
   const swipeActiveRef = useRef(false);
 
   const [editRingId, setEditRingId] = useState(null);
-  const longPressRef = useRef({
-    timer: null,
-    ringTimer: null,
-    completedAt: 0,
-  });
+  const longPressRef = useRef({ timer: null, ringTimer: null, completedAt: 0 });
   const LONG_PRESS_IGNORE_MS = 500;
   const RING_START_DELAY = 200;
 
@@ -76,16 +58,11 @@ const MessageList = ({
   const editTextareaRef = useRef(null);
 
   useEffect(() => {
-    return () => {
-      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
-    };
+    return () => { if (tapTimerRef.current) clearTimeout(tapTimerRef.current); };
   }, []);
 
   useEffect(() => {
-    if (!activeMessageId) {
-      setReactionsExpanded(false);
-      setPickerOrigin(null);
-    }
+    if (!activeMessageId) setPickerAnchor(null);
   }, [activeMessageId]);
 
   useEffect(() => {
@@ -113,10 +90,7 @@ const MessageList = ({
     const nextText = editText.trim();
     const changed = nextText !== (original?.text || '');
     const allowed = nextText.length > 0 || !!original?.imageUrl;
-
-    if (changed && allowed) {
-      onEditMessage(messageId, nextText);
-    }
+    if (changed && allowed) onEditMessage(messageId, nextText);
     cancelEdit();
   };
 
@@ -128,10 +102,7 @@ const MessageList = ({
   };
 
   const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
-
-  const didIReact = (message, emoji) =>
-    !!message?.reactions?.[emoji]?.includes(nickname);
-
+  const didIReact = (message, emoji) => !!message?.reactions?.[emoji]?.includes(nickname);
   const canDelete = (m) => isAdmin || m.userId === myId;
 
   const handleImageTap = (e, m) => {
@@ -153,17 +124,10 @@ const MessageList = ({
       Math.abs(y - last.y) < 40;
 
     if (isDouble) {
-      if (tapTimerRef.current) {
-        clearTimeout(tapTimerRef.current);
-        tapTimerRef.current = null;
-      }
+      if (tapTimerRef.current) { clearTimeout(tapTimerRef.current); tapTimerRef.current = null; }
       lastTapRef.current = { id: null, time: 0, x: 0, y: 0 };
-
       const alreadyHeart = m.reactions?.['❤️']?.includes(nickname);
-      if (!alreadyHeart) {
-        sendReaction(m.id, '❤️');
-      }
-
+      if (!alreadyHeart) sendReaction(m.id, '❤️');
       setHeartBurst({ id: m.id, x, y, key: now });
       setTimeout(() => {
         setHeartBurst(prev => (prev && prev.key === now ? null : prev));
@@ -179,29 +143,18 @@ const MessageList = ({
     }, DOUBLE_TAP_MS);
   };
 
-  // [2.35.52] Тап — точка origin пикера
+  // [2.35.53] Точка тапа — viewport. Клампинг в ReactionWheel.
   const handleMessageTap = (messageId, e) => {
-    if (actionsMenu) {
-      setActionsMenu(null);
-      return;
-    }
-
-    if (activeMessageId === messageId) {
-      toggleReactions(messageId);
-      return;
-    }
+    if (actionsMenu) { setActionsMenu(null); return; }
+    if (activeMessageId === messageId) { toggleReactions(messageId); return; }
 
     setPoppingId(messageId);
     setTimeout(() => setPoppingId(null), 380);
 
-    const cardEl = e?.currentTarget;
-    if (cardEl) {
-      const rect = cardEl.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      setPickerOrigin({ x, y });
+    if (e && typeof e.clientX === 'number') {
+      setPickerAnchor({ x: e.clientX, y: e.clientY });
     } else {
-      setPickerOrigin({ x: 0, y: 0 });
+      setPickerAnchor(null);
     }
 
     toggleReactions(messageId);
@@ -214,12 +167,9 @@ const MessageList = ({
     if (!container) return;
     const el = container.querySelector(`[data-msg-id="${replyId}"]`);
     if (!el) return;
-
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.classList.add('msg--highlight');
-    setTimeout(() => {
-      el.classList.remove('msg--highlight');
-    }, 1600);
+    setTimeout(() => el.classList.remove('msg--highlight'), 1600);
   };
 
   const SWIPE_THRESHOLD = 60;
@@ -227,14 +177,8 @@ const MessageList = ({
   const DIRECTION_LOCK = 8;
 
   const cancelLongPress = () => {
-    if (longPressRef.current.timer) {
-      clearTimeout(longPressRef.current.timer);
-      longPressRef.current.timer = null;
-    }
-    if (longPressRef.current.ringTimer) {
-      clearTimeout(longPressRef.current.ringTimer);
-      longPressRef.current.ringTimer = null;
-    }
+    if (longPressRef.current.timer) { clearTimeout(longPressRef.current.timer); longPressRef.current.timer = null; }
+    if (longPressRef.current.ringTimer) { clearTimeout(longPressRef.current.ringTimer); longPressRef.current.ringTimer = null; }
     setEditRingId(null);
   };
 
@@ -244,9 +188,7 @@ const MessageList = ({
       cardEl.style.transform = '';
       cardEl.classList.remove('msg-content--ready-reply');
       cardEl.classList.remove('msg-content--ready-delete');
-      setTimeout(() => {
-        if (cardEl) cardEl.style.transition = '';
-      }, 220);
+      setTimeout(() => { if (cardEl) cardEl.style.transition = ''; }, 220);
     }
     if (replyGlowEl) replyGlowEl.style.opacity = '0';
     if (deleteGlowEl) deleteGlowEl.style.opacity = '0';
@@ -259,14 +201,8 @@ const MessageList = ({
     const target = cardEl && cardEl.closest('.msg') ? cardEl.closest('.msg') : cardEl;
     const rect = (target || containerEl).getBoundingClientRect();
     const containerRect = containerEl.getBoundingClientRect();
-
     setActionsMenu({
-      anchor: {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      },
+      anchor: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
       container: {
         top: containerRect.top,
         left: containerRect.left,
@@ -282,12 +218,7 @@ const MessageList = ({
   const buildForwardData = (m) => {
     const forwardedFrom = m.forwardedFrom
       ? m.forwardedFrom
-      : {
-          nickname: m.nickname,
-          originalId: m.id,
-          originalTime: m.time,
-          fromPrivate: false,
-        };
+      : { nickname: m.nickname, originalId: m.id, originalTime: m.time, fromPrivate: false };
     return {
       text: m.text || '',
       imageUrl: m.imageUrl || null,
@@ -303,7 +234,6 @@ const MessageList = ({
 
     const t = e.touches[0];
     const card = e.currentTarget;
-
     const msgEl = card.closest('.msg');
     const replyGlow = msgEl?.querySelector('.msg-swipe-glow--reply') || null;
     const deleteGlow = msgEl?.querySelector('.msg-swipe-glow--delete') || null;
@@ -320,10 +250,7 @@ const MessageList = ({
     r.msg = m;
     swipeActiveRef.current = false;
 
-    if (card) {
-      card.style.transition = 'none';
-      card.style.transform = '';
-    }
+    if (card) { card.style.transition = 'none'; card.style.transform = ''; }
 
     longPressRef.current.ringTimer = setTimeout(() => {
       longPressRef.current.ringTimer = null;
@@ -335,10 +262,7 @@ const MessageList = ({
       longPressRef.current.completedAt = Date.now();
       setEditRingId(null);
       swipeActiveRef.current = true;
-      if (card) {
-        card.style.transform = '';
-        card.style.transition = '';
-      }
+      if (card) { card.style.transform = ''; card.style.transition = ''; }
       openActionsMenuFor(m, card);
     }, LONG_PRESS_MENU_MS);
   };
@@ -354,26 +278,12 @@ const MessageList = ({
 
     if (!r.direction) {
       if (Math.abs(dx) < DIRECTION_LOCK && Math.abs(dy) < DIRECTION_LOCK) return;
-
       cancelLongPress();
 
-      if (Math.abs(dy) > Math.abs(dx)) {
-        r.active = false;
-        r.cardEl = null;
-        return;
-      }
+      if (Math.abs(dy) > Math.abs(dx)) { r.active = false; r.cardEl = null; return; }
+      if (dx < 0 && m.stickerUrl) { r.active = false; r.cardEl = null; return; }
+      if (dx > 0 && !canDelete(m)) { r.active = false; r.cardEl = null; return; }
 
-      if (dx < 0 && m.stickerUrl) {
-        r.active = false;
-        r.cardEl = null;
-        return;
-      }
-
-      if (dx > 0 && !canDelete(m)) {
-        r.active = false;
-        r.cardEl = null;
-        return;
-      }
       r.direction = dx < 0 ? 'reply' : 'delete';
       swipeActiveRef.current = true;
     }
@@ -382,24 +292,12 @@ const MessageList = ({
 
     if (r.direction === 'reply') {
       const off = Math.max(dx, -SWIPE_MAX);
-      if (r.cardEl) {
-        r.cardEl.style.transition = 'none';
-        r.cardEl.style.transform = `translateX(${off}px)`;
-      }
-      if (r.replyGlowEl) {
-        const op = Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1);
-        r.replyGlowEl.style.opacity = String(op);
-      }
+      if (r.cardEl) { r.cardEl.style.transition = 'none'; r.cardEl.style.transform = `translateX(${off}px)`; }
+      if (r.replyGlowEl) r.replyGlowEl.style.opacity = String(Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1));
     } else if (r.direction === 'delete') {
       const off = Math.min(dx, SWIPE_MAX);
-      if (r.cardEl) {
-        r.cardEl.style.transition = 'none';
-        r.cardEl.style.transform = `translateX(${off}px)`;
-      }
-      if (r.deleteGlowEl) {
-        const op = Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1);
-        r.deleteGlowEl.style.opacity = String(op);
-      }
+      if (r.cardEl) { r.cardEl.style.transition = 'none'; r.cardEl.style.transform = `translateX(${off}px)`; }
+      if (r.deleteGlowEl) r.deleteGlowEl.style.opacity = String(Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1));
     }
 
     const abs = Math.abs(dx);
@@ -407,38 +305,26 @@ const MessageList = ({
     if (nextReady !== r.ready) {
       r.ready = nextReady;
       if (r.cardEl) {
-        if (r.direction === 'reply') {
-          r.cardEl.classList.toggle('msg-content--ready-reply', nextReady);
-        } else if (r.direction === 'delete') {
-          r.cardEl.classList.toggle('msg-content--ready-delete', nextReady);
-        }
+        if (r.direction === 'reply') r.cardEl.classList.toggle('msg-content--ready-reply', nextReady);
+        else if (r.direction === 'delete') r.cardEl.classList.toggle('msg-content--ready-delete', nextReady);
       }
     }
   };
 
   const handleMsgTouchEnd = (e, m) => {
     cancelLongPress();
-
     const r = swipeRef.current;
-    if (!r.active && !r.cardEl) {
-      return;
-    }
+    if (!r.active && !r.cardEl) return;
 
     const t = e.changedTouches[0];
     const dx = t.clientX - r.startX;
     const dir = r.direction;
-
     const cardEl = r.cardEl;
     const replyGlowEl = r.replyGlowEl;
     const deleteGlowEl = r.deleteGlowEl;
 
-    r.active = false;
-    r.direction = null;
-    r.cardEl = null;
-    r.replyGlowEl = null;
-    r.deleteGlowEl = null;
-    r.ready = false;
-    r.msg = null;
+    r.active = false; r.direction = null; r.cardEl = null;
+    r.replyGlowEl = null; r.deleteGlowEl = null; r.ready = false; r.msg = null;
 
     if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply && !m.stickerUrl) {
       resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
@@ -454,10 +340,7 @@ const MessageList = ({
   };
 
   const handleMsgClick = (e, m) => {
-    if (actionsMenu) {
-      setActionsMenu(null);
-      return;
-    }
+    if (actionsMenu) { setActionsMenu(null); return; }
     if (swipeActiveRef.current) return;
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
     handleMessageTap(m.id, e);
@@ -475,16 +358,13 @@ const MessageList = ({
         }
       >
         {!url && getInitial(nick)}
-        {isBanned && (
-          <span className="msg-avatar-banned-badge" aria-hidden="true">🚫</span>
-        )}
+        {isBanned && <span className="msg-avatar-banned-badge" aria-hidden="true">🚫</span>}
       </div>
     );
   };
 
   const sameMinute = (t1, t2) => {
-    const d1 = new Date(t1);
-    const d2 = new Date(t2);
+    const d1 = new Date(t1); const d2 = new Date(t2);
     return (
       d1.getFullYear() === d2.getFullYear() &&
       d1.getMonth() === d2.getMonth() &&
@@ -500,13 +380,10 @@ const MessageList = ({
     if (!sameMinute(a.time, b.time)) return false;
     if (b.replyTo) return false;
     if (editingMessageId && (a.id === editingMessageId || b.id === editingMessageId)) return false;
-
     const aImageOnly = !a.text?.trim() && !!a.imageUrl;
     const bImageOnly = !b.text?.trim() && !!b.imageUrl;
     if (aImageOnly || bImageOnly) return false;
-
     if (a.stickerUrl || b.stickerUrl) return false;
-
     return true;
   };
 
@@ -524,61 +401,9 @@ const MessageList = ({
     );
   };
 
-  // [2.35.52] Радиальный рендер
-  const renderWheel = (m) => {
-    if (!pickerOrigin) return null;
-
-    const renderOrbit = (emojis, radius, isExtra) => (
-      <div className={`reaction-wheel-orbit ${isExtra ? 'reaction-wheel-orbit--extra' : 'reaction-wheel-orbit--main'}`}>
-        {emojis.map((emoji, i) => {
-          const angle = (360 / emojis.length) * i;
-          const pos = polar(radius, angle);
-          const isActive = didIReact(m, emoji);
-          return (
-            <button
-              key={emoji}
-              type="button"
-              className={`reaction-wheel-btn ${isActive ? 'active' : ''}`}
-              style={{
-                left: pos.x - WHEEL_BTN / 2,
-                top: pos.y - WHEEL_BTN / 2,
-                animationDelay: `${i * 0.025}s`,
-              }}
-              onClick={() => {
-                sendReaction(m.id, emoji);
-                toggleReactions(m.id);
-              }}
-              aria-label={emoji}
-            >
-              {emoji}
-            </button>
-          );
-        })}
-      </div>
-    );
-
-    return (
-      <div
-        className={`reaction-wheel ${reactionsExpanded ? 'reaction-wheel--expanded' : ''}`}
-        style={{ left: pickerOrigin.x, top: pickerOrigin.y }}
-        onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-      >
-        <div className="reaction-wheel-center">
-          <button
-            type="button"
-            className="reaction-wheel-toggle"
-            onClick={() => setReactionsExpanded(v => !v)}
-            aria-label={reactionsExpanded ? 'Свернуть' : 'Ещё эмодзи'}
-          >
-            {reactionsExpanded ? '−' : '＋'}
-          </button>
-        </div>
-        {renderOrbit(REACTIONS_MAIN, WHEEL_R_MAIN, false)}
-        {reactionsExpanded && renderOrbit(REACTIONS_EXTRA, WHEEL_R_EXTRA, true)}
-      </div>
-    );
-  };
+  const activeMessage = activeMessageId
+    ? messages.find(x => x.id === activeMessageId)
+    : null;
 
   return (
     <>
@@ -591,7 +416,6 @@ const MessageList = ({
           const prevMessage = messages[i - 1];
           const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
-
           const isGroupStart = !isGroupable(prevMessage, m);
           const isGroupEnd = !isGroupable(m, nextMessage);
           const isInGroup = !isGroupStart || !isGroupEnd;
@@ -608,10 +432,7 @@ const MessageList = ({
             return (
               <React.Fragment key={m.id}>
                 {dateDivider}
-                <div
-                  className={`msg msg--sticker ${isOwn ? 'msg--own' : 'msg--other'}`}
-                  data-msg-id={m.id}
-                >
+                <div className={`msg msg--sticker ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
                   <div className="msg-swipe-glow msg-swipe-glow--delete" />
                   <div
                     className="msg-sticker-wrap"
@@ -621,13 +442,7 @@ const MessageList = ({
                   >
                     {forwardLabel}
                     <div className="msg-sticker-nick">{m.nickname}</div>
-                    <img
-                      src={m.stickerUrl}
-                      alt=""
-                      className="msg-sticker-img"
-                      draggable={false}
-                      loading="lazy"
-                    />
+                    <img src={m.stickerUrl} alt="" className="msg-sticker-img" draggable={false} loading="lazy" />
                   </div>
                 </div>
               </React.Fragment>
@@ -650,11 +465,7 @@ const MessageList = ({
           ) : null;
 
           const heartBurstNode = heartBurst && heartBurst.id === m.id ? (
-            <span
-              key={heartBurst.key}
-              className="msg-heart-burst"
-              style={{ left: heartBurst.x, top: heartBurst.y }}
-            >
+            <span key={heartBurst.key} className="msg-heart-burst" style={{ left: heartBurst.x, top: heartBurst.y }}>
               ❤️
             </span>
           ) : null;
@@ -663,15 +474,10 @@ const MessageList = ({
             return (
               <React.Fragment key={m.id}>
                 {dateDivider}
-                <div
-                  className={`msg msg--image-only ${isOwn ? 'msg--own' : 'msg--other'}`}
-                  data-msg-id={m.id}
-                >
+                <div className={`msg msg--image-only ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
                   {renderMsgAvatar(m.userId, m.nickname)}
-
                   <div className="msg-swipe-glow msg-swipe-glow--reply" />
                   <div className="msg-swipe-glow msg-swipe-glow--delete" />
-
                   <div className="msg-content msg-content--image-only">
                     <div
                       className="msg-image-only-wrap"
@@ -680,56 +486,35 @@ const MessageList = ({
                       onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                     >
                       {editRingId === m.id && <div className="msg-edit-ring" />}
-
-                      {replyBlock && (
-                        <div className="msg-image-only-reply-wrap">{replyBlock}</div>
-                      )}
+                      {replyBlock && <div className="msg-image-only-reply-wrap">{replyBlock}</div>}
                       <img
                         src={m.imageUrl}
                         alt="photo"
                         className="msg-image-only-img"
                         draggable={false}
-                        onError={(e) => {
-                          console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                          e.target.style.display = 'none';
-                        }}
+                        onError={(e) => { console.error('❌ Ошибка загрузки фото:', m.imageUrl); e.target.style.display = 'none'; }}
                         onClick={(e) => handleImageTap(e, m)}
                       />
                       {heartBurstNode}
-
                       <div className="msg-image-overlay">
                         <span className="msg-nick msg-nick--overlay">{m.nickname}</span>
                         {forwardLabel}
                       </div>
-
                       <div className="msg-image-bottom-overlay">
-                        <span className="msg-time msg-time--bottom">
-                          {formatMessageDate(m.time)}
-                        </span>
+                        <span className="msg-time msg-time--bottom">{formatMessageDate(m.time)}</span>
                       </div>
                     </div>
 
                     {hasReactions(m) && (
-                      <div
-                        className={`msg-image-only-reactions ${
-                          activeMessageId === m.id ? 'msg-image-only-reactions--above-picker' : ''
-                        }`}
-                      >
+                      <div className={`msg-image-only-reactions ${activeMessageId === m.id ? 'msg-image-only-reactions--above-picker' : ''}`}>
                         {Object.entries(m.reactions).map(([emoji, users]) => (
-                          <span
-                            key={emoji}
-                            className={`image-only-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
-                          >
+                          <span key={emoji} className={`image-only-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}>
                             {emoji}
-                            {users.length > 1 && (
-                              <span className="image-only-reaction-count">{users.length}</span>
-                            )}
+                            {users.length > 1 && (<span className="image-only-reaction-count">{users.length}</span>)}
                           </span>
                         ))}
                       </div>
                     )}
-
-                    {activeMessageId === m.id && !isEditingThis && renderWheel(m)}
                   </div>
                 </div>
               </React.Fragment>
@@ -752,7 +537,6 @@ const MessageList = ({
                 {isGroupStart ? renderMsgAvatar(m.userId, m.nickname) : (
                   <div className="msg-avatar msg-avatar--placeholder" />
                 )}
-
                 <div className="msg-swipe-glow msg-swipe-glow--reply" />
                 <div className="msg-swipe-glow msg-swipe-glow--delete" />
 
@@ -773,7 +557,6 @@ const MessageList = ({
                   )}
 
                   {forwardLabel}
-
                   {replyBlock}
 
                   {isEditingThis ? (
@@ -784,10 +567,7 @@ const MessageList = ({
                         onChange={(e) => setEditText(e.target.value)}
                         autoFocus
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            saveEdit(m.id);
-                          }
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(m.id); }
                           if (e.key === 'Escape') cancelEdit();
                         }}
                         className="msg-edit-input msg-edit-textarea"
@@ -796,18 +576,8 @@ const MessageList = ({
                         enterKeyHint="done"
                       />
                       <div className="msg-edit-actions">
-                        <button
-                          className="btn msg-edit-btn msg-edit-btn--cancel"
-                          onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
-                        >
-                          Отмена
-                        </button>
-                        <button
-                          className="btn msg-edit-btn msg-edit-btn--save"
-                          onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}
-                        >
-                          Сохранить
-                        </button>
+                        <button className="btn msg-edit-btn msg-edit-btn--cancel" onClick={(e) => { e.stopPropagation(); cancelEdit(); }}>Отмена</button>
+                        <button className="btn msg-edit-btn msg-edit-btn--save" onClick={(e) => { e.stopPropagation(); saveEdit(m.id); }}>Сохранить</button>
                       </div>
                     </div>
                   ) : (
@@ -821,10 +591,7 @@ const MessageList = ({
                         alt="photo"
                         className="msg-image"
                         draggable={false}
-                        onError={(e) => {
-                          console.error('❌ Ошибка загрузки фото:', m.imageUrl);
-                          e.target.style.display = 'none';
-                        }}
+                        onError={(e) => { console.error('❌ Ошибка загрузки фото:', m.imageUrl); e.target.style.display = 'none'; }}
                         onClick={(e) => handleImageTap(e, m)}
                       />
                       {heartBurstNode}
@@ -832,26 +599,15 @@ const MessageList = ({
                   )}
 
                   {hasReactions(m) && (
-                    <div
-                      className={`msg-reactions ${
-                        activeMessageId === m.id ? 'msg-reactions--above-picker' : ''
-                      }`}
-                    >
+                    <div className={`msg-reactions ${activeMessageId === m.id ? 'msg-reactions--above-picker' : ''}`}>
                       {Object.entries(m.reactions).map(([emoji, users]) => (
-                        <span
-                          key={emoji}
-                          className={`msg-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
-                        >
+                        <span key={emoji} className={`msg-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}>
                           {emoji}
-                          {users.length > 1 && (
-                            <span className="msg-reaction-count">{users.length}</span>
-                          )}
+                          {users.length > 1 && (<span className="msg-reaction-count">{users.length}</span>)}
                         </span>
                       ))}
                     </div>
                   )}
-
-                  {activeMessageId === m.id && !isEditingThis && renderWheel(m)}
                 </div>
               </div>
             </React.Fragment>
@@ -860,6 +616,22 @@ const MessageList = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {activeMessage && pickerAnchor && (
+        <ReactionWheel
+          open
+          anchorX={pickerAnchor.x}
+          anchorY={pickerAnchor.y}
+          boundsRef={containerRef}
+          reactions={activeMessage.reactions || {}}
+          nickname={nickname}
+          onPick={(emoji) => {
+            sendReaction(activeMessage.id, emoji);
+            toggleReactions(activeMessage.id);
+          }}
+          onClose={() => toggleReactions(activeMessage.id)}
+        />
+      )}
+
       <MessageActionsMenu
         open={!!actionsMenu}
         anchor={actionsMenu?.anchor}
@@ -867,17 +639,9 @@ const MessageList = ({
         isOwn={actionsMenu?.msg?.userId === myId}
         isAdmin={isAdmin}
         isSticker={!!actionsMenu?.msg?.stickerUrl}
-        onForward={() => {
-          if (actionsMenu?.msg && onForward) {
-            onForward(buildForwardData(actionsMenu.msg));
-          }
-        }}
-        onEdit={() => {
-          if (actionsMenu?.msg) startEdit(actionsMenu.msg);
-        }}
-        onDelete={() => {
-          if (actionsMenu?.msg) setConfirmData({ messageId: actionsMenu.msg.id });
-        }}
+        onForward={() => { if (actionsMenu?.msg && onForward) onForward(buildForwardData(actionsMenu.msg)); }}
+        onEdit={() => { if (actionsMenu?.msg) startEdit(actionsMenu.msg); }}
+        onDelete={() => { if (actionsMenu?.msg) setConfirmData({ messageId: actionsMenu.msg.id }); }}
         onClose={closeActionsMenu}
       />
 
