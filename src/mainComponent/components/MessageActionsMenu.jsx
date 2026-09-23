@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 /*
+  [2.35.59] edit-кнопка скрывается, если onEdit не передан.
   [2.35.45] Меню действий над сообщением — только иконки, без карточки.
             Long-press на любом сообщении. Позиционируется рядом.
             Пункты: Переслать / (для своих) Редактировать / Удалить.
@@ -43,10 +44,10 @@ const MessageActionsMenu = ({
   const items = [];
   items.push({ id: 'forward', icon: '↪', label: 'Переслать', onClick: onForward });
 
-  if (isOwn && !isSticker) {
+  if (isOwn && !isSticker && onEdit) {
     items.push({ id: 'edit', icon: '✏️', label: 'Редактировать', onClick: onEdit });
   }
-  if (isOwn || isAdmin) {
+  if ((isOwn || isAdmin) && onDelete) {
     items.push({ id: 'delete', icon: '🗑️', label: 'Удалить', onClick: onDelete, danger: true });
   }
 

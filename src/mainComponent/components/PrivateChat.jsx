@@ -7,6 +7,7 @@ import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
 import VoiceRecordingOverlay from './VoiceRecordingOverlay';
+import ConfirmModal from './ConfirmModal';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 
 const PICKER_AUTOHIDE_MS = 5000;
@@ -75,6 +76,7 @@ const PrivateChat = ({
   const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
   const [bgLoaded, setBgLoaded] = useState(false);
   const [actionsMenu, setActionsMenu] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const [dateFilter, setDateFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -478,6 +480,17 @@ const PrivateChat = ({
 
   // ===== /VOICE =====
 
+  const handleConfirmDelete = useCallback(() => {
+    if (!confirmDelete) return;
+    if (sendMessage) {
+      sendMessage({
+        type: 'private_delete_message',
+        data: { messageId: confirmDelete.messageId },
+      });
+    }
+    setConfirmDelete(null);
+  }, [confirmDelete, sendMessage]);
+
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
   const bgIsUrl = isUrlBg(dialogsBg);
@@ -737,15 +750,29 @@ const PrivateChat = ({
         open={!!actionsMenu}
         anchor={actionsMenu?.anchor}
         container={actionsMenu?.container}
-        // !!! ВАЖНО, НАДО СДЕЛАТЬ И НЕ ПОТЕРЯТЬ, БРАТ
-        //isOwn={actionsMenu?.msg?.senderId === myId}
-        isOwn={false}
-        isAdmin={isAdmin}
+        isOwn={actionsMenu?.msg?.senderId === myId}
+        isAdmin={false}
         isSticker={!!actionsMenu?.msg?.stickerUrl}
-        onForward={() => { if (actionsMenu?.msg && onForward) onForward(buildForwardData(actionsMenu.msg)); }}
-        onEdit={() => {}}
-        onDelete={() => {}}
+        onForward={() => {
+          if (actionsMenu?.msg && onForward) {
+            onForward(buildForwardData(actionsMenu.msg));
+          }
+        }}
+        onEdit={undefined}
+        onDelete={() => {
+          if (actionsMenu?.msg) {
+            setConfirmDelete({ messageId: actionsMenu.msg.id });
+          }
+        }}
         onClose={closeActionsMenu}
+      />
+
+      <ConfirmModal
+        open={!!confirmDelete}
+        title="Удалить сообщение?"
+        description="Вы подтверждаете удаление этого сообщения?"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
       />
 
       <StickerPanel
