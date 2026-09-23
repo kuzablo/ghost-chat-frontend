@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import LatestVersionLink from './LatestVersionLink';
 import PrivateChat from './components/PrivateChat';
 import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
@@ -17,6 +16,7 @@ import StickerPanel from './components/StickerPanel';
 import PrivateMessageToasts from './components/PrivateMessageToasts';
 import ForwardPickerModal from './components/ForwardPickerModal';
 import ReactionWheel from './components/ReactionWheel';
+import UpdateToast from './components/UpdateToast';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -32,6 +32,7 @@ import { useDuel } from './hooks/useDuel';
 import { usePrivateChat } from './hooks/usePrivateChat';
 import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
+import { useVersionCheck } from './hooks/useVersionCheck';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
@@ -52,15 +53,16 @@ import '../styles/Chat.friendship.css';
 import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
+import '../styles/Chat.update.css';
 
+// feat(update): авто-обновление фронта через version.json (v2.37.0)
+// fix(reactions): единый таймер автоскрытия (v2.36.7)
 // feat(reactions): fullscreen использует общий ReactionWheel (v2.36.4)
 // feat(voice): оверлей записи с маскотом (v2.35.58)
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-// [2.35.45] пересылка сообщений — меню long-press + выбор получателя
-// [2.35.44] свои сообщения справа без синего + стикер 220px
-const VERSION = '2.36.7';
+const VERSION = '2.37.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -69,9 +71,7 @@ const FS_CLOSE_THRESHOLD = 120;
 const FS_DOUBLE_TAP_MS = 250;
 const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
-
-// [2.36.4] колесо реакций требует места: 104 (R_EXTRA) + 18 (BTN/2) + 14 (PAD)
-const WHEEL_NEED_PX = 136;
+const UPDATE_DEFER_MS = 10 * 60 * 1000;
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -142,7 +142,7 @@ const ClipIcon = () => (
 const Chat = () => {
   const auth = useAuth();
   const {
-    token, nickname, isAuth, isAdmin, myId, serverVersion,
+    token, nickname, isAuth, isAdmin, myId,
     adminUserId, adminNickname,
     isRegisterMode, setIsRegisterMode,
     authNickname, setAuthNickname,
@@ -194,6 +194,7 @@ const Chat = () => {
   const [profileTarget, setProfileTarget] = useState(null);
   const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
   const [forwardData, setForwardData] = useState(null);
+  const [updateDeferred, setUpdateDeferred] = useState(false);
 
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
@@ -250,6 +251,7 @@ const Chat = () => {
   const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
+  const versionCheck = useVersionCheck();
 
   const sendVoiceMessageRef = useRef(null);
 
@@ -364,7 +366,7 @@ const Chat = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yt.trackIndex]);
 
-  const { isConnected: wsConnected, error: wsError, sendMessage, ws } = useWebSocket(
+  const { isConnected: wsConnected, error: wsError, sendMessage } = useWebSocket(
     WS_URL,
     tokenRef.current,
     (msg) => handleWebSocketMessage(msg)
@@ -581,14 +583,6 @@ const Chat = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
-
-    // [2.36.6] Метка этапа — видно в логах Amvera, дошёл ли React до сюда
-    if (typeof window.__clientLog === 'function') {
-      window.__clientLog(
-        'chat-boot-check',
-        `isAuth=${isAuth} hist=${isHistoryLoaded} avatars=${isAvatarsLoaded}`
-      );
-    }
 
     if (!isAuth) {
       window.__ready();
@@ -973,20 +967,6 @@ const Chat = () => {
     }
     setForwardData(null);
   }, [forwardData, sendMessage]);
-
-  const compareVersions = (v1, v2) => {
-    const p1 = v1.split('.').map(Number);
-    const p2 = v2.split('.').map(Number);
-    for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-      const n1 = p1[i] || 0;
-      const n2 = p2[i] || 0;
-      if (n1 > n2) return 1;
-      if (n1 < n2) return -1;
-    }
-    return 0;
-  };
-
-  const isNewVersionAvailable = serverVersion && compareVersions(serverVersion, VERSION) > 0;
 
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
@@ -1514,6 +1494,7 @@ const Chat = () => {
       setShowFullscreenReactions(false);
       return;
     }
+    const WHEEL_NEED_PX = 136;
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -1539,7 +1520,36 @@ const Chat = () => {
     setShowFullscreenReactions(false);
   }, [setShowFullscreenReactions]);
 
+  // [2.37.0] Отложить обновление на 10 минут
+  const handleDeferUpdate = useCallback(() => {
+    setUpdateDeferred(true);
+    setTimeout(() => setUpdateDeferred(false), UPDATE_DEFER_MS);
+  }, []);
+
   const voiceRecording = voiceRecActive;
+
+  // [2.37.0] Занят ли юзер чем-то важным — тогда тост обновления не мешаем
+  const isBusyForReload =
+    !!fullscreenImage ||
+    voiceRecActive ||
+    sending ||
+    isUploading ||
+    !isAuth ||
+    !!forwardData ||
+    stickerPanelOpen ||
+    showDialogs ||
+    showInfo ||
+    showPlayers ||
+    !!banConfirm ||
+    logoutConfirm ||
+    showNotifModal ||
+    !!profileTarget ||
+    !!privateChat;
+
+  const showUpdateToast =
+    versionCheck.updateAvailable &&
+    !updateDeferred &&
+    !isBusyForReload;
 
   return (
     <>
@@ -2046,7 +2056,12 @@ const Chat = () => {
 
       <InstallPwaBanner />
       <InstallPwaBannerAndroid />
-      {isNewVersionAvailable && <LatestVersionLink />}
+
+      <UpdateToast
+        open={showUpdateToast}
+        onReload={versionCheck.reload}
+        onDefer={handleDeferUpdate}
+      />
 
       {fullscreenImage && (
         <div
