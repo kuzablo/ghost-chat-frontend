@@ -1526,3 +1526,15 @@ body.theme-switching *::after {
   left: auto;
   right: 6px;
 }
+
+/* ============================================================= */
+/* [2.35.55] Reply/delete-подсветка для стикеров                  */
+/* ============================================================= */
+
+.msg--sticker .msg-sticker-wrap.msg-content--ready-reply {
+  animation: msgReadyReply 1s ease-in-out infinite;
+}
+
+.msg--sticker .msg-sticker-wrap.msg-content--ready-delete {
+  animation: msgReadyDelete 1s ease-in-out infinite;
+}

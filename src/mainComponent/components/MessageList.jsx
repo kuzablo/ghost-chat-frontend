@@ -13,6 +13,7 @@ const MessageList = ({
   deleteMessage,
   toggleReactions,
   activeMessageId,
+  setActiveMessageId,
   nickname,
   sendReaction,
   setFullscreenImage,
@@ -143,7 +144,6 @@ const MessageList = ({
     }, DOUBLE_TAP_MS);
   };
 
-  // [2.35.53] Точка тапа — viewport. Клампинг в ReactionWheel.
   const handleMessageTap = (messageId, e) => {
     if (actionsMenu) { setActionsMenu(null); return; }
     if (activeMessageId === messageId) { toggleReactions(messageId); return; }
@@ -281,27 +281,42 @@ const MessageList = ({
       cancelLongPress();
 
       if (Math.abs(dy) > Math.abs(dx)) { r.active = false; r.cardEl = null; return; }
-      if (dx < 0 && m.stickerUrl) { r.active = false; r.cardEl = null; return; }
       if (dx > 0 && !canDelete(m)) { r.active = false; r.cardEl = null; return; }
 
       r.direction = dx < 0 ? 'reply' : 'delete';
       swipeActiveRef.current = true;
+
+      // [2.35.55] Свайп начался — гасим пикер реакций
+      if (setActiveMessageId) setActiveMessageId(prev => prev == null ? prev : null);
     }
 
     if (e.cancelable) e.preventDefault();
 
+    // [2.35.55] Направление фиксировано. Ответ — только влево, удаление — только вправо.
+    let off;
     if (r.direction === 'reply') {
-      const off = Math.max(dx, -SWIPE_MAX);
-      if (r.cardEl) { r.cardEl.style.transition = 'none'; r.cardEl.style.transform = `translateX(${off}px)`; }
-      if (r.replyGlowEl) r.replyGlowEl.style.opacity = String(Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1));
+      off = Math.min(0, Math.max(dx, -SWIPE_MAX));
+      if (r.cardEl) {
+        r.cardEl.style.transition = 'none';
+        r.cardEl.style.transform = `translateX(${off}px)`;
+      }
+      if (r.replyGlowEl) {
+        r.replyGlowEl.style.opacity = String(Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1));
+      }
     } else if (r.direction === 'delete') {
-      const off = Math.min(dx, SWIPE_MAX);
-      if (r.cardEl) { r.cardEl.style.transition = 'none'; r.cardEl.style.transform = `translateX(${off}px)`; }
-      if (r.deleteGlowEl) r.deleteGlowEl.style.opacity = String(Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1));
+      off = Math.max(0, Math.min(dx, SWIPE_MAX));
+      if (r.cardEl) {
+        r.cardEl.style.transition = 'none';
+        r.cardEl.style.transform = `translateX(${off}px)`;
+      }
+      if (r.deleteGlowEl) {
+        r.deleteGlowEl.style.opacity = String(Math.min(Math.abs(off) / SWIPE_THRESHOLD, 1));
+      }
+    } else {
+      off = 0;
     }
 
-    const abs = Math.abs(dx);
-    const nextReady = abs >= SWIPE_THRESHOLD;
+    const nextReady = Math.abs(off) >= SWIPE_THRESHOLD;
     if (nextReady !== r.ready) {
       r.ready = nextReady;
       if (r.cardEl) {
@@ -326,7 +341,8 @@ const MessageList = ({
     r.active = false; r.direction = null; r.cardEl = null;
     r.replyGlowEl = null; r.deleteGlowEl = null; r.ready = false; r.msg = null;
 
-    if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply && !m.stickerUrl) {
+    // [2.35.55] reply теперь работает и для стикеров — убрали !m.stickerUrl
+    if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply) {
       resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
       onReply(m);
     } else if (dir === 'delete' && dx >= SWIPE_THRESHOLD && canDelete(m)) {
@@ -433,6 +449,7 @@ const MessageList = ({
               <React.Fragment key={m.id}>
                 {dateDivider}
                 <div className={`msg msg--sticker ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
+                  <div className="msg-swipe-glow msg-swipe-glow--reply" />
                   <div className="msg-swipe-glow msg-swipe-glow--delete" />
                   <div
                     className="msg-sticker-wrap"

@@ -60,7 +60,7 @@ import '../styles/Chat.toasts.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.54';
+const VERSION = '2.35.55';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1635,6 +1635,7 @@ const Chat = () => {
               deleteMessage={deleteMessage}
               toggleReactions={toggleReactions}
               activeMessageId={activeMessageId}
+              setActiveMessageId={setActiveMessageId}
               nickname={nickname}
               sendReaction={sendReaction}
               setFullscreenImage={setFullscreenImage}

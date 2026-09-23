@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 
 /*
   [2.35.53] Радиальный пикер реакций — отдельный компонент.
-            position: fixed, координаты viewport.
-            Центр клампится в boundsRef (скролл-контейнер).
-            Если клампинг сдвинул центр — рисуется анкер-нить от точки тапа.
+  [2.35.55] Таймер сбрасывается при клике на +. Любой клик вне
+            boundsRef (контейнер сообщений) моментально закрывает.
 */
 
 const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
@@ -69,11 +68,29 @@ const ReactionWheel = ({
     setExpanded(false);
   }, [open, anchorX, anchorY, boundsRef]);
 
+  // [2.35.55] Таймер автоскрытия. Расширение/сворачивание + сбрасывает его.
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => onClose?.(), AUTOHIDE_MS);
     return () => clearTimeout(t);
-  }, [open, onClose]);
+  }, [open, expanded, onClose]);
+
+  // [2.35.55] Любой pointerdown вне boundsRef (и вне самого колеса) — закрыть.
+  //           Внутри boundsRef — пусть MessageList/PrivateChat решает сам.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      const t = e.target;
+      if (!t || !t.closest) { onClose?.(); return; }
+      if (t.closest('.reaction-wheel')) return;
+      if (t.closest('.reaction-wheel-anchor')) return;
+      const bounds = boundsRef?.current;
+      if (bounds && bounds.contains(t)) return;
+      onClose?.();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [open, boundsRef, onClose]);
 
   useEffect(() => {
     if (!open) return;
