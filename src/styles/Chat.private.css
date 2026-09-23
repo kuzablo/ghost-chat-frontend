@@ -909,3 +909,17 @@ body.dark .private-loading-mascot {
   }
   .reaction-wheel-anchor-dot { animation: none; }
 }
+
+/* ============================================================= */
+/* [2.35.57] Голосовые в личке                                    */
+/* ============================================================= */
+
+.private-msg .voice-msg {
+  margin-top: 4px;
+}
+
+.private-msg-voice-only {
+  padding: 0;
+  background: transparent;
+  border: none;
+}

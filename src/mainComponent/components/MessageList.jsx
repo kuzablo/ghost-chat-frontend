@@ -3,6 +3,7 @@ import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNew
 import ConfirmModal from './ConfirmModal';
 import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
+import VoiceMessage from './VoiceMessage';
 
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
@@ -223,6 +224,9 @@ const MessageList = ({
       text: m.text || '',
       imageUrl: m.imageUrl || null,
       stickerUrl: m.stickerUrl || null,
+      voiceUrl: m.voiceUrl || null,
+      voiceDuration: m.voiceDuration || null,
+      voiceWaveform: m.voiceWaveform || null,
       forwardedFrom,
     };
   };
@@ -286,13 +290,11 @@ const MessageList = ({
       r.direction = dx < 0 ? 'reply' : 'delete';
       swipeActiveRef.current = true;
 
-      // [2.35.55] Свайп начался — гасим пикер реакций
       if (setActiveMessageId) setActiveMessageId(prev => prev == null ? prev : null);
     }
 
     if (e.cancelable) e.preventDefault();
 
-    // [2.35.55] Направление фиксировано. Ответ — только влево, удаление — только вправо.
     let off;
     if (r.direction === 'reply') {
       off = Math.min(0, Math.max(dx, -SWIPE_MAX));
@@ -341,7 +343,6 @@ const MessageList = ({
     r.active = false; r.direction = null; r.cardEl = null;
     r.replyGlowEl = null; r.deleteGlowEl = null; r.ready = false; r.msg = null;
 
-    // [2.35.55] reply теперь работает и для стикеров — убрали !m.stickerUrl
     if (dir === 'reply' && dx <= -SWIPE_THRESHOLD && onReply) {
       resetSwipeVisual(cardEl, replyGlowEl, deleteGlowEl);
       onReply(m);
@@ -429,6 +430,7 @@ const MessageList = ({
           const isEditingThis = editingMessageId === m.id;
           const isSticker = !!m.stickerUrl;
           const isImageOnly = !isSticker && !m.text?.trim() && !!m.imageUrl && !isEditingThis;
+          const isVoiceOnly = !isSticker && !m.text?.trim() && !m.imageUrl && !!m.voiceUrl;
           const prevMessage = messages[i - 1];
           const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
@@ -486,6 +488,36 @@ const MessageList = ({
               ❤️
             </span>
           ) : null;
+
+          if (isVoiceOnly) {
+            return (
+              <React.Fragment key={m.id}>
+                {dateDivider}
+                <div
+                  className={`msg msg--image-only msg-voice-only ${isOwn ? 'msg--own' : 'msg--other'}`}
+                  data-msg-id={m.id}
+                >
+                  {renderMsgAvatar(m.userId, m.nickname)}
+                  <div className="msg-swipe-glow msg-swipe-glow--reply" />
+                  <div className="msg-swipe-glow msg-swipe-glow--delete" />
+                  <div
+                    className="msg-content msg-content--image-only"
+                    onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                    onTouchMove={(e) => handleMsgTouchMove(e, m)}
+                    onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
+                  >
+                    {replyBlock}
+                    <VoiceMessage
+                      url={m.voiceUrl}
+                      duration={m.voiceDuration || 0}
+                      waveform={m.voiceWaveform || []}
+                      isOwn={isOwn}
+                    />
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          }
 
           if (isImageOnly) {
             return (
@@ -576,6 +608,15 @@ const MessageList = ({
                   {forwardLabel}
                   {replyBlock}
 
+                  {m.voiceUrl && (
+                    <VoiceMessage
+                      url={m.voiceUrl}
+                      duration={m.voiceDuration || 0}
+                      waveform={m.voiceWaveform || []}
+                      isOwn={isOwn}
+                    />
+                  )}
+
                   {isEditingThis ? (
                     <div className="msg-edit-area">
                       <textarea
@@ -598,7 +639,7 @@ const MessageList = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="msg-text">{m.text}</div>
+                    m.text ? <div className="msg-text">{m.text}</div> : null
                   )}
 
                   {m.imageUrl && (

@@ -5,6 +5,9 @@ import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
+import VoiceMessage from './VoiceMessage';
+import VoiceRecordingBar from './VoiceRecordingBar';
+import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 
 const PICKER_AUTOHIDE_MS = 5000;
 const MAX_UPLOAD_MB = 25;
@@ -77,6 +80,11 @@ const PrivateChat = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showScrollDown, setShowScrollDown] = useState(false);
 
+  const [voiceRecActive, setVoiceRecActive] = useState(false);
+  const [voiceRecCancel, setVoiceRecCancel] = useState(false);
+  const voiceLongPressTimerRef = useRef(null);
+  const voiceStartXRef = useRef(0);
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -84,6 +92,13 @@ const PrivateChat = ({
   const fileInputRef = useRef(null);
   const panelRef = useRef(null);
   const longPressRef = useRef({ timer: null, completedAt: 0 });
+
+  const sendVoiceMessageRef = useRef(null);
+
+  const voiceRec = useVoiceRecorder({
+    maxDurationSec: 60,
+    onAutoStop: () => { sendVoiceMessageRef.current?.(); },
+  });
 
   const swipeRef = useRef({ active: false, startX: 0, startY: 0, direction: null, lastDx: 0 });
 
@@ -209,6 +224,9 @@ const PrivateChat = ({
       text: m.text || '',
       imageUrl: m.imageUrl || null,
       stickerUrl: m.stickerUrl || null,
+      voiceUrl: m.voiceUrl || null,
+      voiceDuration: m.voiceDuration || null,
+      voiceWaveform: m.voiceWaveform || null,
       forwardedFrom,
     };
   };
@@ -331,6 +349,7 @@ const PrivateChat = ({
     if (e.target.closest('.private-attach-btn')) return;
     if (e.target.closest('.ig-card')) return;
     if (e.target.closest('.private-msg-sticker')) return;
+    if (e.target.closest('.voice-msg')) return;
 
     if (pickerFor === id) { setPickerFor(null); return; }
 
@@ -374,6 +393,82 @@ const PrivateChat = ({
     );
   };
 
+  // ===== VOICE =====
+
+  const uploadAndSendVoice = useCallback(async (result) => {
+    if (!result) return;
+    const fd = new FormData();
+    const ext = extFromMime(result.mime);
+    fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
+    try {
+      const res = await fetch('https://api.banjoboy420.ru/api/upload-voice', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      sendMessage({
+        type: 'private_message',
+        data: {
+          recipientId: userId,
+          text: '',
+          voiceUrl: data.voiceUrl,
+          voiceDuration: result.duration,
+          voiceWaveform: result.waveform,
+        },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки голосового:', err);
+      setUploadError('Не удалось отправить голосовое');
+      setTimeout(() => setUploadError(''), 4000);
+    }
+  }, [sendMessage, userId]);
+
+  const stopVoicePressTimer = useCallback(() => {
+    if (voiceLongPressTimerRef.current) {
+      clearTimeout(voiceLongPressTimerRef.current);
+      voiceLongPressTimerRef.current = null;
+    }
+  }, []);
+
+  const finishVoice = useCallback(async () => {
+    stopVoicePressTimer();
+    if (!voiceRecActive) return;
+    if (voiceRecCancel) voiceRec.cancel();
+    const result = await voiceRec.stop();
+    setVoiceRecActive(false);
+    setVoiceRecCancel(false);
+    if (result) await uploadAndSendVoice(result);
+  }, [voiceRecActive, voiceRecCancel, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
+
+  sendVoiceMessageRef.current = finishVoice;
+
+  const handleVoicePointerDown = useCallback((e) => {
+    if (input.trim()) return;
+    if (isUploading) return;
+    voiceStartXRef.current = e.clientX;
+    setVoiceRecCancel(false);
+    stopVoicePressTimer();
+    voiceLongPressTimerRef.current = setTimeout(async () => {
+      voiceLongPressTimerRef.current = null;
+      const ok = await voiceRec.start();
+      if (ok) setVoiceRecActive(true);
+    }, 280);
+  }, [input, isUploading, voiceRec, stopVoicePressTimer]);
+
+  const handleVoicePointerMove = useCallback((e) => {
+    if (!voiceRecActive) return;
+    const dx = e.clientX - voiceStartXRef.current;
+    if (dx < -80) setVoiceRecCancel(true);
+  }, [voiceRecActive]);
+
+  const handleVoicePointerUp = useCallback(() => {
+    if (!voiceRecActive) { stopVoicePressTimer(); return; }
+    finishVoice();
+  }, [voiceRecActive, finishVoice, stopVoicePressTimer]);
+
+  // ===== /VOICE =====
+
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
   const bgIsUrl = isUrlBg(dialogsBg);
@@ -391,6 +486,8 @@ const PrivateChat = ({
   const activeMessage = pickerFor
     ? filteredMessages.find(x => x.id === pickerFor)
     : null;
+
+  const voiceRecording = voiceRecActive || voiceRec.recording;
 
   return (
     <>
@@ -510,6 +607,14 @@ const PrivateChat = ({
                           onClick={(e) => { e.stopPropagation(); setFullscreenImage(m.imageUrl); }}
                         />
                       )}
+                      {m.voiceUrl && (
+                        <VoiceMessage
+                          url={m.voiceUrl}
+                          duration={m.voiceDuration || 0}
+                          waveform={m.voiceWaveform || []}
+                          isOwn={isOwn}
+                        />
+                      )}
                       {m.text && <span className="private-msg-text">{m.text}</span>}
                       {igUrl && <InstagramCard url={igUrl} />}
 
@@ -543,46 +648,62 @@ const PrivateChat = ({
 
         {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
-        <div className="private-input-row">
-          <button
-            type="button"
-            className="input-icon-btn input-icon-btn--compact"
-            onClick={() => setStickerPanelOpen(v => !v)}
-            title="Стикеры"
-            aria-label="Стикеры"
-          >
-            <StickerIcon />
-          </button>
-          <button
-            type="button"
-            className="input-icon-btn input-icon-btn--compact"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            title="Прикрепить фото"
-            aria-label="Прикрепить фото"
-          >
-            {isUploading ? '⏳' : <ClipIcon />}
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept="image/*"
-            style={{ display: 'none' }}
+        {voiceRecording ? (
+          <VoiceRecordingBar
+            duration={voiceRec.duration}
+            level={voiceRec.level}
+            cancelled={voiceRecCancel}
           />
-          <ChatInput
-            value={input}
-            onChange={handlePrivateInput}
-            onSend={handleSend}
-            placeholder="Напишите сообщение..."
-            draftKey={null}
-          />
-          <button className="btn" onClick={handleSend}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-            </svg>
-          </button>
-        </div>
+        ) : (
+          <div className="private-input-row">
+            <button
+              type="button"
+              className="input-icon-btn input-icon-btn--compact"
+              onClick={() => setStickerPanelOpen(v => !v)}
+              title="Стикеры"
+              aria-label="Стикеры"
+            >
+              <StickerIcon />
+            </button>
+            <button
+              type="button"
+              className="input-icon-btn input-icon-btn--compact"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              title="Прикрепить фото"
+              aria-label="Прикрепить фото"
+            >
+              {isUploading ? '⏳' : <ClipIcon />}
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              style={{ display: 'none' }}
+            />
+            <ChatInput
+              value={input}
+              onChange={handlePrivateInput}
+              onSend={handleSend}
+              placeholder="Напишите сообщение..."
+              draftKey={null}
+            />
+            <button
+              className="btn"
+              onClick={input.trim() ? handleSend : undefined}
+              onPointerDown={handleVoicePointerDown}
+              onPointerMove={handleVoicePointerMove}
+              onPointerUp={handleVoicePointerUp}
+              onPointerCancel={handleVoicePointerUp}
+              title={input.trim() ? 'Отправить' : 'Удерживай для записи'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {activeMessage && pickerAnchor && (

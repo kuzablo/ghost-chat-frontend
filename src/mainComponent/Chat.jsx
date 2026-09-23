@@ -33,6 +33,8 @@ import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
+import VoiceRecordingBar from './components/VoiceRecordingBar';
+import { useVoiceRecorder, extFromMime } from './hooks/useVoiceRecorder';
 
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
@@ -50,6 +52,7 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 
+// feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
@@ -61,7 +64,7 @@ import '../styles/Chat.toasts.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.56';
+const VERSION = '2.35.57';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -179,6 +182,10 @@ const Chat = () => {
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
+  const [voiceRecActive, setVoiceRecActive] = useState(false);
+  const [voiceRecCancel, setVoiceRecCancel] = useState(false);
+  const voiceLongPressTimerRef = useRef(null);
+  const voiceStartXRef = useRef(0);
 
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
@@ -208,6 +215,7 @@ const Chat = () => {
 
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
+  const inputDragYRef = useRef(0);
 
   const capsuleSwipeRef = useRef({
     startX: 0,
@@ -242,6 +250,13 @@ const Chat = () => {
   const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
+
+  const sendVoiceMessageRef = useRef(null);
+
+  const voiceRec = useVoiceRecorder({
+    maxDurationSec: 60,
+    onAutoStop: () => { sendVoiceMessageRef.current?.(); },
+  });
 
   useEffect(() => {
     if (!showMiniPlayer) return;
@@ -455,7 +470,6 @@ const Chat = () => {
     [messages]
   );
 
-  // [2.35.32] Пользователи с непрочитанными личными — для орбитального уведомления
   const unreadUserObjects = useMemo(() => {
     const ids = Object.keys(unreadByUser).filter(id => unreadByUser[id]);
     return ids.map(id => {
@@ -825,8 +839,6 @@ const Chat = () => {
     };
   }, [chatTogglePlayers, setShowPlayers, setShowInfo]);
 
-  // [2.35.22] Без chatTogglePlayers() — не шлём get_friends при каждом клике.
-  // Данные friends обновляются при auth_ok и friend_request_accept.
   const togglePlayers = () => {
     setShowPlayers(prev => !prev);
   };
@@ -913,7 +925,6 @@ const Chat = () => {
     setStickerPanelOpen(false);
   }, [sendSticker]);
 
-  // [2.35.45] Пересылка — открыть выбор получателя
   const handleForwardOpen = useCallback((data) => {
     if (!data) return;
     setForwardData(data);
@@ -928,6 +939,9 @@ const Chat = () => {
           text: forwardData.text || '',
           imageUrl: forwardData.imageUrl || null,
           stickerUrl: forwardData.stickerUrl || null,
+          voiceUrl: forwardData.voiceUrl || null,
+          voiceDuration: forwardData.voiceDuration || null,
+          voiceWaveform: forwardData.voiceWaveform || null,
           forwardedFrom: forwardData.forwardedFrom,
         },
       });
@@ -939,6 +953,9 @@ const Chat = () => {
           text: forwardData.text || '',
           imageUrl: forwardData.imageUrl || null,
           stickerUrl: forwardData.stickerUrl || null,
+          voiceUrl: forwardData.voiceUrl || null,
+          voiceDuration: forwardData.voiceDuration || null,
+          voiceWaveform: forwardData.voiceWaveform || null,
           forwardedFrom: forwardData.forwardedFrom,
         },
       });
@@ -1112,12 +1129,13 @@ const Chat = () => {
     }
   };
 
-  const INPUT_DRAG_THRESHOLD = 60;
+  const INPUT_DRAG_THRESHOLD = 40;
 
   const handleInputTouchStart = (e) => {
     const t = e.touches[0];
     inputTouchStartYRef.current = t.clientY;
     inputTouchStartXRef.current = t.clientX;
+    inputDragYRef.current = 0;
   };
 
   const handleInputTouchMove = (e) => {
@@ -1127,15 +1145,94 @@ const Chat = () => {
     const dx = t.clientX - inputTouchStartXRef.current;
 
     if (Math.abs(dx) > Math.abs(dy)) return;
-    if (dy > 0) setInputDragY(dy);
+    if (dy > 0) {
+      inputDragYRef.current = dy;
+      setInputDragY(dy);
+    }
   };
 
   const handleInputTouchEnd = () => {
-    if (inputDragY > INPUT_DRAG_THRESHOLD) setShowMobileInput(false);
+    if (inputDragYRef.current > INPUT_DRAG_THRESHOLD) setShowMobileInput(false);
     setInputDragY(0);
+    inputDragYRef.current = 0;
     inputTouchStartYRef.current = null;
     inputTouchStartXRef.current = null;
   };
+
+  // ===== VOICE =====
+
+  const uploadAndSendVoice = useCallback(async (result) => {
+    if (!result) return;
+    const fd = new FormData();
+    const ext = extFromMime(result.mime);
+    fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
+    try {
+      const res = await fetch(`${API_URL}/api/upload-voice`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      sendMessage({
+        type: 'message',
+        data: {
+          text: '',
+          voiceUrl: data.voiceUrl,
+          voiceDuration: result.duration,
+          voiceWaveform: result.waveform,
+        },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки голосового:', err);
+      setErrorMessage('Не удалось отправить голосовое');
+      setTimeout(() => setErrorMessage(''), 4000);
+    }
+  }, [sendMessage, setErrorMessage]);
+
+  const stopVoicePressTimer = useCallback(() => {
+    if (voiceLongPressTimerRef.current) {
+      clearTimeout(voiceLongPressTimerRef.current);
+      voiceLongPressTimerRef.current = null;
+    }
+  }, []);
+
+  const finishVoice = useCallback(async () => {
+    stopVoicePressTimer();
+    if (!voiceRecActive) return;
+    if (voiceRecCancel) voiceRec.cancel();
+    const result = await voiceRec.stop();
+    setVoiceRecActive(false);
+    setVoiceRecCancel(false);
+    if (result) await uploadAndSendVoice(result);
+  }, [voiceRecActive, voiceRecCancel, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
+
+  sendVoiceMessageRef.current = finishVoice;
+
+  const handleVoicePointerDown = useCallback((e) => {
+    if (input.trim()) return;
+    if (isUploading) return;
+    voiceStartXRef.current = e.clientX;
+    setVoiceRecCancel(false);
+    stopVoicePressTimer();
+    voiceLongPressTimerRef.current = setTimeout(async () => {
+      voiceLongPressTimerRef.current = null;
+      const ok = await voiceRec.start();
+      if (ok) setVoiceRecActive(true);
+    }, 280);
+  }, [input, isUploading, voiceRec, stopVoicePressTimer]);
+
+  const handleVoicePointerMove = useCallback((e) => {
+    if (!voiceRecActive) return;
+    const dx = e.clientX - voiceStartXRef.current;
+    if (dx < -80) setVoiceRecCancel(true);
+  }, [voiceRecActive]);
+
+  const handleVoicePointerUp = useCallback(() => {
+    if (!voiceRecActive) {
+      stopVoicePressTimer();
+      return;
+    }
+    finishVoice();
+  }, [voiceRecActive, finishVoice, stopVoicePressTimer]);
+
+  // ===== /VOICE =====
 
   const LONG_PRESS_MS = 600;
   const VOLUME_PIXELS_PER_PERCENT = 2;
@@ -1394,6 +1491,8 @@ const Chat = () => {
     setLogoutConfirm(false);
   }, []);
 
+  const voiceRecording = voiceRecActive || voiceRec.recording;
+
   return (
     <>
       <button
@@ -1577,7 +1676,7 @@ const Chat = () => {
                 alt="banjoboy"
                 className={
                   `chat-header-logo` +
-                  (yt.isPlaying ? ' mascot-playing' : '')
+                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '')
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
@@ -1698,78 +1797,91 @@ const Chat = () => {
             </div>
           )}
 
-          <div
-            className="input-row"
-            onTouchStart={handleInputTouchStart}
-            onTouchMove={handleInputTouchMove}
-            onTouchEnd={handleInputTouchEnd}
-            style={{
-              transform: `translateY(${inputDragY}px)`,
-              transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
-            }}
-          >
-            <ChatInput
-              ref={inputRef}
-              value={input}
-              onChange={(text) => handleInputChange({ target: { value: text } })}
-              onSend={handleSendMessage}
-              disabled={!isAuth || isUploading}
-              placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
-              maxLength={2000}
+          {voiceRecording ? (
+            <VoiceRecordingBar
+              duration={voiceRec.duration}
+              level={voiceRec.level}
+              cancelled={voiceRecCancel}
             />
-            <button
-              type="button"
-              className="input-icon-btn"
-              onClick={() => setStickerPanelOpen(v => !v)}
-              disabled={!isAuth}
-              title="Стикеры"
-              aria-label="Стикеры"
+          ) : (
+            <div
+              className="input-row"
+              onTouchStart={handleInputTouchStart}
+              onTouchMove={handleInputTouchMove}
+              onTouchEnd={handleInputTouchEnd}
+              style={{
+                transform: `translateY(${inputDragY}px)`,
+                transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
+              }}
             >
-              <StickerIcon />
-            </button>
-            <button
-              type="button"
-              className="input-icon-btn"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!isAuth || isUploading}
-              title="Прикрепить фото"
-              aria-label="Прикрепить фото"
-            >
-              <ClipIcon />
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              accept="image/*"
-              style={{ display: 'none' }}
-            />
-            <button
-              className={`send-btn ${sending ? 'sending' : ''}`}
-              onClick={handleSendMessage}
-              disabled={!isAuth || !input.trim() || isUploading || sending}
-            >
-              <div className="rotating-text">
-                {sendChars.map((char, idx) => {
-                  const angle = (360 / sendChars.length) * idx;
-                  return (
-                    <span
-                      key={idx}
-                      style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}
-                    >
-                      {char}
-                    </span>
-                  );
-                })}
-              </div>
-              <div className="send-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-              </div>
-              <div className="send-spinner" />
-            </button>
-          </div>
+              <ChatInput
+                ref={inputRef}
+                value={input}
+                onChange={(text) => handleInputChange({ target: { value: text } })}
+                onSend={handleSendMessage}
+                disabled={!isAuth || isUploading}
+                placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
+                maxLength={2000}
+              />
+              <button
+                type="button"
+                className="input-icon-btn"
+                onClick={() => setStickerPanelOpen(v => !v)}
+                disabled={!isAuth}
+                title="Стикеры"
+                aria-label="Стикеры"
+              >
+                <StickerIcon />
+              </button>
+              <button
+                type="button"
+                className="input-icon-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!isAuth || isUploading}
+                title="Прикрепить фото"
+                aria-label="Прикрепить фото"
+              >
+                <ClipIcon />
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="image/*"
+                style={{ display: 'none' }}
+              />
+              <button
+                className={`send-btn ${sending ? 'sending' : ''}`}
+                onClick={input.trim() ? handleSendMessage : undefined}
+                onPointerDown={handleVoicePointerDown}
+                onPointerMove={handleVoicePointerMove}
+                onPointerUp={handleVoicePointerUp}
+                onPointerCancel={handleVoicePointerUp}
+                disabled={!isAuth || isUploading || sending}
+                title={input.trim() ? 'Отправить' : 'Удерживай для записи'}
+              >
+                <div className="rotating-text">
+                  {sendChars.map((char, idx) => {
+                    const angle = (360 / sendChars.length) * idx;
+                    return (
+                      <span
+                        key={idx}
+                        style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}
+                      >
+                        {char}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="send-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </div>
+                <div className="send-spinner" />
+              </button>
+            </div>
+          )}
 
           <div
             className={`mobile-capsule${capsuleOpen ? ' mobile-capsule--open' : ''}${!capsuleOpen && totalNotifications > 0 ? ' mobile-capsule--has-pulse' : ''}`}
