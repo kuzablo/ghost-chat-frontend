@@ -33,6 +33,7 @@ import { usePrivateChat } from './hooks/usePrivateChat';
 import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import { useVersionCheck } from './hooks/useVersionCheck';
+import { useMascotGestures } from './hooks/useMascotGestures';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
@@ -55,6 +56,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
 // feat(update): авто-обновление фронта через version.json (v2.37.0)
 // fix(reactions): единый таймер автоскрытия (v2.36.7)
 // feat(reactions): fullscreen использует общий ReactionWheel (v2.36.4)
@@ -62,7 +64,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.3';
+const VERSION = '2.37.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -140,8 +142,6 @@ const ClipIcon = () => (
 );
 
 // [2.37.2] Одноразовый маркер: показать, добрался ли React до рендера Chat.
-// Если в логах есть chat-render-start, но нет chat-boot-check — ошибка в
-// теле функции. Если нет и chat-render-start — React вообще до Chat не дошёл.
 let __chatRenderStartLogged = false;
 
 const Chat = () => {
@@ -189,9 +189,7 @@ const Chat = () => {
   const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
   const [fsReactionAnchor, setFsReactionAnchor] = useState(null);
   const [inputDragY, setInputDragY] = useState(0);
-  const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [voiceRecActive, setVoiceRecActive] = useState(false);
   const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
@@ -248,21 +246,18 @@ const Chat = () => {
   const fsLastTapRef = useRef(0);
   const fsTapPosRef = useRef({ x: 0, y: 0 });
 
-  const mascotGestureRef = useRef({
-    startY: 0,
-    startTime: 0,
-    volumeBase: 50,
-    inVolumeDrag: false,
-    longPressTimer: null,
-    longPressFired: false,
-    pointerId: null,
-    lastTapTime: 0,
-  });
-
   const titleTimeoutRef = useRef(null);
 
   const yt = useYouTubePlayer();
   const versionCheck = useVersionCheck();
+  const {
+    volumeTipVisible,
+    showMiniPlayer,
+    handleMascotPointerDown,
+    handleMascotPointerMove,
+    handleMascotPointerUp,
+    handleMascotContextMenu,
+  } = useMascotGestures(yt);
 
   const sendVoiceMessageRef = useRef(null);
 
@@ -270,12 +265,6 @@ const Chat = () => {
     maxDurationSec: 60,
     onAutoStop: () => { sendVoiceMessageRef.current?.(); },
   });
-
-  useEffect(() => {
-    if (!showMiniPlayer) return;
-    if (!yt.hasStarted) return;
-    setShowMiniPlayer(false);
-  }, [showMiniPlayer, yt.hasStarted]);
 
   useEffect(() => {
     if (!fullscreenImage) return;
@@ -636,9 +625,7 @@ const Chat = () => {
   }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
 
   // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам —
-  // зовём принудительно. Универсальная страховка от любых сбоев
-  // (WS не поднялся, banned, сеть, что угодно). Сплэш больше не
-  // может висеть вечно.
+  // зовём принудительно. Универсальная страховка от любых сбоев.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
     const t = setTimeout(() => {
@@ -651,8 +638,6 @@ const Chat = () => {
   }, []);
 
   // [2.37.3] Спец-маркеры от useWebSocket (onclose 4003/4006/4001).
-  // Без этого сплэш висел вечно: WS закрылось, history не пришло,
-  // useEffect ниже выходил до вызова __ready().
   useEffect(() => {
     if (wsError) {
       if (wsError === 'banned-forever') {
@@ -1267,85 +1252,6 @@ const Chat = () => {
   }, [stopVoicePressTimer]);
 
   // ===== /VOICE =====
-
-  const LONG_PRESS_MS = 600;
-  const VOLUME_PIXELS_PER_PERCENT = 2;
-
-  const handleMascotPointerDown = (e) => {
-    const ref = mascotGestureRef.current;
-    ref.startY = e.clientY;
-    ref.startTime = Date.now();
-    ref.volumeBase = yt.volume;
-    ref.inVolumeDrag = false;
-    ref.longPressFired = false;
-    ref.pointerId = e.pointerId;
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
-
-    ref.longPressTimer = setTimeout(() => {
-      ref.longPressFired = true;
-      ref.longPressTimer = null;
-
-      if (!yt.hasStarted) {
-        setShowMiniPlayer(true);
-        yt.next();
-      } else {
-        yt.next();
-      }
-    }, LONG_PRESS_MS);
-  };
-
-  const handleMascotPointerMove = (e) => {
-    const ref = mascotGestureRef.current;
-    if (ref.pointerId !== e.pointerId) return;
-    const dy = e.clientY - ref.startY;
-
-    if (Math.abs(dy) > 8) {
-      if (!ref.inVolumeDrag) {
-        ref.inVolumeDrag = true;
-        if (ref.longPressTimer) {
-          clearTimeout(ref.longPressTimer);
-          ref.longPressTimer = null;
-        }
-        setVolumeTipVisible(true);
-      }
-      const delta = -dy / VOLUME_PIXELS_PER_PERCENT;
-      yt.setVolume(ref.volumeBase + delta);
-    }
-  };
-
-  const handleMascotPointerUp = (e) => {
-    const ref = mascotGestureRef.current;
-    if (ref.pointerId !== e.pointerId) return;
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) { /* noop */ }
-    ref.pointerId = null;
-
-    if (ref.longPressTimer) {
-      clearTimeout(ref.longPressTimer);
-      ref.longPressTimer = null;
-    }
-
-    if (ref.inVolumeDrag) {
-      ref.inVolumeDrag = false;
-      setTimeout(() => setVolumeTipVisible(false), 600);
-      return;
-    }
-
-    if (ref.longPressFired) {
-      ref.longPressFired = false;
-      ref.lastTapTime = 0;
-      return;
-    }
-
-    if (!yt.hasStarted) {
-      return;
-    }
-
-    yt.toggle();
-  };
-
-  const handleMascotContextMenu = (e) => {
-    e.preventDefault();
-  };
 
   const handleNotifAllow = async () => {
     try {
