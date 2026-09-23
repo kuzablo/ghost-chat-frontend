@@ -1,12 +1,13 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.4] fromLanded — старт из lastLandedRect в новую цель (без
-           возврата в шапку). Нужно для переходов panel ↔ center.
-           LANDED_HOLD_MS = 260 — целевой проявляется через opacity
-           240мс, летающий перекрывает это окно.
+  [2.39.5] Анимация через left/top/width/height вместо transform: scale.
+           Scale увеличивал border вместе с размером — обводки не совпадали
+           с конечным элементом. Теперь border 2px сохраняется на всех
+           размерах. Медленнее для GPU, но за 600мс для одного элемента —
+           приемлемо.
+  [2.39.4] fromLanded — старт из lastLandedRect в новую цель.
   [2.39.3] Целевая точка = центр элемента + размер size.
-  [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse, fromLanded }).
 */
 
 const DEFAULT_DURATION = 600;
@@ -120,14 +121,20 @@ export const useMascotFlight = ({
     flyingRef.current = true;
     setFlying(true);
 
-    const dx = (to.left - from.left) + (to.width - from.width) / 2;
-    const dy = (to.top - from.top) + (to.height - from.height) / 2;
-    const scale = from.width > 0 ? to.width / from.width : 1;
-
     const anim = el.animate(
       [
-        { transform: 'translate3d(0, 0, 0) scale(1)' },
-        { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${scale})` },
+        {
+          left: `${from.left}px`,
+          top: `${from.top}px`,
+          width: `${from.width}px`,
+          height: `${from.height}px`,
+        },
+        {
+          left: `${to.left}px`,
+          top: `${to.top}px`,
+          width: `${to.width}px`,
+          height: `${to.height}px`,
+        },
       ],
       {
         duration,

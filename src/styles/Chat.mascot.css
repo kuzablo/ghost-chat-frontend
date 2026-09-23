@@ -194,8 +194,8 @@
   border: 2px solid var(--card-border);
   background: #FFF url('/mascot.png') center / cover no-repeat;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-  will-change: transform;
-  transform-origin: center;
+  will-change: left, top, width, height;
+  box-sizing: border-box;
 }
 
 body.dark .mascot-flying {
@@ -211,7 +211,7 @@ body.dark .mascot-flying {
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  border: 3px solid var(--card-border);
+  border: 2px solid var(--card-border);
   background: #FFF url('/mascot.png') center / cover no-repeat;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   animation: playersBgMascotPulse 1.4s ease-in-out infinite;

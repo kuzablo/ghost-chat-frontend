@@ -59,6 +59,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// fix(mascot): обводки + цикл 8с + мгновенный возврат при модалке (v2.39.5)
 // feat(mascot): три места, полёт шапка ↔ панель ↔ центр (v2.39.4)
 // fix(mascot): mascotPlace как state, удаление летающего через RAF (v2.39.2)
 // feat(mascot): маскот летит в шапку PlayersPanel (v2.39.0)
@@ -73,7 +74,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.4';
+const VERSION = '2.39.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -81,7 +82,7 @@ const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
 const TOAST_LIFETIME_MS = 8000;
-// [2.39.4] Размеры маскота на трёх «остановках».
+// [2.39.5] Размеры маскота на трёх «остановках».
 const MASCOT_SIZE_HEADER = 40;
 const MASCOT_SIZE_PANEL_SOLO = 72;
 const MASCOT_SIZE_PANEL_ORBIT = 41;
@@ -216,7 +217,7 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-  // [2.39.4] Полёт маскота: три ref-цели.
+  // [2.39.5] Полёт маскота: три ref-цели.
   const headerMascotRef = useRef(null);
   const panelOrbitRef = useRef(null);
   const centerMascotRef = useRef(null);
@@ -254,9 +255,13 @@ const Chat = () => {
     duration: 600,
   });
 
-  // [2.39.4] Где сейчас маскот: 'header' | 'panel' | 'center'. State, не ref —
-  // иначе JSX читает устаревшее значение и маскот скачет.
+  // [2.39.5] Где сейчас маскот: 'header' | 'panel' | 'center'. State, не ref.
   const [mascotPlace, setMascotPlace] = useState('header');
+
+  // [2.39.5] Для какого количества непрочитанных тост в центре уже показан
+  // и истёк. Пока счётчик не изменится — в центр больше не летим. Это
+  // разрывает цикл «8с → шапка → снова центр».
+  const centerDismissedForCountRef = useRef(null);
 
   const sendVoiceMessageRef = useRef(null);
 
@@ -523,16 +528,26 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.39.4] Один управляющий эффект для полёта.
-  // Приоритеты: панель > центр > шапка.
+  // [2.39.5] Один управляющий эффект для полёта.
+  // Приоритеты: modal > панель > центр > шапка.
   useEffect(() => {
     if (mascotFlying) return;
 
     const hasUnread = unreadUserObjects.length > 0;
-    const wantPanel = showPlayers;
+    const modalOpen = showDialogs || privateChat;
+    const wantPanel = showPlayers && !modalOpen;
+    const centerAlreadyShown =
+      centerDismissedForCountRef.current === unreadUserObjects.length;
     const wantCenter =
-      !showPlayers && !showDialogs && !privateChat && hasUnread;
+      !showPlayers && !modalOpen && hasUnread && !centerAlreadyShown;
 
+    // Модалка (dialogs/private) открыта → мгновенно в шапку, без полёта.
+    if (modalOpen) {
+      if (mascotPlace !== 'header') setMascotPlace('header');
+      return;
+    }
+
+    // Хотим в панель.
     if (wantPanel && mascotPlace !== 'panel') {
       setMascotPlace('panel');
       const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
@@ -544,6 +559,7 @@ const Chat = () => {
       return;
     }
 
+    // Хотим в центр.
     if (wantCenter && mascotPlace !== 'center') {
       setMascotPlace('center');
       if (mascotPlace === 'header') {
@@ -554,6 +570,7 @@ const Chat = () => {
       return;
     }
 
+    // Возврат в шапку с полётом.
     if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
       setMascotPlace('header');
       startMascotFlight({ reverse: true });
@@ -568,15 +585,27 @@ const Chat = () => {
     startMascotFlight,
   ]);
 
-  // [2.39.4] Возврат из центра в шапку через 8 секунд.
+  // [2.39.5] Таймер возврата из центра — 8с. По истечении помечаем счётчик
+  // как «уже показано» — в центр для этого же количества непрочитанных
+  // больше не полетим.
   useEffect(() => {
     if (mascotPlace !== 'center') return;
     const t = setTimeout(() => {
+      centerDismissedForCountRef.current = unreadUserObjects.length;
       setMascotPlace('header');
       startMascotFlight({ reverse: true });
     }, TOAST_LIFETIME_MS);
     return () => clearTimeout(t);
-  }, [mascotPlace, startMascotFlight]);
+  }, [mascotPlace, unreadUserObjects.length, startMascotFlight]);
+
+  // [2.39.5] Если количество непрочитанных изменилось — сбрасываем «уже
+  // показано», чтобы новый тост мог появиться.
+  useEffect(() => {
+    if (centerDismissedForCountRef.current !== null
+        && centerDismissedForCountRef.current !== unreadUserObjects.length) {
+      centerDismissedForCountRef.current = null;
+    }
+  }, [unreadUserObjects.length]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -1293,7 +1322,7 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.39.4] Маскот в шапке скрыт, если летит или уже не в шапке.
+  // [2.39.5] Маскот в шапке скрыт, если летит или уже не в шапке.
   const hideHeaderMascot = mascotFlying || mascotPlace !== 'header';
 
   return (
@@ -1779,7 +1808,7 @@ const Chat = () => {
         />
       )}
 
-      {/* [2.39.4] PrivateMessageToasts всегда в DOM — ref на маскота валиден
+      {/* [2.39.5] PrivateMessageToasts всегда в DOM — ref на маскота валиден
           для полёта. Видимость через проп visible. */}
       <PrivateMessageToasts
         users={unreadUserObjects}
