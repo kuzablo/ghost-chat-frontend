@@ -524,7 +524,7 @@ body.dark .sticker-panel-overlay {
   animation: msgReadyDelete 1s ease-in-out infinite;
 }
 
-/* ===== Стикер в личке — ник над гифкой ===== */
+/* ===== Стикер в личке — без ника над гифкой ===== */
 
 .private-msg--sticker {
   background: none;
@@ -534,18 +534,7 @@ body.dark .sticker-panel-overlay {
   max-width: 200px;
   cursor: default;
 }
-.private-msg--sticker .private-msg-sticker-nick {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  padding: 0 4px 2px;
-  line-height: 1;
-  opacity: 0.85;
-}
-.private-msg--own.private-msg--sticker .private-msg-sticker-nick {
-  color: var(--btn-bg);
-  text-align: right;
-}
+
 .private-msg--sticker .private-msg-sticker {
   width: 180px;
   height: 180px;
