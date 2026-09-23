@@ -1,11 +1,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.35.60] private_message_deleted — удаление + пересчёт preview в dialogs
   [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update
-  [2.35.41] historyLoaded в privateChat — для маскота-загрузки в PrivateChat
+  [2.35.41] historyLoaded в privateChat
   [2.28.7] восстанавливаем unreadByUser из dialogs_list
-  [2.17.0] state dialogs
 */
+
+const previewFromMessage = (m) => {
+  if (!m) return '· · ·';
+  if (m.text && m.text.trim()) return m.text;
+  if (m.stickerUrl) return '🎨 стикер';
+  if (m.imageUrl) return '📷 фото';
+  if (m.voiceUrl) return '🎤 голосовое';
+  return '· · ·';
+};
+
 export const usePrivateChat = ({ sendMessage, myId, players }) => {
   const [privateChat, setPrivateChat] = useState(null);
   const [privateTypingUser, setPrivateTypingUser] = useState(null);
@@ -104,7 +114,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
         ));
         return true;
 
-      // [2.35.49] моё сообщение прочитано — точка гаснет
       case 'dialog_read_update':
         setDialogs(prev => prev.map(d =>
           d.userId === msg.data.userId ? { ...d, lastIsRead: true } : d
@@ -177,6 +186,33 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
           return rest;
         });
         return true;
+
+      // [2.35.60] Удаление в личке — убираем и пересчитываем preview
+      case 'private_message_deleted': {
+        const { messageId, senderId, recipientId } = msg.data;
+
+        setPrivateChat(prev => {
+          if (!prev) return prev;
+          if (prev.userId !== senderId && prev.userId !== recipientId) return prev;
+
+          const wasLast = prev.messages[prev.messages.length - 1]?.id === messageId;
+          const nextMessages = prev.messages.filter(m => m.id !== messageId);
+
+          if (wasLast) {
+            const newLast = nextMessages[nextMessages.length - 1];
+            const newPreview = previewFromMessage(newLast);
+            const newLastAt = newLast?.created_at || prev.lastAt;
+
+            setDialogs(d => d.map(dd => {
+              if (dd.userId !== prev.userId) return dd;
+              return { ...dd, lastText: newPreview, lastAt: newLastAt };
+            }));
+          }
+
+          return { ...prev, messages: nextMessages };
+        });
+        return true;
+      }
 
       case 'private_reaction_update': {
         const { messageId, reactions } = msg.data;

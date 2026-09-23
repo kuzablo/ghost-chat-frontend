@@ -401,6 +401,7 @@ const MessageList = ({
     const bImageOnly = !b.text?.trim() && !!b.imageUrl;
     if (aImageOnly || bImageOnly) return false;
     if (a.stickerUrl || b.stickerUrl) return false;
+    if (a.voiceUrl || b.voiceUrl) return false;
     return true;
   };
 
@@ -494,18 +495,23 @@ const MessageList = ({
               <React.Fragment key={m.id}>
                 {dateDivider}
                 <div
-                  className={`msg msg--image-only msg-voice-only ${isOwn ? 'msg--own' : 'msg--other'}`}
+                  className={`msg ${isOwn ? 'msg--own' : 'msg--other'}`}
                   data-msg-id={m.id}
                 >
                   {renderMsgAvatar(m.userId, m.nickname)}
                   <div className="msg-swipe-glow msg-swipe-glow--reply" />
                   <div className="msg-swipe-glow msg-swipe-glow--delete" />
                   <div
-                    className="msg-content msg-content--image-only"
+                    className="msg-content"
                     onTouchStart={(e) => handleMsgTouchStart(e, m)}
                     onTouchMove={(e) => handleMsgTouchMove(e, m)}
                     onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                   >
+                    <div className="msg-header">
+                      <span className="msg-nick">{m.nickname}</span>
+                      <span className="msg-time">{formatMessageDate(m.time)}</span>
+                    </div>
+                    {forwardLabel}
                     {replyBlock}
                     <VoiceMessage
                       url={m.voiceUrl}
