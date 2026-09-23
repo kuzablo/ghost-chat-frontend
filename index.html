@@ -8,7 +8,6 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
 
-    <!-- [2.36.6] Critical CSS + boot-splash + аварийный сценарий -->
     <style>
       *,
       *::before,
@@ -140,11 +139,6 @@
 
     <div id="root"></div>
 
-    <!--
-      [2.36.6] Диагностика клиента + тема + аварийный сценарий.
-      Всё в одном скрипте, до загрузки модуля. Ошибки уходят
-      POST-ом на /api/client-error → в логи Amvera.
-    -->
     <script>
       (function () {
         var ERROR_ENDPOINT = 'https://api.banjoboy420.ru/api/client-error';
@@ -164,7 +158,6 @@
               ua: String(navigator.userAgent || '').slice(0, 300),
               ts: Date.now(),
             });
-
             if (navigator.sendBeacon) {
               navigator.sendBeacon(
                 ERROR_ENDPOINT,
@@ -181,10 +174,47 @@
           } catch (e) { /* noop */ }
         }
 
-        // Экспортируем наружу — main.jsx и Chat.jsx смогут слать метки
         window.__clientLog = send;
 
-        // Ошибки парсинга/выполнения
+        // [2.37.2] Перехват console.error / console.warn.
+        // React 19 пишет ошибки рендера сюда, минуя window.onerror.
+        var origError = console.error;
+        var origWarn = console.warn;
+        var consoleBudget = 6;
+
+        function argsToString(args) {
+          try {
+            var parts = [];
+            for (var i = 0; i < args.length; i++) {
+              var a = args[i];
+              if (a instanceof Error) {
+                parts.push((a.message || '') + ' | ' + (a.stack || ''));
+              } else if (typeof a === 'string') {
+                parts.push(a);
+              } else {
+                try { parts.push(JSON.stringify(a)); }
+                catch (e) { parts.push(String(a)); }
+              }
+            }
+            return parts.join(' ');
+          } catch (e) {
+            return '[unserializable]';
+          }
+        }
+
+        console.error = function () {
+          try { origError.apply(console, arguments); } catch (e) {}
+          if (consoleBudget-- > 0) {
+            send('console.error', argsToString(arguments).slice(0, 1400));
+          }
+        };
+        console.warn = function () {
+          try { origWarn.apply(console, arguments); } catch (e) {}
+          if (consoleBudget-- > 0) {
+            send('console.warn', argsToString(arguments).slice(0, 1000));
+          }
+        };
+
         window.addEventListener('error', function (e) {
           var msg = e && e.message ? e.message : 'error';
           var stack = '';
@@ -192,22 +222,19 @@
           send('window.onerror', msg, stack);
         }, true);
 
-        // Необработанные промисы
         window.addEventListener('unhandledrejection', function (e) {
           var reason = e && e.reason;
-          var msg = reason && reason.message ? reason.reason : String(reason);
+          var msg = reason && reason.message ? reason.message : String(reason);
           var stack = reason && reason.stack ? reason.stack : '';
           send('unhandledrejection', msg, stack);
         });
 
-        // Тема
         try {
           if (localStorage.getItem('ghost-chat-theme') === 'dark') {
             document.body.classList.add('dark');
           }
         } catch (e) { /* noop */ }
 
-        // ===== Аварийный сценарий boot splash =====
         var splashEl = document.getElementById('boot-splash');
         if (!splashEl) return;
 
