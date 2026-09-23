@@ -2,8 +2,8 @@ import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.36.0] InfoPanel — 5 глав, орбита-оглавление, живой маскот,
-           свайп-закрытие, динамическая версия, заготовка под пасхалку.
+  [2.36.1] InfoPanel — 5 глав + живые игрушечные демо.
+  [2.36.0] 5 глав, орбита-оглавление, живой маскот, свайп-закрытие.
 */
 
 const CHAPTERS = [
@@ -17,6 +17,403 @@ const CHAPTERS = [
 const SWIPE_THRESHOLD = 90;
 const SWIPE_MAX = 220;
 const DIRECTION_LOCK = 10;
+
+/* ============================================================ */
+/* ЖИВЫЕ ДЕМО                                                  */
+/* ============================================================ */
+
+const DemoRoomPulse = () => {
+  const svgRef = useRef(null);
+  const pathRef = useRef(null);
+  const stateRef = useRef({
+    amp: 0.6, freq: 1.2, speed: 0.012,
+    phase: 0, raf: null, width: 0, height: 8, running: false,
+  });
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    const path = pathRef.current;
+    if (!svg || !path) return;
+
+    const s = stateRef.current;
+    const start = () => {
+      if (s.running) return;
+      s.running = true;
+      const tick = () => {
+        if (!svgRef.current || !pathRef.current) { s.running = false; return; }
+        const rect = svgRef.current.getBoundingClientRect();
+        s.width = rect.width;
+        if (s.width <= 0) { s.raf = requestAnimationFrame(tick); return; }
+
+        s.phase += s.speed;
+        const midY = s.height / 2;
+        const step = 4;
+        const pointsCount = Math.ceil(s.width / step);
+        let d = '';
+        for (let i = 0; i <= pointsCount; i++) {
+          const x = i * step;
+          const t = x / s.width;
+          const y = midY +
+            Math.sin(t * Math.PI * 2 * s.freq + s.phase) * s.amp +
+            Math.sin(t * Math.PI * 4 * s.freq + s.phase * 1.3) * (s.amp * 0.25);
+          if (i === 0) d += `M ${x.toFixed(1)} ${y.toFixed(2)}`;
+          else d += ` L ${x.toFixed(1)} ${y.toFixed(2)}`;
+        }
+        pathRef.current.setAttribute('d', d);
+        s.raf = requestAnimationFrame(tick);
+      };
+      s.raf = requestAnimationFrame(tick);
+    };
+    start();
+
+    return () => {
+      s.running = false;
+      if (s.raf) cancelAnimationFrame(s.raf);
+    };
+  }, []);
+
+  return (
+    <div className="info-demo-live">
+      <div className="info-demo-roompulse">
+        <svg
+          ref={svgRef}
+          viewBox="0 0 100 8"
+          preserveAspectRatio="none"
+          width="100%"
+          height="8"
+        >
+          <defs>
+            <linearGradient id="info-roompulse-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--btn-bg)" stopOpacity="0" />
+              <stop offset="20%" stopColor="var(--btn-bg)" stopOpacity="0.7" />
+              <stop offset="50%" stopColor="var(--nick-color)" stopOpacity="0.9" />
+              <stop offset="80%" stopColor="var(--btn-bg)" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="var(--btn-bg)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path
+            ref={pathRef}
+            d=""
+            fill="none"
+            stroke="url(#info-roompulse-grad)"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </div>
+      <div className="info-demo-caption">полоска-пульс · дышит</div>
+    </div>
+  );
+};
+
+const DemoReactions = () => {
+  const [hit, setHit] = useState(null);
+  const emojis = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
+
+  const handleTap = (emoji) => {
+    setHit(emoji);
+    setTimeout(() => setHit(null), 900);
+  };
+
+  return (
+    <div className="info-demo-live">
+      <div className="info-demo-reactions-wheel">
+        <div className="info-demo-reactions-center">
+          <span>＋</span>
+        </div>
+        {emojis.map((e, i) => {
+          const angle = (360 / emojis.length) * i - 90;
+          const rad = (angle * Math.PI) / 180;
+          const r = 52;
+          const x = Math.cos(rad) * r;
+          const y = Math.sin(rad) * r;
+          return (
+            <button
+              key={e}
+              type="button"
+              className={`info-demo-reaction-btn ${hit === e ? 'info-demo-reaction-btn--hit' : ''}`}
+              style={{
+                left: `calc(50% + ${x}px - 18px)`,
+                top: `calc(50% + ${y}px - 18px)`,
+                animationDelay: `${i * 0.05}s`,
+              }}
+              onClick={() => handleTap(e)}
+              aria-label={e}
+            >
+              {e}
+            </button>
+          );
+        })}
+      </div>
+      <div className="info-demo-caption">
+        {hit ? `реакция ${hit}` : 'тапни — попробуй'}
+      </div>
+    </div>
+  );
+};
+
+const DemoVoiceMessage = () => {
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const rafRef = useRef(null);
+  const startRef = useRef(0);
+  const DURATION_MS = 3200;
+
+  const stop = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    setPlaying(false);
+    setProgress(0);
+  };
+
+  const play = () => {
+    if (playing) { stop(); return; }
+    setPlaying(true);
+    startRef.current = Date.now();
+    const tick = () => {
+      const el = Date.now() - startRef.current;
+      if (el >= DURATION_MS) { stop(); return; }
+      setProgress(el / DURATION_MS);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const bars = [0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.2, 0.6, 0.5, 0.7, 0.4, 0.6, 0.8, 0.3, 0.5, 0.9, 0.4, 0.6];
+  const activeBars = Math.floor(progress * bars.length);
+
+  return (
+    <div className="info-demo-live">
+      <div className={`voice-msg ${playing ? 'voice-msg--playing' : ''}`}>
+        <button
+          type="button"
+          className="voice-msg-play"
+          onClick={play}
+          aria-label={playing ? 'Пауза' : 'Играть'}
+        >
+          {playing ? (
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <rect x="6" y="5" width="4" height="14" rx="1" />
+              <rect x="14" y="5" width="4" height="14" rx="1" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <div className="voice-msg-wave">
+          {bars.map((v, i) => (
+            <span
+              key={i}
+              className={`voice-msg-bar ${i < activeBars ? 'voice-msg-bar--active' : ''}`}
+              style={{ height: `${22 + Math.round(v * 78)}%` }}
+            />
+          ))}
+        </div>
+        <span className="voice-msg-time">
+          {playing ? `0:0${Math.floor(progress * 3)}` : '0:03'}
+        </span>
+      </div>
+      <div className="info-demo-caption">тапни — играет · тап по волне — перемотка</div>
+    </div>
+  );
+};
+
+const DemoDialogCard = () => {
+  return (
+    <div className="info-demo-live">
+      <div className="dialog-card-wrap info-demo-dialog-card">
+        <div className="dialog-card">
+          <div className="dialog-avatar-wrap">
+            <div
+              className="dialog-avatar dialog-avatar--unread"
+              style={{ background: getAvatarColor('Кря') }}
+            >
+              К
+            </div>
+            <span className="dialog-online-dot" aria-hidden="true" />
+            <span className="dialog-unread-pulse" aria-hidden="true" />
+          </div>
+          <div className="dialog-body">
+            <div className="dialog-top">
+              <span className="dialog-nick">Кря</span>
+              <span className="dialog-time">сейчас</span>
+            </div>
+            <div className="dialog-bottom">
+              <span className="dialog-preview">🎤 голосовое</span>
+              <span className="dialog-badge">3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="info-demo-caption">карточка диалога · живая</div>
+    </div>
+  );
+};
+
+const DemoSearch = () => {
+  const [q, setQ] = useState('');
+  const sample = 'найду тебя в любом диалоге';
+  const qLower = q.trim().toLowerCase();
+  const isHit = qLower.length > 0 && sample.toLowerCase().includes(qLower);
+
+  return (
+    <div className="info-demo-live">
+      <div className="info-demo-search-wrap">
+        <input
+          className="info-demo-search-input"
+          type="text"
+          placeholder="Поиск..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        {q && <span className="info-demo-search-count">{isHit ? '1' : '0'}</span>}
+      </div>
+      <div className={`info-demo-search-msg ${isHit ? 'info-demo-search-msg--hit' : ''}`}>
+        {sample}
+      </div>
+      <div className="info-demo-caption">
+        {q ? (isHit ? 'найдено — пульсирует' : 'ничего') : 'попробуй поиск'}
+      </div>
+    </div>
+  );
+};
+
+const DemoFriendshipRitual = () => {
+  return (
+    <div className="info-demo-live">
+      <div className="info-demo-fr-stage">
+        <div className="info-demo-fr-orb info-demo-fr-orb--fire">
+          <span>К</span>
+        </div>
+        <svg className="info-demo-fr-thread" viewBox="0 0 240 60" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="info-fr-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#FF7A45" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#3BB5E8" stopOpacity="0.9" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M 20 30 C 80 5, 160 55, 220 30"
+            fill="none"
+            stroke="url(#info-fr-grad)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="info-demo-fr-thread-path"
+          />
+        </svg>
+        <div className="info-demo-fr-orb info-demo-fr-orb--water">
+          <span>A</span>
+        </div>
+      </div>
+      <div className="info-demo-caption">огонь · вода · нить</div>
+    </div>
+  );
+};
+
+const DemoThemeSwitcher = () => {
+  const [dark, setDark] = useState(false);
+  return (
+    <div className="info-demo-live">
+      <button
+        type="button"
+        className={`info-demo-theme-scene ${dark ? 'info-demo-theme-scene--dark' : ''}`}
+        onClick={() => setDark(v => !v)}
+        aria-label="Переключить тему"
+      >
+        <span className="info-demo-theme-icon">
+          {dark ? '🌙' : '☀️'}
+        </span>
+        <span className="info-demo-theme-hint">
+          {dark ? 'тёмная' : 'светлая'}
+        </span>
+      </button>
+      <div className="info-demo-caption">тапни — растекается кругом</div>
+    </div>
+  );
+};
+
+const DemoMascotRadio = () => {
+  const [playing, setPlaying] = useState(true);
+  return (
+    <div className="info-demo-live">
+      <button
+        type="button"
+        className="info-demo-radio"
+        onClick={() => setPlaying(v => !v)}
+        aria-label={playing ? 'Пауза' : 'Играть'}
+      >
+        <span className={`info-demo-radio-mascot ${playing ? 'info-demo-radio-mascot--playing' : ''}`}>
+          <img src="/mascot.png" alt="" draggable={false} />
+        </span>
+        {playing && (
+          <span className="info-demo-radio-eq" aria-hidden="true">
+            <span /><span /><span /><span />
+          </span>
+        )}
+      </button>
+      <div className="info-demo-caption">
+        {playing ? '♪ трек играет' : 'пауза'}
+      </div>
+    </div>
+  );
+};
+
+const DemoCapsule = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="info-demo-live info-demo-live--capsule">
+      <div
+        className={`info-demo-capsule ${open ? 'info-demo-capsule--open' : ''}`}
+        onClick={() => setOpen(v => !v)}
+      >
+        {!open && <span className="info-demo-capsule-arrow">▲</span>}
+        {open && (
+          <div className="info-demo-capsule-content">
+            <span className="info-demo-capsule-btn">👥</span>
+            <span className="info-demo-capsule-btn">✏️</span>
+          </div>
+        )}
+      </div>
+      <div className="info-demo-caption">
+        {open ? 'развёрнута' : 'тапни — раскроется'}
+      </div>
+    </div>
+  );
+};
+
+const DemoPwaBanner = () => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="info-demo-live">
+      <button
+        type="button"
+        className="info-demo-pwa-trigger"
+        onClick={() => setVisible(v => !v)}
+        aria-label="Показать баннер"
+      >
+        {visible ? 'Скрыть' : 'Показать баннер'}
+      </button>
+      {visible && (
+        <div className="info-demo-pwa-banner">
+          <span className="info-demo-pwa-num">1</span>
+          <span>Нажми <b>Поделиться</b></span>
+        </div>
+      )}
+      <div className="info-demo-caption">iPhone: Safari → Поделиться</div>
+    </div>
+  );
+};
+
+/* ============================================================ */
+/* InfoPanel                                                    */
+/* ============================================================ */
 
 const InfoPanel = forwardRef(({
   onClose,
@@ -59,7 +456,6 @@ const InfoPanel = forwardRef(({
     else if (ref) ref.current = panelRef.current;
   }, [ref]);
 
-  // Scroll-spy — активная глава
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -95,7 +491,6 @@ const InfoPanel = forwardRef(({
     setActiveChapter(id);
   }, []);
 
-  // Свайп вправо — закрыть
   const handleTouchStart = (e) => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
@@ -233,38 +628,21 @@ const InfoPanel = forwardRef(({
             </p>
 
             <div className="info-block">
-              <div className="info-block-title">Написать</div>
+              <div className="info-block-title">Тишина и дыхание</div>
               <p>
-                Текст, фото до 25 МБ, стикеры, голосовое до минуты.
-                Enter — отправить. Свайп вниз по полю ввода — спрятать клавиатуру.
+                Под шапкой — тонкая полоска. Она ничего не измеряет.
+                Просто дышит вместе с теми, кто сейчас в комнате.
               </p>
-            </div>
-
-            <div className="info-block">
-              <div className="info-block-title">Ответить</div>
-              <p>
-                Свайп влево по сообщению — цитата поднимется к полю ввода.
-                Оригинал коротко мигнёт, когда тапнешь по ней.
-              </p>
+              <DemoRoomPulse />
             </div>
 
             <div className="info-block">
               <div className="info-block-title">Реакции</div>
               <p>
-                Тап по сообщению — из точки тапа расцветает колесо эмодзи.
-                Шесть главных на внутренней орбите. Плюс — двенадцать свежих снаружи.
+                Тап по сообщению — из точки тапа расцветает колесо.
+                Шесть главных эмодзи — на внутренней орбите.
               </p>
-              <p className="info-block-note">
-                Двойной тап по фото — ❤️ прямо в точку.
-              </p>
-            </div>
-
-            <div className="info-block">
-              <div className="info-block-title">Своё</div>
-              <p>
-                Своё можно менять и убирать. Долгий тап — меню.
-                Свайп вправо — красная подсветка, отпустил — удалить.
-              </p>
+              <DemoReactions />
             </div>
 
             <div className="info-block">
@@ -273,6 +651,7 @@ const InfoPanel = forwardRef(({
                 Зажми кнопку отправки на пустом поле — запись начнётся.
                 Тапни маскота — пауза. Потяни вверх — отправить, вниз — отменить.
               </p>
+              <DemoVoiceMessage />
             </div>
           </section>
 
@@ -287,37 +666,24 @@ const InfoPanel = forwardRef(({
             </p>
 
             <div className="info-block">
-              <div className="info-block-title">Открыть личку</div>
+              <div className="info-block-title">Диалоги</div>
               <p>
-                Из панели игроков — кнопка ✉️. Или свайп от правого края — там все диалоги.
+                Свайп от правого края — там все, с кем ты говорил лично.
+                У непрочитанного — счётчик и подсветка.
               </p>
-            </div>
-
-            <div className="info-block">
-              <div className="info-block-title">Внутри</div>
-              <p>
-                Реакции, «печатает…», статус «прочитано».
-                Фото и голосовые — тоже сюда.
-              </p>
+              <DemoDialogCard />
             </div>
 
             <div className="info-block">
               <div className="info-block-title">Поиск</div>
               <p>
                 Строка сверху. Ищешь по тексту — совпадения пульсируют голубым.
-                Рядом — фильтр по дате: сегодня / 7 дней / 30 / всё.
               </p>
+              <DemoSearch />
             </div>
 
             <div className="info-block">
-              <div className="info-block-title">Фон</div>
-              <p>
-                Кнопка-картинка в шапке лички. Семь пресетов, или своё фото до 15 МБ.
-              </p>
-            </div>
-
-            <div className="info-block">
-              <div className="info-block-title">Удаление</div>
+              <div className="info-block-title">Своё</div>
               <p>
                 Своё можно убрать — долгий тап, потом 🗑️.
                 Уйдёт у обоих. Чужое — не тронешь.
@@ -336,15 +702,12 @@ const InfoPanel = forwardRef(({
             </p>
 
             <div className="info-block">
-              <div className="info-block-title">Дружба — это ритуал</div>
+              <div className="info-block-title">Ритуал дружбы</div>
               <p>
                 Огонь слева, вода справа. Между ними нить.
-                Один тянется — другой отвечает.
+                Принять — нить стягивается. Отклонить — гаснет.
               </p>
-              <p>
-                Принять — нить стягивается, две половины становятся одним.
-                Отклонить — нить гаснет. Чем больше отказов — тем холоднее цвет.
-              </p>
+              <DemoFriendshipRitual />
             </div>
 
             <div className="info-block">
@@ -359,7 +722,7 @@ const InfoPanel = forwardRef(({
               <div className="info-block-title">Блокировка</div>
               <p>
                 Заблокированный исчезает из онлайна и из твоих диалогов.
-                Разблокировать — в конце этого панели, в разделе «Заблокированные».
+                Разблокировать — в самом конце этой панели.
               </p>
             </div>
           </section>
@@ -377,32 +740,33 @@ const InfoPanel = forwardRef(({
             <div className="info-block">
               <div className="info-block-title">Профиль</div>
               <p>
-                Зажми себя в панели игроков — откроется меню, там пункт «Профиль».
-                Аватарка, пара слов о себе, оформление: 8 шрифтов, свой цвет, поворот.
+                Зажми себя в панели игроков — там пункт «Профиль».
+                Аватарка, пара слов о себе, оформление: 8 шрифтов, цвет, поворот.
               </p>
             </div>
 
             <div className="info-block">
               <div className="info-block-title">Темы</div>
               <p>
-                Светлая и тёмная. Кнопка справа сверху. Новая тема растекается кругом
-                из точки тапа — иконка переворачивается.
+                Светлая и тёмная. Новая тема растекается кругом из точки тапа.
               </p>
+              <DemoThemeSwitcher />
             </div>
 
             <div className="info-block">
               <div className="info-block-title">Радио</div>
               <p>
                 Маскот в шапке — это радио. Три трека по кругу.
-                Короткий тап — пауза, долгий — следующий, свайп вверх-вниз — громкость.
+                Короткий тап — пауза, долгий — следующий, свайп — громкость.
               </p>
+              <DemoMascotRadio />
             </div>
 
             <div className="info-block">
               <div className="info-block-title">Уведомления</div>
               <p>
                 На iPhone — сначала установи на домашний экран, потом разреши.
-                На Android — просто разреши в браузере. На иконке появится число непрочитанных.
+                На Android — просто разреши в браузере.
               </p>
             </div>
           </section>
@@ -418,6 +782,14 @@ const InfoPanel = forwardRef(({
             </p>
 
             <div className="info-block">
+              <div className="info-block-title">Капсула</div>
+              <p>
+                Внизу на телефоне — розовая полоска. Внутри — игроки и написать.
+              </p>
+              <DemoCapsule />
+            </div>
+
+            <div className="info-block">
               <div className="info-block-title">Свайпы</div>
               <ul className="info-list">
                 <li>Слева от края — панель игроков.</li>
@@ -430,20 +802,12 @@ const InfoPanel = forwardRef(({
             </div>
 
             <div className="info-block">
-              <div className="info-block-title">Полоска-пульс</div>
-              <p>
-                Под шапкой — тонкая волна. Она ничего не измеряет.
-                Просто дышит вместе с теми, кто сейчас в чате.
-              </p>
-            </div>
-
-            <div className="info-block">
               <div className="info-block-title">PWA</div>
               <p>
                 iPhone: Safari → Поделиться → «На экран "Домой"».
                 Android: меню браузера → Установить приложение.
-                Откроется без адресной строки, во весь экран, с бейджем непрочитанного.
               </p>
+              <DemoPwaBanner />
             </div>
 
             <div className="info-block">
