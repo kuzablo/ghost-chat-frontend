@@ -1,17 +1,19 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.2] Убран HANDOFF_MS — удаление летающего через двойной RAF
-           после onfinish. React успевает отрисовать целевой элемент
-           (оригинал в шапке / маскот в панели / орбита в центре),
-           потом летающий уходит. Без пустого кадра и без двух маскотов.
-  [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse, fromLanded }).
-  [2.37.9] Fallback на центр экрана.
-  [2.37.7] Web Animations API.
+  [2.39.3] toSize — целевой размер маскота. Если задан, то to — центр
+           целевого элемента + toSize×toSize, а не весь его bounding box.
+           Раньше летающий масштабировался до размеров контейнера
+           (260×130 у players-header--orbit) — отсюда овал и промах
+           в месте приземления.
+           Удаление летающего через 260мс после onfinish (а не двойной
+           RAF) — чтобы целевой элемент успел проявиться на opacity
+           transition (240мс) прежде, чем уйдёт летающий.
 */
 
 const DEFAULT_DURATION = 600;
-const CENTER_SIZE = 80;
+const CENTER_SIZE = 82;
+const LANDED_HOLD_MS = 260;
 
 const getRect = (el) => {
   if (!el) return null;
@@ -21,6 +23,20 @@ const getRect = (el) => {
     top: r.top,
     width: r.width,
     height: r.height,
+  };
+};
+
+const getTargetRect = (el, size) => {
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (!size) {
+    return { left: r.left, top: r.top, width: r.width, height: r.height };
+  }
+  return {
+    left: r.left + r.width / 2 - size / 2,
+    top: r.top + r.height / 2 - size / 2,
+    width: size,
+    height: size,
   };
 };
 
@@ -60,7 +76,12 @@ export const useMascotFlight = ({
   }, []);
 
   const startFlight = useCallback((options = {}) => {
-    const { reverse = false, fromLanded = false, toRef: toRefOverride } = options;
+    const {
+      reverse = false,
+      fromLanded = false,
+      toRef: toRefOverride,
+      toSize = null,
+    } = options;
 
     if (flyingRef.current) return;
 
@@ -72,11 +93,12 @@ export const useMascotFlight = ({
       to = getRect(fromRef?.current);
     } else if (fromLanded) {
       from = lastLandedRectRef.current;
-      to = getRect(toRefOverride?.current || toRef?.current);
+      const targetEl = toRefOverride?.current || toRef?.current;
+      to = getTargetRect(targetEl, toSize);
     } else {
       from = getRect(fromRef?.current);
       const targetEl = toRefOverride?.current || toRef?.current;
-      to = getRect(targetEl);
+      to = getTargetRect(targetEl, toSize);
     }
 
     if (!isUsableRect(from)) {
@@ -85,7 +107,7 @@ export const useMascotFlight = ({
     }
 
     if (!isUsableRect(to)) {
-      to = getCenterRect(CENTER_SIZE);
+      to = getCenterRect(toSize || CENTER_SIZE);
     }
 
     const el = document.createElement('div');
@@ -123,17 +145,15 @@ export const useMascotFlight = ({
         el.remove();
         return;
       }
-      // Снимаем флаг → ререндер → целевой элемент появляется на своём месте.
       flyingRef.current = false;
       setFlying(false);
       if (onLand) onLand();
-      // Двойной RAF — даём React отрисовать целевой элемент, потом
-      // убираем летающий. Он визуально окажется ровно под целевым.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try { el.remove(); } catch { /* noop */ }
-        });
-      });
+      // [2.39.3] Держим летающий на месте 260мс — пока целевой маскот
+      // проявляется через opacity transition (240мс). К моменту
+      // удаления летающего целевой уже виден на 100%.
+      setTimeout(() => {
+        try { el.remove(); } catch { /* noop */ }
+      }, LANDED_HOLD_MS);
     };
   }, [fromRef, toRef, duration, onLand]);
 

@@ -72,7 +72,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.2';
+const VERSION = '2.39.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -80,6 +80,8 @@ const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
 const TOAST_LIFETIME_MS = 8000;
+const PANEL_ORBIT_SIZE = 72;   // [2.39.3] размер solo-маскота в шапке PlayersPanel
+const CENTER_ORBIT_SIZE = 82;  // [2.39.3] размер маскота в центре экрана (OrbitNotification)
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -534,9 +536,9 @@ const Chat = () => {
         toastTimerRef.current = null;
       }
       if (mascotPlace === 'header') {
-        startMascotFlight({ toRef: panelOrbitRef });
+        startMascotFlight({ toRef: panelOrbitRef, toSize: PANEL_ORBIT_SIZE });
       } else {
-        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef });
+        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: PANEL_ORBIT_SIZE });
       }
       return;
     }
@@ -545,7 +547,7 @@ const Chat = () => {
       // Панель закрыта → в центр (если есть непрочитанные) или в шапку.
       if (hasUnread) {
         setMascotPlace('toast');
-        startMascotFlight({ fromLanded: true });
+        startMascotFlight({ fromLanded: true, toSize: CENTER_ORBIT_SIZE });
       } else {
         setMascotPlace('header');
         startMascotFlight({ reverse: true });
@@ -556,7 +558,7 @@ const Chat = () => {
     if (!wantInPanel && mascotPlace === 'header' && hasUnread) {
       // Пришли непрочитанные, маскот в шапке → в центр.
       setMascotPlace('toast');
-      startMascotFlight();
+      startMascotFlight({ toSize: CENTER_ORBIT_SIZE });
       return;
     }
 
