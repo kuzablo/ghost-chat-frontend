@@ -1,11 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.38.0] Двусторонний полёт: startFlight({ reverse }) летит обратно.
-           lastLandedRectRef запоминает точку посадки, чтобы обратный
-           полёт знал, откуда стартовать. toRef необязателен — при
-           отсутствии/скрытости цели летим в центр экрана.
-  [2.37.9] Fallback на центр экрана для мобилы.
+  [2.38.0] Двусторонний полёт. startFlight({ toRef, reverse }).
+           toRef опционален — можно задать цель в момент вызова
+           (например, узел орбиты в PlayersPanel). reverse летит
+           обратно к fromRef из точки последней посадки.
+  [2.37.9] Fallback на центр экрана, если цель скрыта.
   [2.37.7] Полёт маскота через Web Animations API.
 */
 
@@ -60,7 +60,7 @@ export const useMascotFlight = ({
   }, []);
 
   const startFlight = useCallback((options = {}) => {
-    const { reverse = false } = options;
+    const { reverse = false, toRef: toRefOverride } = options;
 
     if (flyingRef.current) return;
 
@@ -72,7 +72,8 @@ export const useMascotFlight = ({
       to = getRect(fromRef?.current);
     } else {
       from = getRect(fromRef?.current);
-      to = getRect(toRef?.current);
+      const targetEl = toRefOverride?.current || toRef?.current;
+      to = getRect(targetEl);
     }
 
     if (!isUsableRect(from)) {

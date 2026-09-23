@@ -210,8 +210,11 @@ const Chat = () => {
   const mobilePlayersBtnRef = useRef(null);
   // [2.38.0] Полёт маскота: источник — маскот в шапке.
   const headerMascotRef = useRef(null);
-  // [2.38.0] Предыдущее значение unread — чтобы поймать переход.
-  const prevUnreadCountRef = useRef(null);
+  // [2.38.0] Цель — узел орбиты в PlayersPanel. Заполняется
+  // через orbitSlotRef когда панель открыта и есть непрочитанные.
+  const panelOrbitRef = useRef(null);
+  // [2.38.0] Где сейчас «находится» маскот: 'header' | 'panel'.
+  const mascotPlaceRef = useRef('header');
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -243,6 +246,7 @@ const Chat = () => {
 
   // [2.38.0] Полёт. Без toRef — цель всегда центр экрана.
   // Сюда попадает место, где потом появится орбита непрочитанных.
+  // [2.38.0] Полёт маскота между шапкой чата и шапкой PlayersPanel.
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
     duration: 600,
@@ -514,23 +518,22 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.38.0] Связка полёта с непрочитанными.
-  // 0 → >0: маскот уходит из шапки. >0 → 0: возвращается.
-  // Первый рендер без полёта — иначе при загрузке со «счётчиком»
-  // маскот дёрнется.
+  // [2.38.0] Маскот летит между шапкой чата и шапкой PlayersPanel.
+  // Панель открыта + есть непрочитанные → летит в панель.
+  // Панель закрыта или непрочитанных нет → возвращается.
+  // Пока летит — орбита скрывается (orbitHidden) через mascotFlying.
   useEffect(() => {
-    const count = unreadUserObjects.length;
-    const prev = prevUnreadCountRef.current;
-    prevUnreadCountRef.current = count;
+    const wantInPanel = showPlayers && unreadUserObjects.length > 0;
+    const currentPlace = mascotPlaceRef.current;
 
-    if (prev === null) return;
-
-    if (prev === 0 && count > 0) {
-      startMascotFlight();
-    } else if (prev > 0 && count === 0) {
+    if (wantInPanel && currentPlace === 'header' && panelOrbitRef.current) {
+      mascotPlaceRef.current = 'panel';
+      startMascotFlight({ toRef: panelOrbitRef });
+    } else if (!wantInPanel && currentPlace === 'panel') {
+      mascotPlaceRef.current = 'header';
       startMascotFlight({ reverse: true });
     }
-  }, [unreadUserObjects.length, startMascotFlight]);
+  }, [showPlayers, unreadUserObjects.length, startMascotFlight]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -1250,10 +1253,10 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.38.0] Пока маскот летит или пока есть непрочитанные — оригинал
-  // в шапке скрыт. Возвращается после reverse полёта.
+  // [2.38.0] Оригинал в шапке скрыт, пока маскот летит или пока
+  // он «в панели». Возвращается после reverse полёта.
   const hideHeaderMascot =
-    mascotFlying || unreadUserObjects.length > 0;
+    mascotFlying || mascotPlaceRef.current === 'panel';
 
   return (
     <>
@@ -1293,6 +1296,8 @@ const Chat = () => {
         <PlayersPanel
           ref={playersOverlayRef}
           visible={showPlayers}
+          orbitSlotRef={panelOrbitRef}
+          orbitHidden={mascotFlying || mascotPlaceRef.current === 'header'}
           players={players}
           dialogsBg={effectiveDialogsBg}
           unreadUserObjects={unreadUserObjects}

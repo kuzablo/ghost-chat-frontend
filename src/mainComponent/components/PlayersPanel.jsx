@@ -4,9 +4,10 @@ import StickerMenu from './StickerMenu';
 import OrbitNotification from './OrbitNotification';
 
 /*
+  [2.38.0] orbitSlotRef — ref на узел орбиты, куда летит маскот из шапки.
+           orbitHidden — пока летит — не рендерим орбиту, чтобы не было
+           двух маскотов одновременно.
   [2.35.34] Плейсхолдер-маскот и орбита в шапке разделены.
-            Плейсхолдер только одиночный маскот, z-index ниже контента.
-            Орбита в шапке — всегда поверх.
   [2.35.33] Кастомный фон + орбита
   [2.35.25] visible — панель всегда в DOM
   [2.35.4] дуэль: onRequestDuel(userId)
@@ -39,6 +40,8 @@ const PlayersPanel = forwardRef(({
   blockedIds = new Set(),
   dialogsBg = null,
   unreadUserObjects = [],
+  orbitSlotRef = null,
+  orbitHidden = false,
   onWatchChat,
   onBanConfirm,
   onRequestDuel,
@@ -249,16 +252,20 @@ const PlayersPanel = forwardRef(({
         ref={ref}
         style={panelStyle}
       >
-        {/* Плейсхолдер: одиночный маскот, пока URL-фон грузится. Z-index ниже шапки. */}
+        {/* Плейсхолдер: одиночный маскот, пока URL-фон грузится. */}
         {showBgLoading && (
           <div className="players-bg-loading" aria-hidden="true">
             <div className="players-bg-loading-mascot" />
           </div>
         )}
 
-        {/* Шапка: орбита с непрочитанными — всегда поверх. Или обычный заголовок. */}
-        {unreadUserObjects.length > 0 ? (
-          <div className="players-header players-header--orbit">
+        {/* [2.38.0] Орбита непрочитанных. Пока маскот летит сюда — orbitHidden=true,
+            орбита не рендерится, чтобы в центре не было двух маскотов. */}
+        {unreadUserObjects.length > 0 && !orbitHidden ? (
+          <div
+            ref={orbitSlotRef}
+            className="players-header players-header--orbit"
+          >
             <OrbitNotification
               users={unreadUserObjects}
               onClick={onOpenDialogs}
