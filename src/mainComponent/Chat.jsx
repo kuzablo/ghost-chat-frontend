@@ -157,6 +157,7 @@ const Chat = () => {
   const {
     toggleTheme,
     activeMessageId,
+    setActiveMessageId,
     toggleReactions,
     showPlayers, setShowPlayers,
     showInfo, setShowInfo,
