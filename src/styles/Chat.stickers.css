@@ -408,8 +408,11 @@ body.dark .sticker-panel-overlay {
   overscroll-behavior: contain;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: min-content;
   gap: 8px;
   padding: 2px;
+  will-change: transform;
+  touch-action: pan-y;
 }
 
 .sticker-panel-tile {
@@ -524,7 +527,7 @@ body.dark .sticker-panel-overlay {
   animation: msgReadyDelete 1s ease-in-out infinite;
 }
 
-/* ===== Стикер в личке — без ника над гифкой ===== */
+/* ===== Стикер в личке — ник над гифкой ===== */
 
 .private-msg--sticker {
   background: none;
@@ -534,7 +537,18 @@ body.dark .sticker-panel-overlay {
   max-width: 200px;
   cursor: default;
 }
-
+.private-msg--sticker .private-msg-sticker-nick {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 4px 2px;
+  line-height: 1;
+  opacity: 0.85;
+}
+.private-msg--own.private-msg--sticker .private-msg-sticker-nick {
+  color: var(--btn-bg);
+  text-align: right;
+}
 .private-msg--sticker .private-msg-sticker {
   width: 180px;
   height: 180px;
@@ -581,4 +595,20 @@ body.dark .sticker-panel-overlay {
     width: 20px;
     height: 20px;
   }
+}
+
+/* ============================================================= */
+/* [2.40.1] Обёртка сетки + свайп                                  */
+/* ============================================================= */
+
+.sticker-panel-grid-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  /* [2.40.2] flex-контекст для сетки. Без него flex: 1 на .sticker-panel-grid
+     не срабатывает, сетка не ограничивается по высоте, overflow-y: auto
+     не работает — особенно чувствуется в PWA на мобиле. */
+  display: flex;
+  flex-direction: column;
 }
