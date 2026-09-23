@@ -1,18 +1,18 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
+  [2.37.9] Fallback: если toRef скрыт (0x0) или не навешан — летим
+           в центр экрана с размером CENTER_SIZE. Нужно для мобилы:
+           .dialogs-toggle на мобиле display: none, getBoundingClientRect
+           возвращает 0x0, полёт уходил в угол.
   [2.37.7] Полёт маскота через Web Animations API.
-
-  Элемент создаётся императивно (document.createElement) и
-  анимируется браузером через element.animate(). React в полёт
-  не вмешивается — state flying нужен только чтобы погасить
-  оригинал в шапке.
-
-  Почему не FLIP через setState: transition: none → 600ms после
-  двух RAF не всегда срабатывает (батчинг setState). WAAPI надёжнее.
+           Элемент создаётся императивно и анимируется браузером.
+           React в полёт не вмешивается — state flying нужен только
+           чтобы погасить оригинал в шапке.
 */
 
 const DEFAULT_DURATION = 600;
+const CENTER_SIZE = 80;
 
 const getRect = (el) => {
   if (!el) return null;
@@ -24,6 +24,15 @@ const getRect = (el) => {
     height: r.height,
   };
 };
+
+const isUsableRect = (r) => r && r.width > 0 && r.height > 0;
+
+const getCenterRect = (size) => ({
+  left: (window.innerWidth - size) / 2,
+  top: (window.innerHeight - size) / 2,
+  width: size,
+  height: size,
+});
 
 export const useMascotFlight = ({
   fromRef,
@@ -43,7 +52,6 @@ export const useMascotFlight = ({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      // Чистим всё, что осталось от полёта
       try { animRef.current?.cancel(); } catch { /* noop */ }
       try { nodeRef.current?.remove(); } catch { /* noop */ }
       nodeRef.current = null;
@@ -56,17 +64,25 @@ export const useMascotFlight = ({
     if (flyingRef.current) return;
 
     const fromEl = fromRef?.current;
-    const toEl = toRef?.current;
-    if (!fromEl || !toEl) {
-      console.warn('[useMascotFlight] fromRef или toRef не навешан');
+    if (!fromEl) {
+      console.warn('[useMascotFlight] fromRef не навешан');
       return;
     }
 
     const from = getRect(fromEl);
-    const to = getRect(toEl);
-    if (!from || !to) return;
+    if (!isUsableRect(from)) {
+      console.warn('[useMascotFlight] маскот-источник имеет 0x0');
+      return;
+    }
 
-    // Создаём летающий элемент
+    // [2.37.9] Целевая точка. Приоритет:
+    // 1) toRef видимый → летим туда
+    // 2) toRef скрыт / отсутствует → центр экрана (мобильный кейс)
+    let to = getRect(toRef?.current);
+    if (!isUsableRect(to)) {
+      to = getCenterRect(CENTER_SIZE);
+    }
+
     const el = document.createElement('div');
     el.className = 'mascot-flying';
     el.style.left = `${from.left}px`;
@@ -80,7 +96,6 @@ export const useMascotFlight = ({
     setFlying(true);
     if (onTakeoff) onTakeoff();
 
-    // Смещение по центрам + коэффициент роста
     const dx = (to.left - from.left) + (to.width - from.width) / 2;
     const dy = (to.top - from.top) + (to.height - from.height) / 2;
     const scale = from.width > 0 ? to.width / from.width : 1;

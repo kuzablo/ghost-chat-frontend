@@ -59,6 +59,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// feat(mascot): fallback на центр экрана для мобилы (v2.37.9)
 // feat(mascot): каркас полёта через WAAPI (v2.37.7)
 // refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
 // refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
@@ -70,7 +71,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.7';
+const VERSION = '2.37.9';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -239,8 +240,7 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  // [2.37.7] Каркас полёта. Триггер пока — двойной клик по маскоту.
-  // В Шаге 2 свяжем с unreadUserObjects.length и заменим цель на орбиту.
+  // [2.37.9] Полёт. Если dialogs-toggle на мобиле скрыт — уйдём в центр.
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
     toRef: dialogsToggleRef,
