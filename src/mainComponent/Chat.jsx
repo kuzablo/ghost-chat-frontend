@@ -35,6 +35,7 @@ import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { useMascotGestures } from './hooks/useMascotGestures';
 import { useCapsuleGestures } from './hooks/useCapsuleGestures';
+import { useFullscreenGestures } from './hooks/useFullscreenGestures';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
@@ -57,6 +58,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
 // refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
 // refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
 // feat(update): авто-обновление фронта через version.json (v2.37.0)
@@ -66,13 +68,10 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.5';
+const VERSION = '2.37.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
-const FS_SWIPE_THRESHOLD = 80;
-const FS_CLOSE_THRESHOLD = 120;
-const FS_DOUBLE_TAP_MS = 250;
 const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
@@ -187,9 +186,6 @@ const Chat = () => {
 
   const [isConnected, setIsConnected] = useState(false);
   const [duelNotice, setDuelNotice] = useState('');
-  const [fsHeart, setFsHeart] = useState(null);
-  const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
-  const [fsReactionAnchor, setFsReactionAnchor] = useState(null);
   const [inputDragY, setInputDragY] = useState(0);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
@@ -213,9 +209,6 @@ const Chat = () => {
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
 
-  const fsImgRef = useRef(null);
-  const fsOverlayRef = useRef(null);
-
   const swipeStartXRef = useRef(null);
   const swipeStartYRef = useRef(null);
   const swipeActiveRef = useRef(false);
@@ -227,17 +220,6 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
   const inputDragYRef = useRef(0);
-
-  const fsGestureRef = useRef({
-    startX: 0,
-    startY: 0,
-    direction: null,
-    active: false,
-    lastDx: 0,
-    lastDy: 0,
-  });
-  const fsLastTapRef = useRef(0);
-  const fsTapPosRef = useRef({ x: 0, y: 0 });
 
   const titleTimeoutRef = useRef(null);
 
@@ -258,19 +240,6 @@ const Chat = () => {
     maxDurationSec: 60,
     onAutoStop: () => { sendVoiceMessageRef.current?.(); },
   });
-
-  useEffect(() => {
-    if (!fullscreenImage) return;
-    const img = fsImgRef.current;
-    if (img) {
-      img.style.transition = '';
-      img.style.transform = '';
-    }
-    const ov = fsOverlayRef.current;
-    if (ov) {
-      ov.style.background = '';
-    }
-  }, [fullscreenImage?.messageId]);
 
   const subscribeToPush = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -502,12 +471,35 @@ const Chat = () => {
     ? avatarCache[fullscreenMessage.userId]
     : null;
 
-  useEffect(() => {
-    if (!fullscreenImage) return;
-    if (currentImageIndex === -1) {
-      closeFullscreen();
-    }
-  }, [fullscreenImage, currentImageIndex, closeFullscreen]);
+  // [2.37.6] Жесты fullscreen: свайпы между фото, свайп вниз — закрыть,
+  // двойной тап — ❤️. Плюс toggle/close/pick для ReactionWheel.
+  const {
+    fsImgRef,
+    fsOverlayRef,
+    fsHeart,
+    fsReactionListEmoji,
+    setFsReactionListEmoji,
+    fsReactionAnchor,
+    handleFsTouchStart,
+    handleFsTouchMove,
+    handleFsTouchEnd,
+    handleFsDoubleTap,
+    fsGoPrev,
+    fsGoNext,
+    handleFullscreenReactionToggle,
+    handleFullscreenReactionPick,
+    handleFullscreenReactionClose,
+  } = useFullscreenGestures({
+    fullscreenImage,
+    setFullscreenImage,
+    closeFullscreen,
+    showFullscreenReactions,
+    setShowFullscreenReactions,
+    imageMessages,
+    messages,
+    nickname,
+    sendReaction,
+  });
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -617,7 +609,7 @@ const Chat = () => {
     return () => { cancelled = true; };
   }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
 
-  // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам — зовём принудительно.
+  // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам — зовём.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
     const t = setTimeout(() => {
@@ -629,7 +621,7 @@ const Chat = () => {
     return () => clearTimeout(t);
   }, []);
 
-  // [2.37.3] Спец-маркеры от useWebSocket (onclose 4003/4006/4001).
+  // [2.37.3] Спец-маркеры от useWebSocket.
   useEffect(() => {
     if (wsError) {
       if (wsError === 'banned-forever') {
@@ -999,155 +991,6 @@ const Chat = () => {
   const sendText = 'ОТПРАВИТЬ';
   const sendChars = sendText.split('');
 
-  const fsGoPrev = (e) => {
-    if (e) e.stopPropagation();
-    if (!hasPrevImage) return;
-    const prev = imageMessages[currentImageIndex - 1];
-    setFullscreenImage({ url: prev.imageUrl, messageId: prev.id });
-  };
-  const fsGoNext = (e) => {
-    if (e) e.stopPropagation();
-    if (!hasNextImage) return;
-    const next = imageMessages[currentImageIndex + 1];
-    setFullscreenImage({ url: next.imageUrl, messageId: next.id });
-  };
-
-  const handleFsTouchStart = (e) => {
-    if (e.touches.length !== 1) return;
-    const t = e.touches[0];
-    fsGestureRef.current = {
-      startX: t.clientX,
-      startY: t.clientY,
-      direction: null,
-      active: true,
-      lastDx: 0,
-      lastDy: 0,
-    };
-  };
-
-  const handleFsTouchMove = (e) => {
-    const g = fsGestureRef.current;
-    if (!g.active) return;
-    if (e.touches.length !== 1) return;
-
-    const t = e.touches[0];
-    const dx = t.clientX - g.startX;
-    const dy = t.clientY - g.startY;
-
-    if (!g.direction) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      g.direction = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
-    }
-
-    const img = fsImgRef.current;
-    if (!img) return;
-
-    if (g.direction === 'horizontal') {
-      if ((dx > 0 && hasPrevImage) || (dx < 0 && hasNextImage)) {
-        g.lastDx = dx;
-        img.style.transition = 'none';
-        img.style.transform = `translate3d(${dx}px, 0, 0)`;
-        if (e.cancelable) e.preventDefault();
-      }
-    } else {
-      if (dy > 0) {
-        g.lastDy = dy;
-        const scale = Math.max(0.85, 1 - dy / 800);
-        img.style.transition = 'none';
-        img.style.transform = `translate3d(0, ${dy}px, 0) scale(${scale})`;
-        const ov = fsOverlayRef.current;
-        if (ov) {
-          const alpha = Math.max(0.15, 0.95 - (dy / 200) * 0.6);
-          ov.style.background = `rgba(10, 10, 10, ${alpha})`;
-        }
-        if (e.cancelable) e.preventDefault();
-      }
-    }
-  };
-
-  const handleFsTouchEnd = (e) => {
-    const g = fsGestureRef.current;
-    g.active = false;
-
-    const img = fsImgRef.current;
-    if (!img) {
-      g.direction = null;
-      return;
-    }
-
-    if (!g.direction) {
-      g.direction = null;
-      return;
-    }
-
-    const t = e.changedTouches[0];
-    const dx = t.clientX - g.startX;
-    const dy = t.clientY - g.startY;
-
-    if (g.direction === 'horizontal') {
-      img.style.transition = 'transform 0.22s cubic-bezier(0.25, 1, 0.5, 1)';
-      if (dx <= -FS_SWIPE_THRESHOLD && hasNextImage) {
-        const next = imageMessages[currentImageIndex + 1];
-        setFullscreenImage({ url: next.imageUrl, messageId: next.id });
-      } else if (dx >= FS_SWIPE_THRESHOLD && hasPrevImage) {
-        const prev = imageMessages[currentImageIndex - 1];
-        setFullscreenImage({ url: prev.imageUrl, messageId: prev.id });
-      } else {
-        img.style.transform = 'translate3d(0,0,0)';
-      }
-    } else {
-      if (dy > FS_CLOSE_THRESHOLD) {
-        closeFullscreen();
-      } else {
-        img.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
-        img.style.transform = 'translate3d(0,0,0) scale(1)';
-        const ov = fsOverlayRef.current;
-        if (ov) {
-          ov.style.transition = 'background 0.25s';
-          ov.style.background = '';
-          setTimeout(() => {
-            if (ov) ov.style.transition = '';
-          }, 300);
-        }
-      }
-    }
-
-    g.direction = null;
-  };
-
-  const handleFsDoubleTap = (e) => {
-    if (!fullscreenImage) return;
-    const stage = e.currentTarget.closest('.fs-stage') || e.currentTarget;
-    const rect = stage.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const now = Date.now();
-    const last = fsLastTapRef.current;
-    const pos = fsTapPosRef.current;
-    const isDouble =
-      now - last < FS_DOUBLE_TAP_MS &&
-      Math.abs(x - pos.x) < 40 &&
-      Math.abs(y - pos.y) < 40;
-
-    if (isDouble) {
-      fsLastTapRef.current = 0;
-
-      const msgId = fullscreenImage.messageId;
-      const msg = messages.find(m => m.id === msgId);
-      const alreadyHeart = msg?.reactions?.['❤️']?.includes(nickname);
-      if (!alreadyHeart) {
-        sendReaction(msgId, '❤️');
-      }
-
-      setFsHeart({ x, y, key: now });
-      setTimeout(() => setFsHeart(null), 800);
-    } else {
-      fsLastTapRef.current = now;
-      fsTapPosRef.current = { x, y };
-    }
-  };
-
   const INPUT_DRAG_THRESHOLD = 40;
 
   const handleInputTouchStart = (e) => {
@@ -1344,38 +1187,6 @@ const Chat = () => {
   const handleLogoutCancel = useCallback(() => {
     setLogoutConfirm(false);
   }, []);
-
-  // [2.36.4] клик по «😀» в fullscreen — toggle общего ReactionWheel
-  const handleFullscreenReactionToggle = useCallback((e) => {
-    if (showFullscreenReactions) {
-      setShowFullscreenReactions(false);
-      return;
-    }
-    const WHEEL_NEED_PX = 136;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const x = Math.max(
-      WHEEL_NEED_PX,
-      Math.min(window.innerWidth - WHEEL_NEED_PX, cx)
-    );
-    const y = Math.max(
-      WHEEL_NEED_PX,
-      Math.min(window.innerHeight - WHEEL_NEED_PX, cy)
-    );
-    setFsReactionAnchor({ x, y });
-    setShowFullscreenReactions(true);
-  }, [showFullscreenReactions, setShowFullscreenReactions]);
-
-  const handleFullscreenReactionPick = useCallback((emoji) => {
-    if (!fullscreenImage) return;
-    sendReaction(fullscreenImage.messageId, emoji);
-    setShowFullscreenReactions(false);
-  }, [fullscreenImage, sendReaction, setShowFullscreenReactions]);
-
-  const handleFullscreenReactionClose = useCallback(() => {
-    setShowFullscreenReactions(false);
-  }, [setShowFullscreenReactions]);
 
   // [2.37.0] Отложить обновление на 10 минут
   const handleDeferUpdate = useCallback(() => {
