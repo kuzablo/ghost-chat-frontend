@@ -1,20 +1,17 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.1] Не удаляем летающий элемент мгновенно по onfinish.
-           Даём 240мс — пока оригинал в шапке проявляется через
-           opacity transition. Без этого между исчезновением
-           летающего и появлением оригинала — пустой кадр.
-           Добавлен fromLanded — старт из lastLandedRect (для
-           переходов panel → toast без возврата в шапку).
-  [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse }).
+  [2.39.2] Убран HANDOFF_MS — удаление летающего через двойной RAF
+           после onfinish. React успевает отрисовать целевой элемент
+           (оригинал в шапке / маскот в панели / орбита в центре),
+           потом летающий уходит. Без пустого кадра и без двух маскотов.
+  [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse, fromLanded }).
   [2.37.9] Fallback на центр экрана.
   [2.37.7] Web Animations API.
 */
 
 const DEFAULT_DURATION = 600;
 const CENTER_SIZE = 80;
-const HANDOFF_MS = 240;
 
 const getRect = (el) => {
   if (!el) return null;
@@ -41,7 +38,6 @@ export const useMascotFlight = ({
   toRef,
   duration = DEFAULT_DURATION,
   onLand,
-  onTakeoff,
 } = {}) => {
   const [flying, setFlying] = useState(false);
 
@@ -103,7 +99,6 @@ export const useMascotFlight = ({
 
     flyingRef.current = true;
     setFlying(true);
-    if (onTakeoff) onTakeoff();
 
     const dx = (to.left - from.left) + (to.width - from.width) / 2;
     const dy = (to.top - from.top) + (to.height - from.height) / 2;
@@ -128,18 +123,19 @@ export const useMascotFlight = ({
         el.remove();
         return;
       }
-      // [2.39.1] Держим элемент на месте 240мс — пока оригинал в шапке
-      // проявляется через opacity transition. Иначе пустой кадр.
-      setTimeout(() => {
-        try { el.remove(); } catch { /* noop */ }
-      }, HANDOFF_MS);
-      nodeRef.current = null;
-      animRef.current = null;
+      // Снимаем флаг → ререндер → целевой элемент появляется на своём месте.
       flyingRef.current = false;
       setFlying(false);
       if (onLand) onLand();
+      // Двойной RAF — даём React отрисовать целевой элемент, потом
+      // убираем летающий. Он визуально окажется ровно под целевым.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          try { el.remove(); } catch { /* noop */ }
+        });
+      });
     };
-  }, [fromRef, toRef, duration, onTakeoff, onLand]);
+  }, [fromRef, toRef, duration, onLand]);
 
   return { flying, startFlight };
 };

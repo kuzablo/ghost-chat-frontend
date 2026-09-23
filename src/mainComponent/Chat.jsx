@@ -59,6 +59,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// fix(mascot): mascotPlace как state, удаление летающего через RAF (v2.39.2)
 // feat(mascot): маскот летит в шапку PlayersPanel (v2.39.0)
 // feat(mascot): двусторонний полёт + fallback на центр (v2.38.1)
 // refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
@@ -71,13 +72,14 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.1';
+const VERSION = '2.39.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
 const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
+const TOAST_LIFETIME_MS = 8000;
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -208,13 +210,9 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-  // [2.39.0] Полёт маскота: ref на маскота в шапке и на узел орбиты в PlayersPanel.
+  // [2.39.2] Полёт маскота: ref на маскота в шапке и на узел орбиты.
   const headerMascotRef = useRef(null);
   const panelOrbitRef = useRef(null);
-  // [2.39.1] Где сейчас «находится» маскот: 'header' | 'panel' | 'toast'.
-  // 'toast' — временно ушёл в центр показать уведомление на 8 секунд.
-  const mascotPlaceRef = useRef('header');
-  const toastTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -244,11 +242,16 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  // [2.39.0] Полёт. Цель задаётся в момент вызова startFlight.
+  // [2.39.2] Полёт. Цель задаётся в момент вызова startFlight.
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
     duration: 600,
   });
+
+  // [2.39.2] Где сейчас маскот. State, не ref — иначе JSX читает
+  // устаревшее значение и маскот скачет.
+  const [mascotPlace, setMascotPlace] = useState('header');
+  const toastTimerRef = useRef(null);
 
   const sendVoiceMessageRef = useRef(null);
 
@@ -515,84 +518,76 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.39.1] Возврат маскота из тоста в шапку через 8с.
-  const scheduleToastReturn = useCallback(() => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
-      toastTimerRef.current = null;
-      if (mascotPlaceRef.current !== 'toast') return;
-      mascotPlaceRef.current = 'header';
-      startMascotFlight({ reverse: true });
-    }, 8000);
-  }, [startMascotFlight]);
-
+  // [2.39.2] Один управляющий эффект. Смотрит на (showPlayers, unread).
+  // Меняет mascotPlace и запускает полёт. Игнорирует, если летим.
   useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    };
-  }, []);
+    if (mascotFlying) return;
 
-  // [2.39.1] Три состояния маскота: 'header' | 'panel' | 'toast'.
-  // Переходы:
-  //   header → panel : открыли панель
-  //   panel → header : закрыли панель, непрочитанных нет
-  //   panel → toast  : закрыли панель, непрочитанные есть
-  //   header → toast : пришли непрочитанные, панель закрыта
-  //   toast → header : прочитали или истекли 8 секунд
-  useEffect(() => {
     const wantInPanel = showPlayers;
-    const place = mascotPlaceRef.current;
     const hasUnread = unreadUserObjects.length > 0;
 
-    // Открылась панель — летим в неё из любого места
-    if (wantInPanel) {
+    if (wantInPanel && mascotPlace !== 'panel') {
+      // Панель открыта → летим в панель (из шапки или из центра).
+      setMascotPlace('panel');
       if (toastTimerRef.current) {
         clearTimeout(toastTimerRef.current);
         toastTimerRef.current = null;
       }
-      if (place !== 'panel') {
-        mascotPlaceRef.current = 'panel';
-        if (place === 'header') {
-          startMascotFlight({ toRef: panelOrbitRef });
-        } else {
-          startMascotFlight({ fromLanded: true, toRef: panelOrbitRef });
-        }
+      if (mascotPlace === 'header') {
+        startMascotFlight({ toRef: panelOrbitRef });
+      } else {
+        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef });
       }
       return;
     }
 
-    // Панель закрыта
-    if (place === 'panel') {
+    if (!wantInPanel && mascotPlace === 'panel') {
+      // Панель закрыта → в центр (если есть непрочитанные) или в шапку.
       if (hasUnread) {
-        // Панель закрылась, есть непрочитанные → в центр на 8с
-        mascotPlaceRef.current = 'toast';
+        setMascotPlace('toast');
         startMascotFlight({ fromLanded: true });
-        scheduleToastReturn();
       } else {
-        mascotPlaceRef.current = 'header';
+        setMascotPlace('header');
         startMascotFlight({ reverse: true });
       }
       return;
     }
 
-    if (place === 'header' && hasUnread) {
-      // Пришли непрочитанные, маскот в шапке → в центр
-      mascotPlaceRef.current = 'toast';
+    if (!wantInPanel && mascotPlace === 'header' && hasUnread) {
+      // Пришли непрочитанные, маскот в шапке → в центр.
+      setMascotPlace('toast');
       startMascotFlight();
-      scheduleToastReturn();
       return;
     }
 
-    if (place === 'toast' && !hasUnread) {
-      // Прочитали до истечения 8с → сразу назад
+    if (mascotPlace === 'toast' && !hasUnread) {
+      // Прочитали до истечения 8с → сразу в шапку.
       if (toastTimerRef.current) {
         clearTimeout(toastTimerRef.current);
         toastTimerRef.current = null;
       }
-      mascotPlaceRef.current = 'header';
+      setMascotPlace('header');
       startMascotFlight({ reverse: true });
     }
-  }, [showPlayers, unreadUserObjects.length, startMascotFlight, scheduleToastReturn]);
+  }, [showPlayers, unreadUserObjects.length, mascotPlace, mascotFlying, startMascotFlight]);
+
+  // [2.39.2] Таймер возврата из тоста — отдельно, чтобы не мешать
+  // основному эффекту.
+  useEffect(() => {
+    if (mascotPlace !== 'toast') return;
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      toastTimerRef.current = null;
+      setMascotPlace('header');
+      startMascotFlight({ reverse: true });
+    }, TOAST_LIFETIME_MS);
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, [mascotPlace, startMascotFlight]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -1308,12 +1303,8 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.39.1] Маскот в шапке скрыт, пока летит или пока находится
-  // в панели либо в центре экрана (toast). После возврата — снова виден.
-  const hideHeaderMascot =
-    mascotFlying ||
-    mascotPlaceRef.current === 'panel' ||
-    mascotPlaceRef.current === 'toast';
+  // [2.39.2] Маскот в шапке скрыт, пока летит или пока его место не 'header'.
+  const hideHeaderMascot = mascotFlying || mascotPlace !== 'header';
 
   return (
     <>
@@ -1798,9 +1789,8 @@ const Chat = () => {
         />
       )}
 
-      {/* [2.39.0] Тост-орбита в центре экрана — только когда панель закрыта
-          и маскот сейчас не летит. Пока летит — скрыт, чтобы не было двух. */}
-      {!showPlayers && !showDialogs && !privateChat && !mascotFlying && (
+      {/* [2.39.2] Тост-орбита в центре — только когда маскот в 'toast'. */}
+      {!showPlayers && !showDialogs && !privateChat && !mascotFlying && mascotPlace === 'toast' && (
         <PrivateMessageToasts
           users={unreadUserObjects}
           onOpenDialogs={handleOpenDialogs}
