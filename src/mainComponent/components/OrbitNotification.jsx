@@ -2,9 +2,13 @@ import { useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.35.40] Клик по pointerdown — срабатывает мгновенно, до long-press.
-            Убирает сдвиг орбиты при удержании.
-            Двигаешь пальцем — не срабатывает (защита от случайного тапа).
+  [2.39.4] mascotRef — ref на обёртку маскота. Через него маскот из шапки
+           летит точно на место, а не в приблизительный центр контейнера.
+           mascotOnly — рендерить только маскота, без орбиты и аватарок.
+           Нужно, чтобы маскот был в DOM даже когда непрочитанных нет —
+           ref валиден для будущих полётов.
+  [2.35.40] Клик по pointerdown.
+  [2.35.34] Кнопка вместо div.
 */
 const MAX_AVATARS = 5;
 const MOVE_CANCEL_PX = 12;
@@ -23,14 +27,15 @@ const OrbitNotification = ({
   users = [],
   onClick,
   className = '',
+  mascotRef = null,
+  mascotOnly = false,
 }) => {
   const orbitRef = useRef(null);
   const rafRef = useRef(null);
-
-  // [2.35.40] защита от случайного срабатывания при скролле/движении
   const startPosRef = useRef({ x: 0, y: 0, fired: false });
 
   useEffect(() => {
+    if (mascotOnly) return;
     const stage = orbitRef.current;
     if (!stage) return;
 
@@ -71,22 +76,18 @@ const OrbitNotification = ({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [mascotOnly]);
 
-  if (users.length === 0) return null;
-
-  const shown = users.slice(0, MAX_AVATARS);
-  const more = users.length - MAX_AVATARS;
+  const shown = mascotOnly ? [] : users.slice(0, MAX_AVATARS);
+  const more = mascotOnly ? 0 : Math.max(0, users.length - MAX_AVATARS);
+  const hasOrbit = shown.length > 0;
 
   const handlePointerDown = (e) => {
+    if (!onClick) return;
     e.stopPropagation();
     e.preventDefault();
-    startPosRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      fired: true,
-    };
-    if (onClick) onClick();
+    startPosRef.current = { x: e.clientX, y: e.clientY, fired: true };
+    onClick();
   };
 
   const handlePointerMove = (e) => {
@@ -102,10 +103,16 @@ const OrbitNotification = ({
     startPosRef.current.fired = false;
   };
 
+  const classes = [
+    'pm-orbit',
+    className,
+    mascotOnly || !hasOrbit ? 'pm-orbit--mascot-only' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <button
       type="button"
-      className={`pm-orbit ${className}`.trim()}
+      className={classes}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -114,32 +121,42 @@ const OrbitNotification = ({
       onDragStart={prevent}
       aria-label="Новые личные сообщения"
     >
-      <span className="pm-orbit-halo pm-orbit-halo--outer" aria-hidden="true" />
-      <span className="pm-orbit-halo pm-orbit-halo--inner" aria-hidden="true" />
+      {hasOrbit && (
+        <>
+          <span className="pm-orbit-halo pm-orbit-halo--outer" aria-hidden="true" />
+          <span className="pm-orbit-halo pm-orbit-halo--inner" aria-hidden="true" />
+        </>
+      )}
 
-      <span className="pm-orbit-mascot-wrap" aria-hidden="true">
+      <span
+        ref={mascotRef}
+        className="pm-orbit-mascot-wrap"
+        aria-hidden="true"
+      >
         <span className="pm-orbit-mascot" />
       </span>
 
-      <span className="pm-orbit-stage" ref={orbitRef} aria-hidden="true">
-        {shown.map((u, i) => (
-          <span
-            key={u.userId}
-            className="pm-orbit-slot"
-            style={{ animationDelay: `${0.06 + i * 0.12}s` }}
-          >
+      {hasOrbit && (
+        <span className="pm-orbit-stage" ref={orbitRef} aria-hidden="true">
+          {shown.map((u, i) => (
             <span
-              className="pm-orbit-avatar"
-              style={u.avatarUrl
-                ? { backgroundImage: `url(${u.avatarUrl})` }
-                : { background: getAvatarColor(u.nickname || '?') }
-              }
+              key={u.userId}
+              className="pm-orbit-slot"
+              style={{ animationDelay: `${0.06 + i * 0.12}s` }}
             >
-              {!u.avatarUrl && getInitial(u.nickname || '?')}
+              <span
+                className="pm-orbit-avatar"
+                style={u.avatarUrl
+                  ? { backgroundImage: `url(${u.avatarUrl})` }
+                  : { background: getAvatarColor(u.nickname || '?') }
+                }
+              >
+                {!u.avatarUrl && getInitial(u.nickname || '?')}
+              </span>
             </span>
-          </span>
-        ))}
-      </span>
+          ))}
+        </span>
+      )}
 
       {more > 0 && (
         <span className="pm-orbit-more">+{more}</span>

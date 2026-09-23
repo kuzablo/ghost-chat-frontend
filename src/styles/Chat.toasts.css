@@ -301,3 +301,20 @@ body.dark .pm-orbit-more {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ============================================================= */
+/* [2.39.4] Скрытое состояние тоста: маскот в DOM для координат,   */
+/*          но невидим пока visible=false                          */
+/* ============================================================= */
+
+.pm-orbit--preparing {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease-out;
+}
+
+.pm-orbit--preparing .pm-orbit-halo,
+.pm-orbit--preparing .pm-orbit-stage,
+.pm-orbit--preparing .pm-orbit-more {
+  display: none;
+}

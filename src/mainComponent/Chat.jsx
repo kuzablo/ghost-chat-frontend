@@ -59,6 +59,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// feat(mascot): три места, полёт шапка ↔ панель ↔ центр (v2.39.4)
 // fix(mascot): mascotPlace как state, удаление летающего через RAF (v2.39.2)
 // feat(mascot): маскот летит в шапку PlayersPanel (v2.39.0)
 // feat(mascot): двусторонний полёт + fallback на центр (v2.38.1)
@@ -72,7 +73,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.3';
+const VERSION = '2.39.4';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -80,8 +81,11 @@ const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
 const TOAST_LIFETIME_MS = 8000;
-const PANEL_ORBIT_SIZE = 72;   // [2.39.3] размер solo-маскота в шапке PlayersPanel
-const CENTER_ORBIT_SIZE = 82;  // [2.39.3] размер маскота в центре экрана (OrbitNotification)
+// [2.39.4] Размеры маскота на трёх «остановках».
+const MASCOT_SIZE_HEADER = 40;
+const MASCOT_SIZE_PANEL_SOLO = 72;
+const MASCOT_SIZE_PANEL_ORBIT = 41;
+const MASCOT_SIZE_CENTER = 82;
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -212,9 +216,10 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-  // [2.39.2] Полёт маскота: ref на маскота в шапке и на узел орбиты.
+  // [2.39.4] Полёт маскота: три ref-цели.
   const headerMascotRef = useRef(null);
   const panelOrbitRef = useRef(null);
+  const centerMascotRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -244,16 +249,14 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  // [2.39.2] Полёт. Цель задаётся в момент вызова startFlight.
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
     duration: 600,
   });
 
-  // [2.39.2] Где сейчас маскот. State, не ref — иначе JSX читает
-  // устаревшее значение и маскот скачет.
+  // [2.39.4] Где сейчас маскот: 'header' | 'panel' | 'center'. State, не ref —
+  // иначе JSX читает устаревшее значение и маскот скачет.
   const [mascotPlace, setMascotPlace] = useState('header');
-  const toastTimerRef = useRef(null);
 
   const sendVoiceMessageRef = useRef(null);
 
@@ -520,75 +523,59 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.39.2] Один управляющий эффект. Смотрит на (showPlayers, unread).
-  // Меняет mascotPlace и запускает полёт. Игнорирует, если летим.
+  // [2.39.4] Один управляющий эффект для полёта.
+  // Приоритеты: панель > центр > шапка.
   useEffect(() => {
     if (mascotFlying) return;
 
-    const wantInPanel = showPlayers;
     const hasUnread = unreadUserObjects.length > 0;
+    const wantPanel = showPlayers;
+    const wantCenter =
+      !showPlayers && !showDialogs && !privateChat && hasUnread;
 
-    if (wantInPanel && mascotPlace !== 'panel') {
-      // Панель открыта → летим в панель (из шапки или из центра).
+    if (wantPanel && mascotPlace !== 'panel') {
       setMascotPlace('panel');
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = null;
-      }
+      const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
       if (mascotPlace === 'header') {
-        startMascotFlight({ toRef: panelOrbitRef, toSize: PANEL_ORBIT_SIZE });
+        startMascotFlight({ toRef: panelOrbitRef, toSize: size });
       } else {
-        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: PANEL_ORBIT_SIZE });
+        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: size });
       }
       return;
     }
 
-    if (!wantInPanel && mascotPlace === 'panel') {
-      // Панель закрыта → в центр (если есть непрочитанные) или в шапку.
-      if (hasUnread) {
-        setMascotPlace('toast');
-        startMascotFlight({ fromLanded: true, toSize: CENTER_ORBIT_SIZE });
+    if (wantCenter && mascotPlace !== 'center') {
+      setMascotPlace('center');
+      if (mascotPlace === 'header') {
+        startMascotFlight({ toRef: centerMascotRef, toSize: MASCOT_SIZE_CENTER });
       } else {
-        setMascotPlace('header');
-        startMascotFlight({ reverse: true });
+        startMascotFlight({ fromLanded: true, toRef: centerMascotRef, toSize: MASCOT_SIZE_CENTER });
       }
       return;
     }
 
-    if (!wantInPanel && mascotPlace === 'header' && hasUnread) {
-      // Пришли непрочитанные, маскот в шапке → в центр.
-      setMascotPlace('toast');
-      startMascotFlight({ toSize: CENTER_ORBIT_SIZE });
-      return;
-    }
-
-    if (mascotPlace === 'toast' && !hasUnread) {
-      // Прочитали до истечения 8с → сразу в шапку.
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = null;
-      }
+    if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
       setMascotPlace('header');
       startMascotFlight({ reverse: true });
     }
-  }, [showPlayers, unreadUserObjects.length, mascotPlace, mascotFlying, startMascotFlight]);
+  }, [
+    showPlayers,
+    showDialogs,
+    privateChat,
+    unreadUserObjects.length,
+    mascotPlace,
+    mascotFlying,
+    startMascotFlight,
+  ]);
 
-  // [2.39.2] Таймер возврата из тоста — отдельно, чтобы не мешать
-  // основному эффекту.
+  // [2.39.4] Возврат из центра в шапку через 8 секунд.
   useEffect(() => {
-    if (mascotPlace !== 'toast') return;
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
-      toastTimerRef.current = null;
+    if (mascotPlace !== 'center') return;
+    const t = setTimeout(() => {
       setMascotPlace('header');
       startMascotFlight({ reverse: true });
     }, TOAST_LIFETIME_MS);
-    return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = null;
-      }
-    };
+    return () => clearTimeout(t);
   }, [mascotPlace, startMascotFlight]);
 
   useEffect(() => {
@@ -736,6 +723,7 @@ const Chat = () => {
       if (e.target.closest && e.target.closest('.theme-toggle')) return;
       if (e.target.closest && e.target.closest('.chat-header-theme')) return;
       if (e.target.closest && e.target.closest('.dialogs-toggle')) return;
+      if (e.target.closest && e.target.closest('.pm-orbit')) return;
 
       if (playersOverlayRef.current && !playersOverlayRef.current.contains(e.target)) {
         setShowPlayers(false);
@@ -1305,7 +1293,7 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.39.2] Маскот в шапке скрыт, пока летит или пока его место не 'header'.
+  // [2.39.4] Маскот в шапке скрыт, если летит или уже не в шапке.
   const hideHeaderMascot = mascotFlying || mascotPlace !== 'header';
 
   return (
@@ -1791,13 +1779,14 @@ const Chat = () => {
         />
       )}
 
-      {/* [2.39.2] Тост-орбита в центре — только когда маскот в 'toast'. */}
-      {!showPlayers && !showDialogs && !privateChat && !mascotFlying && mascotPlace === 'toast' && (
-        <PrivateMessageToasts
-          users={unreadUserObjects}
-          onOpenDialogs={handleOpenDialogs}
-        />
-      )}
+      {/* [2.39.4] PrivateMessageToasts всегда в DOM — ref на маскота валиден
+          для полёта. Видимость через проп visible. */}
+      <PrivateMessageToasts
+        users={unreadUserObjects}
+        visible={mascotPlace === 'center' && !mascotFlying}
+        onOpenDialogs={handleOpenDialogs}
+        mascotRef={centerMascotRef}
+      />
 
       <StickerPanel
         open={stickerPanelOpen}

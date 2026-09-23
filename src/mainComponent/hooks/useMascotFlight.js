@@ -1,14 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.3] toSize — целевой размер маскота. Если задан, то to — центр
-           целевого элемента + toSize×toSize, а не весь его bounding box.
-           Раньше летающий масштабировался до размеров контейнера
-           (260×130 у players-header--orbit) — отсюда овал и промах
-           в месте приземления.
-           Удаление летающего через 260мс после onfinish (а не двойной
-           RAF) — чтобы целевой элемент успел проявиться на opacity
-           transition (240мс) прежде, чем уйдёт летающий.
+  [2.39.4] fromLanded — старт из lastLandedRect в новую цель (без
+           возврата в шапку). Нужно для переходов panel ↔ center.
+           LANDED_HOLD_MS = 260 — целевой проявляется через opacity
+           240мс, летающий перекрывает это окно.
+  [2.39.3] Целевая точка = центр элемента + размер size.
+  [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse, fromLanded }).
 */
 
 const DEFAULT_DURATION = 600;
@@ -148,9 +146,6 @@ export const useMascotFlight = ({
       flyingRef.current = false;
       setFlying(false);
       if (onLand) onLand();
-      // [2.39.3] Держим летающий на месте 260мс — пока целевой маскот
-      // проявляется через opacity transition (240мс). К моменту
-      // удаления летающего целевой уже виден на 100%.
       setTimeout(() => {
         try { el.remove(); } catch { /* noop */ }
       }, LANDED_HOLD_MS);
