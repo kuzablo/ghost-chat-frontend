@@ -1,12 +1,16 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 
 /*
-  [2.40.1] Свайп влево/вправо по сетке стикеров для пагинации.
-           Кнопки ‹ › остались. Направление фиксируется на первых 8px.
-           Если жест вертикальный — пагинация не срабатывает, скролл
-           свободен.
-  [2.40.0] Пагинация: 12 стикеров на страницу (4×3), стрелки ‹ ›
-           и счётчик. Стикеров ≤ 12 — пагинатор скрыт.
+  [2.41.0] Избранные стикеры.
+           - Long-press 500мс на не-избранном → добавить.
+           - Long-press 1000мс на избранном → убрать.
+           - Короткий тап → отправить.
+           - Сортировка: избранные (в порядке favoriteStickers, новые
+             первыми) → остальные.
+           - Маркер ⭐ в углу избранной плитки.
+           - Тост внутри панели с классом .duel-notice.
+  [2.40.1] Свайп по сетке для пагинации.
+  [2.40.0] Пагинация 12 на страницу.
   [2.35.16] Панель стикеров.
 */
 const API_URL = 'https://api.banjoboy420.ru';
@@ -18,6 +22,10 @@ const SWIPE_THRESHOLD = 60;
 const SWIPE_MAX_DRAG = 60;
 const SWIPE_DIRECTION_LOCK = 8;
 
+const LONG_PRESS_ADD_MS = 500;
+const LONG_PRESS_REMOVE_MS = 1000;
+const LONG_PRESS_CANCEL_PX = 8;
+
 const StickerPanel = ({
   open,
   onClose,
@@ -26,36 +34,73 @@ const StickerPanel = ({
   isAdmin,
   token,
   onUploaded,
+  favoriteStickers = [],
+  onToggleFavorite,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
   const [page, setPage] = useState(0);
   const fileRef = useRef(null);
   const gridRef = useRef(null);
 
-  const totalPages = Math.max(1, Math.ceil((stickers?.length || 0) / PAGE_SIZE));
+  const favoriteSet = useMemo(
+    () => new Set(Array.isArray(favoriteStickers) ? favoriteStickers : []),
+    [favoriteStickers]
+  );
 
-  // [2.40.0] Если page вылетел за границы — на последнюю.
+  // [2.41.0] Сортировка: сначала избранные (в порядке массива — новые первыми),
+  // потом остальные в исходном порядке бэка.
+  const sortedStickers = useMemo(() => {
+    if (!Array.isArray(stickers)) return [];
+    const favs = [];
+    const rest = [];
+    const favOrder = new Map();
+    (favoriteStickers || []).forEach((u, i) => favOrder.set(u, i));
+
+    stickers.forEach(s => {
+      if (favoriteSet.has(s.url)) {
+        favs.push(s);
+      } else {
+        rest.push(s);
+      }
+    });
+
+    favs.sort((a, b) => {
+      const ai = favOrder.has(a.url) ? favOrder.get(a.url) : Infinity;
+      const bi = favOrder.has(b.url) ? favOrder.get(b.url) : Infinity;
+      return ai - bi;
+    });
+
+    return [...favs, ...rest];
+  }, [stickers, favoriteStickers, favoriteSet]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedStickers.length / PAGE_SIZE));
+
   useEffect(() => {
     if (page > totalPages - 1) {
       setPage(Math.max(0, totalPages - 1));
     }
   }, [page, totalPages]);
 
-  // [2.40.0] При смене страницы — скролл к верху.
   useEffect(() => {
     const el = gridRef.current;
     if (el) el.scrollTop = 0;
   }, [page]);
 
   const visibleStickers = useMemo(() => {
-    if (!Array.isArray(stickers)) return [];
     const start = page * PAGE_SIZE;
-    return stickers.slice(start, start + PAGE_SIZE);
-  }, [stickers, page]);
+    return sortedStickers.slice(start, start + PAGE_SIZE);
+  }, [sortedStickers, page]);
 
-  // [2.40.1] Свайп-жест. Нативный listener — иначе React onTouchMove
-  // passive и preventDefault не сработает.
+  // [2.41.0] Тост — 2.4с, дальше сам гаснет.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(''), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // [2.40.1] Свайп по сетке.
   useEffect(() => {
     if (!open) return;
     const el = gridRef.current;
@@ -66,7 +111,7 @@ const StickerPanel = ({
       active: false,
       startX: 0,
       startY: 0,
-      direction: null, // 'horizontal' | 'vertical' | null
+      direction: null,
       lastDx: 0,
     };
 
@@ -109,7 +154,6 @@ const StickerPanel = ({
       }
       if (state.direction !== 'horizontal') return;
 
-      // На границах — упираемся, но всё равно двигаем чуть-чуть (резина).
       const atStart = page === 0 && dx > 0;
       const atEnd = page === totalPages - 1 && dx < 0;
       let off = dx;
@@ -193,6 +237,11 @@ const StickerPanel = ({
     if (onPick) onPick(url);
   };
 
+  const handleToggleFavorite = (url, isFav) => {
+    if (onToggleFavorite) onToggleFavorite(url);
+    setToast(isFav ? 'больше не нравится' : 'добавлено в избранные');
+  };
+
   const handlePrev = (e) => {
     e.stopPropagation();
     setPage((p) => Math.max(0, p - 1));
@@ -256,17 +305,18 @@ const StickerPanel = ({
           <>
             <div className="sticker-panel-grid-wrap">
               <div className="sticker-panel-grid" ref={gridRef}>
-                {visibleStickers.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className="sticker-panel-tile"
-                    onClick={() => handlePick(s.url)}
-                    title="Отправить"
-                  >
-                    <img src={s.url} alt="" loading="lazy" draggable={false} />
-                  </button>
-                ))}
+                {visibleStickers.map((s) => {
+                  const isFav = favoriteSet.has(s.url);
+                  return (
+                    <StickerTile
+                      key={s.id}
+                      sticker={s}
+                      isFav={isFav}
+                      onPick={handlePick}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -297,8 +347,104 @@ const StickerPanel = ({
             )}
           </>
         )}
+
+        {toast && (
+          <div className="duel-notice sticker-panel-toast">
+            {toast}
+          </div>
+        )}
       </div>
     </>
+  );
+};
+
+// [2.41.0] Плитка стикера с long-press логикой.
+// Отдельный компонент — чтобы long-press-таймеры жили на каждом
+// стикере и сбрасывались при движении/отпускании.
+const StickerTile = ({ sticker, isFav, onPick, onToggleFavorite }) => {
+  const timerRef = useRef(null);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const firedRef = useRef(false);
+  const movedRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const cancelPress = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const handleDown = (e) => {
+    // Координаты — из pointer/touch/mouse.
+    const t = e.touches ? e.touches[0] : e;
+    startPosRef.current = { x: t.clientX, y: t.clientY };
+    firedRef.current = false;
+    movedRef.current = false;
+    cancelPress();
+
+    const delay = isFav ? LONG_PRESS_REMOVE_MS : LONG_PRESS_ADD_MS;
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      firedRef.current = true;
+      onToggleFavorite(sticker.url, isFav);
+    }, delay);
+  };
+
+  const handleMove = (e) => {
+    if (!timerRef.current) return;
+    const t = e.touches ? e.touches[0] : e;
+    const dx = Math.abs(t.clientX - startPosRef.current.x);
+    const dy = Math.abs(t.clientY - startPosRef.current.y);
+    if (dx > LONG_PRESS_CANCEL_PX || dy > LONG_PRESS_CANCEL_PX) {
+      movedRef.current = true;
+      cancelPress();
+    }
+  };
+
+  const handleUp = () => {
+    cancelPress();
+    if (firedRef.current || movedRef.current) {
+      firedRef.current = false;
+      movedRef.current = false;
+      return;
+    }
+    onPick(sticker.url);
+  };
+
+  const handleCancel = () => {
+    cancelPress();
+    firedRef.current = false;
+    movedRef.current = false;
+  };
+
+  return (
+    <button
+      type="button"
+      className={
+        'sticker-panel-tile' +
+        (isFav ? ' sticker-panel-tile--fav' : '')
+      }
+      onPointerDown={handleDown}
+      onPointerMove={handleMove}
+      onPointerUp={handleUp}
+      onPointerCancel={handleCancel}
+      onPointerLeave={handleCancel}
+      onContextMenu={(e) => e.preventDefault()}
+      title={isFav ? 'Отправить · удержание 1с — убрать' : 'Отправить · удержание — в избранное'}
+    >
+      <img src={sticker.url} alt="" loading="lazy" draggable={false} />
+      {isFav && (
+        <span className="sticker-panel-tile-fav-marker" aria-hidden="true">
+          ⭐
+        </span>
+      )}
+    </button>
   );
 };
 

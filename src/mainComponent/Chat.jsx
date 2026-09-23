@@ -59,7 +59,8 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
-// fix(mascot): обводки + цикл 8с + мгновенный возврат при модалке (v2.39.5)
+// feat(stickers): избранные стикеры (v2.41.0)
+// fix(mascot): обводки, цикл 8с, мгновенный возврат при модалке (v2.39.5)
 // feat(mascot): три места, полёт шапка ↔ панель ↔ центр (v2.39.4)
 // fix(mascot): mascotPlace как state, удаление летающего через RAF (v2.39.2)
 // feat(mascot): маскот летит в шапку PlayersPanel (v2.39.0)
@@ -74,7 +75,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.8';
+const VERSION = '2.41.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -83,7 +84,6 @@ const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpM
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
 const TOAST_LIFETIME_MS = 8000;
 // [2.39.5] Размеры маскота на трёх «остановках».
-const MASCOT_SIZE_HEADER = 40;
 const MASCOT_SIZE_PANEL_SOLO = 72;
 const MASCOT_SIZE_PANEL_ORBIT = 41;
 const MASCOT_SIZE_CENTER = 82;
@@ -252,15 +252,14 @@ const Chat = () => {
 
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
-    duration: 600,
+    duration: 700,
   });
 
   // [2.39.5] Где сейчас маскот: 'header' | 'panel' | 'center'. State, не ref.
   const [mascotPlace, setMascotPlace] = useState('header');
 
   // [2.39.5] Для какого количества непрочитанных тост в центре уже показан
-  // и истёк. Пока счётчик не изменится — в центр больше не летим. Это
-  // разрывает цикл «8с → шапка → снова центр».
+  // и истёк. Пока счётчик не изменится — в центр больше не летим.
   const centerDismissedForCountRef = useRef(null);
 
   const sendVoiceMessageRef = useRef(null);
@@ -403,6 +402,7 @@ const Chat = () => {
     globalDialogsBg,
     setGlobalDialogsBgAdmin,
     stickers,
+    favoriteStickers,
     errorMessage,
     setErrorMessage,
     input,
@@ -435,6 +435,7 @@ const Chat = () => {
     saveDialogsBg,
     sendSticker,
     setStickersList,
+    toggleFavoriteSticker,
   } = chat;
 
   const priv = usePrivateChat({ sendMessage, myId, players });
@@ -1451,6 +1452,8 @@ const Chat = () => {
           onStickersUpdated={setStickersList}
           onForward={handleForwardOpen}
           avatarUrl={avatarCache[privateChat.userId] || null}
+          favoriteStickers={favoriteStickers}
+          onToggleFavorite={toggleFavoriteSticker}
         />
       )}
 
@@ -1808,7 +1811,7 @@ const Chat = () => {
         />
       )}
 
-      {/* [2.39.5] PrivateMessageToasts всегда в DOM — ref на маскота валиден
+      {/* [2.39.4] PrivateMessageToasts всегда в DOM — ref на маскота валиден
           для полёта. Видимость через проп visible. */}
       <PrivateMessageToasts
         users={unreadUserObjects}
@@ -1825,6 +1828,8 @@ const Chat = () => {
         isAdmin={isAdmin}
         token={token}
         onUploaded={setStickersList}
+        favoriteStickers={favoriteStickers}
+        onToggleFavorite={toggleFavoriteSticker}
       />
 
       <ForwardPickerModal

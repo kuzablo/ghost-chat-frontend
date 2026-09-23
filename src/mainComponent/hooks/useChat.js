@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.37.1] Убран мёртвый case 'friend_request_accepted'. Бэк его
-           не шлёт — есть только 'friend_request_accepted_notification'.
+  [2.41.0] favoriteStickers — избранные стикеры пользователя.
+           toggleFavoriteSticker(url) → WS toggle_favorite_sticker.
+           favorite_stickers_updated обновляет стейт.
+  [2.37.1] Убран мёртвый case 'friend_request_accepted'.
   [2.36.3] globalDialogsBg + setGlobalDialogsBgAdmin
-  [2.35.23] samePlayerList / sameFriendList
-  [2.35.16] stickers_list
 */
 
 const MAX_UPLOAD_MB = 25;
@@ -43,6 +43,7 @@ export const useChat = ({
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const [isAvatarsLoaded, setIsAvatarsLoaded] = useState(false);
   const [stickers, setStickers] = useState([]);
+  const [favoriteStickers, setFavoriteStickers] = useState([]);
 
   const sendMessageRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -342,11 +343,20 @@ export const useChat = ({
     setStickers(Array.isArray(list) ? list : []);
   }, []);
 
+  // [2.41.0] Переключить избранный стикер.
+  const toggleFavoriteSticker = useCallback((stickerUrl) => {
+    if (!stickerUrl || !sendMessageRef.current || !isAuthRef.current) return;
+    sendMessageRef.current({ type: 'toggle_favorite_sticker', data: { stickerUrl } });
+  }, []);
+
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
       case 'auth_ok':
         setDialogsBg(msg.data?.dialogsBg || null);
         setGlobalDialogsBg(msg.data?.globalDialogsBg || null);
+        setFavoriteStickers(
+          Array.isArray(msg.data?.favoriteStickers) ? msg.data.favoriteStickers : []
+        );
         return false;
 
       case 'friends_list':
@@ -410,6 +420,12 @@ export const useChat = ({
       case 'stickers_list': {
         const list = msg.data?.stickers || [];
         setStickers(list);
+        return true;
+      }
+
+      case 'favorite_stickers_updated': {
+        const list = msg.data?.favoriteStickers;
+        if (Array.isArray(list)) setFavoriteStickers(list);
         return true;
       }
 
@@ -547,6 +563,7 @@ export const useChat = ({
     dialogsBg,
     globalDialogsBg,
     stickers,
+    favoriteStickers,
     errorMessage,
     setErrorMessage,
     input,
@@ -581,5 +598,6 @@ export const useChat = ({
     setGlobalDialogsBgAdmin,
     sendSticker,
     setStickersList,
+    toggleFavoriteSticker,
   };
 };

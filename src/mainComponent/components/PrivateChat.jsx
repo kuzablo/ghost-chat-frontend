@@ -11,15 +11,13 @@ import ConfirmModal from './ConfirmModal';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 
 /*
-  [2.36.7] Убран автоскрывающий таймер pickerFor (5000мс). Он закрывал
-           ReactionWheel раньше, чем пользователь успевал выбрать из
-           раскрытых 12 реакций. Автоскрытие теперь только в ReactionWheel
-           (8 секунд, сбрасывается при «+»).
-  [2.36.5] Убран ник над gif-стикером в личке.
-  [2.35.60] private_message_deleted — удаление + пересчёт preview в dialogs
-  [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update
-  [2.35.41] historyLoaded в privateChat
-  [2.28.7] восстанавливаем unreadByUser из dialogs_list
+  [2.41.0] favoriteStickers / onToggleFavorite пробрасываются в StickerPanel.
+  [2.36.7] Убран автоскрывающий таймер pickerFor.
+  [2.36.5] Убран ник над gif-стикером.
+  [2.35.60] private_message_deleted — удаление + пересчёт preview.
+  [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update.
+  [2.35.41] historyLoaded в privateChat.
+  [2.28.7] восстанавливаем unreadByUser из dialogs_list.
 */
 
 const MAX_UPLOAD_MB = 25;
@@ -75,6 +73,7 @@ const PrivateChat = ({
   initialMessages = [], historyLoaded = true, dialogsBg = null,
   typingUser = null, stickers = [], isAdmin = false, token = '',
   onStickersUpdated, onForward, avatarUrl = null,
+  favoriteStickers = [], onToggleFavorite,
 }) => {
   const [input, setInput] = useState('');
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
@@ -140,8 +139,6 @@ const PrivateChat = ({
 
   useEffect(() => { setLocalTypingUser(typingUser); }, [typingUser]);
 
-  // [2.36.7] Автоскрытие пикера теперь полностью в ReactionWheel.
-  // Здесь только сбрасываем якорь, когда пикер уже закрыт.
   useEffect(() => {
     if (!pickerFor) setPickerAnchor(null);
   }, [pickerFor]);
@@ -790,6 +787,8 @@ const PrivateChat = ({
         isAdmin={isAdmin}
         token={token}
         onUploaded={onStickersUpdated}
+        favoriteStickers={favoriteStickers}
+        onToggleFavorite={onToggleFavorite}
       />
 
       {fullscreenImage && (
