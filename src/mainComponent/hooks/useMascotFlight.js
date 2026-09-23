@@ -1,18 +1,24 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.7] Убран fade-in летающего (opacity 0→1). Раньше оригинал гас
-           через transition 240мс — параллельно с летящим получалось два
-           маскота на экране. Теперь подмена мгновенная.
-           LANDED_HOLD_MS убран — удаление через двойной RAF после
-           setFlying(false). React успевает показать целевой элемент.
-  [2.39.5] Анимация через left/top/width/height — border 2px не растёт.
-  [2.39.4] fromLanded — старт из lastLandedRect.
+  [2.39.8] Crossfade при приземлении. Раньше: onfinish → setFlying(false)
+           → React рисует целевой маскот → летающий удаляется. Между
+           этими состояниями — один кадр с двумя элементами, размеры
+           на стыке дают видимый скачок (border 2px + layout vs transform).
+           Теперь: последние 20% времени полёта opacity летающего 1 → 0.
+           setFlying(false) срабатывает в самом конце — когда летающий
+           уже невидим. Целевой элемент появляется под ним. Никакого
+           прыжка размера.
+  [2.39.7] Убран fade-in летающего.
+  [2.39.5] Анимация left/top/width/height — border не масштабируется.
+  [2.39.4] fromLanded.
   [2.39.3] Целевая точка = центр элемента + размер size.
 */
 
 const DEFAULT_DURATION = 700;
 const CENTER_SIZE = 82;
+const FADE_START = 0.8;      // последние 20% — fade out
+const FINISH_GRACE_MS = 50;  // запас перед удалением DOM-элемента
 
 const getRect = (el) => {
   if (!el) return null;
@@ -121,6 +127,9 @@ export const useMascotFlight = ({
     flyingRef.current = true;
     setFlying(true);
 
+    // [2.39.8] Ключевые кадры: 0% — старт, 80% — ещё полностью видим,
+    // 100% — opacity 0. Так летающий плавно растворяется в точке
+    // приземления, а целевой маскот уже на месте под ним.
     const anim = el.animate(
       [
         {
@@ -128,12 +137,24 @@ export const useMascotFlight = ({
           top: `${from.top}px`,
           width: `${from.width}px`,
           height: `${from.height}px`,
+          opacity: 1,
+          offset: 0,
         },
         {
           left: `${to.left}px`,
           top: `${to.top}px`,
           width: `${to.width}px`,
           height: `${to.height}px`,
+          opacity: 1,
+          offset: FADE_START,
+        },
+        {
+          left: `${to.left}px`,
+          top: `${to.top}px`,
+          width: `${to.width}px`,
+          height: `${to.height}px`,
+          opacity: 0,
+          offset: 1,
         },
       ],
       {
@@ -147,19 +168,17 @@ export const useMascotFlight = ({
     anim.onfinish = () => {
       lastLandedRectRef.current = to;
       if (!mountedRef.current) {
-        el.remove();
+        try { el.remove(); } catch { /* noop */ }
         return;
       }
       flyingRef.current = false;
       setFlying(false);
       if (onLand) onLand();
-      // Двойной RAF — даём React отрисовать целевой элемент, потом
-      // убираем летающий. Он визуально окажется ровно под целевым.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          try { el.remove(); } catch { /* noop */ }
-        });
-      });
+      // Небольшая пауза перед удалением — даём React отрисовать целевой
+      // элемент. Летающий уже невидим (opacity 0), наложения не видно.
+      setTimeout(() => {
+        try { el.remove(); } catch { /* noop */ }
+      }, FINISH_GRACE_MS);
     };
   }, [fromRef, toRef, duration, onLand]);
 
