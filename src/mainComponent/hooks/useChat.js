@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.37.1] Убран мёртвый case 'friend_request_accepted'. Бэк его
+           не шлёт — есть только 'friend_request_accepted_notification'.
   [2.36.3] globalDialogsBg + setGlobalDialogsBgAdmin
   [2.35.23] samePlayerList / sameFriendList
   [2.35.16] stickers_list
@@ -487,10 +489,6 @@ export const useChat = ({
         });
         return true;
       }
-
-      case 'friend_request_accepted':
-        setFriendRequests(prev => prev.filter(r => r.senderId !== msg.data.userId));
-        return true;
 
       case 'friend_requests_list':
         setFriendRequests(msg.data);
