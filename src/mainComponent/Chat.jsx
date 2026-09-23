@@ -74,7 +74,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.5';
+const VERSION = '2.39.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1364,7 +1364,7 @@ const Chat = () => {
           ref={playersOverlayRef}
           visible={showPlayers}
           orbitSlotRef={panelOrbitRef}
-          orbitHidden={mascotFlying}
+          orbitHidden={mascotFlying || mascotPlace !== 'panel'}
           players={players}
           dialogsBg={effectiveDialogsBg}
           unreadUserObjects={unreadUserObjects}

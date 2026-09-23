@@ -1,16 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.39.5] Анимация через left/top/width/height вместо transform: scale.
-           Scale увеличивал border вместе с размером — обводки не совпадали
-           с конечным элементом. Теперь border 2px сохраняется на всех
-           размерах. Медленнее для GPU, но за 600мс для одного элемента —
-           приемлемо.
+  [2.39.6] Плавнее: duration 600→700, easing cubic-bezier(0.4, 0, 0.2, 1)
+           без отскока. Летающий маскот появляется через opacity 0→1
+           за первые ~10% времени — без резкого «выскакивания».
+  [2.39.5] Анимация через left/top/width/height вместо transform: scale —
+           border не масштабируется вместе с маскотом, обводка 2px везде.
   [2.39.4] fromLanded — старт из lastLandedRect в новую цель.
   [2.39.3] Целевая точка = центр элемента + размер size.
 */
 
-const DEFAULT_DURATION = 600;
+const DEFAULT_DURATION = 700;
 const CENTER_SIZE = 82;
 const LANDED_HOLD_MS = 260;
 
@@ -115,6 +115,7 @@ export const useMascotFlight = ({
     el.style.top = `${from.top}px`;
     el.style.width = `${from.width}px`;
     el.style.height = `${from.height}px`;
+    el.style.opacity = '0';
     document.body.appendChild(el);
     nodeRef.current = el;
 
@@ -128,17 +129,27 @@ export const useMascotFlight = ({
           top: `${from.top}px`,
           width: `${from.width}px`,
           height: `${from.height}px`,
+          opacity: 0,
+        },
+        {
+          left: `${from.left}px`,
+          top: `${from.top}px`,
+          width: `${from.width}px`,
+          height: `${from.height}px`,
+          opacity: 1,
+          offset: 0.1,
         },
         {
           left: `${to.left}px`,
           top: `${to.top}px`,
           width: `${to.width}px`,
           height: `${to.height}px`,
+          opacity: 1,
         },
       ],
       {
         duration,
-        easing: 'cubic-bezier(0.34, 1.2, 0.64, 1)',
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
         fill: 'forwards',
       }
     );
