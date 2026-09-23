@@ -8,7 +8,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
     />
 
-    <!-- [2.36.6] Critical CSS + boot-splash + аварийный сценарий с прогрессом -->
+    <!-- [2.36.6] Critical CSS + boot-splash + аварийный сценарий -->
     <style>
       *,
       *::before,
@@ -75,7 +75,6 @@
         50%      { transform: scale(1.05); opacity: 1; }
       }
 
-      /* [2.36.6] Аварийный текст и кнопка. Скрыты, пока грузится нормально */
       #boot-splash__status {
         font-size: 13px;
         font-weight: 700;
@@ -141,45 +140,89 @@
 
     <div id="root"></div>
 
-    <script>
-      (function () {
-        try {
-          if (localStorage.getItem('ghost-chat-theme') === 'dark') {
-            document.body.classList.add('dark');
-          }
-        } catch (e) { /* noop */ }
-      })();
-    </script>
-
-    <script type="module" src="/src/main.jsx"></script>
-
     <!--
-      [2.36.6] Аварийный сценарий. Молчаливый fallback 8с заменён
-      на прогрессивную диагностику. Пользователь видит, что происходит,
-      и может перезагрузить принудительно.
+      [2.36.6] Диагностика клиента + тема + аварийный сценарий.
+      Всё в одном скрипте, до загрузки модуля. Ошибки уходят
+      POST-ом на /api/client-error → в логи Amvera.
     -->
     <script>
       (function () {
-        var splashEl = document.getElementById('boot-splash');
-        if (!splashEl) return;
-
-        var statusEl = document.getElementById('boot-splash__status');
-        var reloadEl = document.getElementById('boot-splash__reload');
+        var ERROR_ENDPOINT = 'https://api.banjoboy420.ru/api/client-error';
         var bootStart = Date.now();
 
         try {
           sessionStorage.setItem('boot-start-at', String(bootStart));
         } catch (e) { /* noop */ }
 
-        // Шаг 1: через 8с — мягкое сообщение
+        function send(stage, message, stack) {
+          try {
+            var payload = JSON.stringify({
+              stage: String(stage || 'unknown').slice(0, 60),
+              message: String(message || '').slice(0, 500),
+              stack: String(stack || '').slice(0, 1500),
+              url: String(location.href || '').slice(0, 300),
+              ua: String(navigator.userAgent || '').slice(0, 300),
+              ts: Date.now(),
+            });
+
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon(
+                ERROR_ENDPOINT,
+                new Blob([payload], { type: 'application/json' })
+              );
+            } else {
+              fetch(ERROR_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                keepalive: true,
+              }).catch(function () { /* noop */ });
+            }
+          } catch (e) { /* noop */ }
+        }
+
+        // Экспортируем наружу — main.jsx и Chat.jsx смогут слать метки
+        window.__clientLog = send;
+
+        // Ошибки парсинга/выполнения
+        window.addEventListener('error', function (e) {
+          var msg = e && e.message ? e.message : 'error';
+          var stack = '';
+          if (e && e.error && e.error.stack) stack = e.error.stack;
+          send('window.onerror', msg, stack);
+        }, true);
+
+        // Необработанные промисы
+        window.addEventListener('unhandledrejection', function (e) {
+          var reason = e && e.reason;
+          var msg = reason && reason.message ? reason.reason : String(reason);
+          var stack = reason && reason.stack ? reason.stack : '';
+          send('unhandledrejection', msg, stack);
+        });
+
+        // Тема
+        try {
+          if (localStorage.getItem('ghost-chat-theme') === 'dark') {
+            document.body.classList.add('dark');
+          }
+        } catch (e) { /* noop */ }
+
+        // ===== Аварийный сценарий boot splash =====
+        var splashEl = document.getElementById('boot-splash');
+        if (!splashEl) return;
+
+        var statusEl = document.getElementById('boot-splash__status');
+        var reloadEl = document.getElementById('boot-splash__reload');
+
         setTimeout(function () {
-          if (!statusEl) return;
           if (document.body.classList.contains('app-ready')) return;
-          statusEl.textContent = 'Долго грузится. Не закрывай…';
-          statusEl.classList.add('visible');
+          if (statusEl) {
+            statusEl.textContent = 'Долго грузится. Не закрывай…';
+            statusEl.classList.add('visible');
+          }
+          send('boot-timeout-8s', 'splash still visible after 8s');
         }, 8000);
 
-        // Шаг 2: через 20с — предлагаем перезагрузить
         setTimeout(function () {
           if (document.body.classList.contains('app-ready')) return;
           if (statusEl) {
@@ -187,29 +230,27 @@
             statusEl.classList.add('visible');
           }
           if (reloadEl) reloadEl.classList.add('visible');
+          send('boot-timeout-20s', 'splash still visible after 20s');
         }, 20000);
 
-        // Кнопка
         if (reloadEl) {
           reloadEl.addEventListener('click', function () {
             location.reload();
           });
         }
 
-        // Шаг 3: через 40с — автоперезагрузка, но один раз (флаг в sessionStorage)
         setTimeout(function () {
           if (document.body.classList.contains('app-ready')) return;
           var tried = false;
           try { tried = sessionStorage.getItem('boot-auto-reload') === '1'; } catch (e) {}
           if (tried) return;
           try { sessionStorage.setItem('boot-auto-reload', '1'); } catch (e) {}
+          send('boot-timeout-40s', 'auto reload');
           location.reload();
         }, 40000);
-
-        // Если приложение загрузится нормально — статус и кнопка исчезнут
-        // автоматически вместе со сплешем (body.app-ready → opacity 0,
-        // затем Chat.jsx удалит #boot-splash из DOM).
       })();
     </script>
+
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

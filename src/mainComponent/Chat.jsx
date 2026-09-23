@@ -60,7 +60,7 @@ import '../styles/Chat.toasts.css';
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
 // [2.35.44] свои сообщения справа без синего + стикер 220px
-const VERSION = '2.36.5';
+const VERSION = '2.36.6';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -581,6 +581,14 @@ const Chat = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
+
+    // [2.36.6] Метка этапа — видно в логах Amvera, дошёл ли React до сюда
+    if (typeof window.__clientLog === 'function') {
+      window.__clientLog(
+        'chat-boot-check',
+        `isAuth=${isAuth} hist=${isHistoryLoaded} avatars=${isAvatarsLoaded}`
+      );
+    }
 
     if (!isAuth) {
       window.__ready();
