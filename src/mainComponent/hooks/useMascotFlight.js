@@ -1,10 +1,9 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
-  [2.38.0] Двусторонний полёт. startFlight({ toRef, reverse }).
-           toRef опционален — можно задать цель в момент вызова
-           (например, узел орбиты в PlayersPanel). reverse летит
-           обратно к fromRef из точки последней посадки.
+  [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse }).
+           toRef можно задать в момент вызова. reverse летит обратно
+           к fromRef из точки последней посадки.
   [2.37.9] Fallback на центр экрана, если цель скрыта.
   [2.37.7] Полёт маскота через Web Animations API.
 */

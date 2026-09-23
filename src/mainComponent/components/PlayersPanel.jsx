@@ -4,9 +4,10 @@ import StickerMenu from './StickerMenu';
 import OrbitNotification from './OrbitNotification';
 
 /*
-  [2.38.0] orbitSlotRef — ref на узел орбиты, куда летит маскот из шапки.
-           orbitHidden — пока летит — не рендерим орбиту, чтобы не было
-           двух маскотов одновременно.
+  [2.39.0] Узел орбиты (players-header--orbit) рендерится всегда.
+           Внутри — OrbitNotification, если unread > 0, иначе маскот-одиночка.
+           Через orbitSlotRef маскот из шапки чата летит именно сюда.
+           orbitHidden=true пока летит — чтобы не было двух маскотов.
   [2.35.34] Плейсхолдер-маскот и орбита в шапке разделены.
   [2.35.33] Кастомный фон + орбита
   [2.35.25] visible — панель всегда в DOM
@@ -252,34 +253,36 @@ const PlayersPanel = forwardRef(({
         ref={ref}
         style={panelStyle}
       >
-        {/* Плейсхолдер: одиночный маскот, пока URL-фон грузится. */}
         {showBgLoading && (
           <div className="players-bg-loading" aria-hidden="true">
             <div className="players-bg-loading-mascot" />
           </div>
         )}
 
-        {/* [2.38.1] Узел орбиты рендерится всегда, когда есть непрочитанные.
-            Ref должен быть валиден — иначе маскот не знает координаты цели
-            и полёт не стартует. Внутри — OrbitNotification условно:
-            пока маскот летит (orbitHidden=true), орбиты нет —
-            иначе было бы два маскота одновременно. */}
-        {unreadUserObjects.length > 0 ? (
-          <div
-            ref={orbitSlotRef}
-            className="players-header players-header--orbit"
-          >
-            {!orbitHidden && (
+        {/* [2.39.0] Узел орбиты рендерится всегда. Ref валиден в любой момент,
+            маскот из шапки чата знает координаты для полёта.
+            Содержимое узла — OrbitNotification (unread > 0) или маскот-одиночка. */}
+        <div
+          ref={orbitSlotRef}
+          className="players-header players-header--orbit"
+        >
+          {!orbitHidden && (
+            unreadUserObjects.length > 0 ? (
               <OrbitNotification
                 users={unreadUserObjects}
                 onClick={onOpenDialogs}
                 className="pm-orbit--header"
               />
-            )}
-          </div>
-        ) : (
-          <h4 className="players-title">banjoboy's crew</h4>
-        )}
+            ) : (
+              <img
+                src="/mascot.png"
+                alt=""
+                className="players-header-mascot-solo"
+                draggable={false}
+              />
+            )
+          )}
+        </div>
 
         <input
           className="search-input"

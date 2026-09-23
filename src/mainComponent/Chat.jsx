@@ -59,8 +59,8 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
-// feat(mascot): полёт связан с непрочитанными (v2.38.0)
-// feat(mascot): двусторонний полёт + fallback на центр (v2.37.10)
+// feat(mascot): маскот летит в шапку PlayersPanel (v2.39.0)
+// feat(mascot): двусторонний полёт + fallback на центр (v2.38.1)
 // refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
 // refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
 // refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
@@ -71,7 +71,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.38.2';
+const VERSION = '2.39.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -208,12 +208,10 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-  // [2.38.0] Полёт маскота: источник — маскот в шапке.
+  // [2.39.0] Полёт маскота: ref на маскота в шапке и на узел орбиты в PlayersPanel.
   const headerMascotRef = useRef(null);
-  // [2.38.0] Цель — узел орбиты в PlayersPanel. Заполняется
-  // через orbitSlotRef когда панель открыта и есть непрочитанные.
   const panelOrbitRef = useRef(null);
-  // [2.38.0] Где сейчас «находится» маскот: 'header' | 'panel'.
+  // [2.39.0] Где сейчас «находится» маскот: 'header' | 'panel'.
   const mascotPlaceRef = useRef('header');
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
@@ -244,9 +242,7 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  // [2.38.0] Полёт. Без toRef — цель всегда центр экрана.
-  // Сюда попадает место, где потом появится орбита непрочитанных.
-  // [2.38.0] Полёт маскота между шапкой чата и шапкой PlayersPanel.
+  // [2.39.0] Полёт. Цель задаётся в момент вызова startFlight.
   const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
     fromRef: headerMascotRef,
     duration: 600,
@@ -489,7 +485,6 @@ const Chat = () => {
     ? avatarCache[fullscreenMessage.userId]
     : null;
 
-  // [2.37.6] Жесты fullscreen.
   const {
     fsImgRef,
     fsOverlayRef,
@@ -518,22 +513,21 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.38.0] Маскот летит между шапкой чата и шапкой PlayersPanel.
-  // Панель открыта + есть непрочитанные → летит в панель.
-  // Панель закрыта или непрочитанных нет → возвращается.
-  // Пока летит — орбита скрывается (orbitHidden) через mascotFlying.
+  // [2.39.0] Маскот летит при открытии/закрытии PlayersPanel.
+  // Открылась — из шапки в узел орбиты. Закрылась — обратно.
+  // Пока летит, орбита не рендерится (orbitHidden=mascotFlying).
   useEffect(() => {
-    const wantInPanel = showPlayers && unreadUserObjects.length > 0;
+    const wantInPanel = showPlayers;
     const currentPlace = mascotPlaceRef.current;
 
-    if (wantInPanel && currentPlace === 'header' && panelOrbitRef.current) {
+    if (wantInPanel && currentPlace === 'header') {
       mascotPlaceRef.current = 'panel';
       startMascotFlight({ toRef: panelOrbitRef });
     } else if (!wantInPanel && currentPlace === 'panel') {
       mascotPlaceRef.current = 'header';
       startMascotFlight({ reverse: true });
     }
-  }, [showPlayers, unreadUserObjects.length, startMascotFlight]);
+  }, [showPlayers, startMascotFlight]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -643,7 +637,6 @@ const Chat = () => {
     return () => { cancelled = true; };
   }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
 
-  // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам — зовём.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
     const t = setTimeout(() => {
@@ -655,7 +648,6 @@ const Chat = () => {
     return () => clearTimeout(t);
   }, []);
 
-  // [2.37.3] Спец-маркеры от useWebSocket.
   useEffect(() => {
     if (wsError) {
       if (wsError === 'banned-forever') {
@@ -1222,7 +1214,6 @@ const Chat = () => {
     setLogoutConfirm(false);
   }, []);
 
-  // [2.37.0] Отложить обновление на 10 минут
   const handleDeferUpdate = useCallback(() => {
     setUpdateDeferred(true);
     setTimeout(() => setUpdateDeferred(false), UPDATE_DEFER_MS);
@@ -1230,7 +1221,6 @@ const Chat = () => {
 
   const voiceRecording = voiceRecActive;
 
-  // [2.37.0] Занят ли юзер чем-то важным
   const isBusyForReload =
     !!fullscreenImage ||
     voiceRecActive ||
@@ -1253,10 +1243,13 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.38.0] Оригинал в шапке скрыт, пока маскот летит или пока
-  // он «в панели». Возвращается после reverse полёта.
+  // [2.39.0] Маскот в шапке скрыт (закрашен цветом фона), если:
+  //   1) летит; 2) уже в панели; 3) панель закрыта и есть непрочитанные
+  //   (в этом случае маскот-орбита в центре экрана).
   const hideHeaderMascot =
-    mascotFlying || mascotPlaceRef.current === 'panel';
+    mascotFlying ||
+    mascotPlaceRef.current === 'panel' ||
+    (!showPlayers && unreadUserObjects.length > 0);
 
   return (
     <>
@@ -1297,7 +1290,7 @@ const Chat = () => {
           ref={playersOverlayRef}
           visible={showPlayers}
           orbitSlotRef={panelOrbitRef}
-          orbitHidden={mascotFlying || mascotPlaceRef.current === 'header'}
+          orbitHidden={mascotFlying}
           players={players}
           dialogsBg={effectiveDialogsBg}
           unreadUserObjects={unreadUserObjects}
@@ -1441,15 +1434,19 @@ const Chat = () => {
       <div className="chat-container">
         <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
-            <div className="chat-header-mascot-wrap">
+            <div
+              className={
+                `chat-header-mascot-wrap` +
+                (hideHeaderMascot ? ' mascot-hidden' : '')
+              }
+            >
               <img
                 ref={headerMascotRef}
                 src="/mascot.png"
                 alt="banjoboy"
                 className={
                   `chat-header-logo` +
-                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '') +
-                  (hideHeaderMascot ? ' mascot-in-flight' : '')
+                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '')
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
@@ -1741,8 +1738,8 @@ const Chat = () => {
         />
       )}
 
-      {/* [2.38.0] Орбиту показываем только когда маскот уже прилетел.
-          Пока летит — прячем, чтобы не было двух маскотов. */}
+      {/* [2.39.0] Тост-орбита в центре экрана — только когда панель закрыта
+          и маскот сейчас не летит. Пока летит — скрыт, чтобы не было двух. */}
       {!showPlayers && !showDialogs && !privateChat && !mascotFlying && (
         <PrivateMessageToasts
           users={unreadUserObjects}
