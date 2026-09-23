@@ -34,6 +34,7 @@ import { useChat } from './hooks/useChat';
 import { useYouTubePlayer } from './hooks/useYouTubePlayer';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { useMascotGestures } from './hooks/useMascotGestures';
+import { useCapsuleGestures } from './hooks/useCapsuleGestures';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
@@ -56,6 +57,7 @@ import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 
+// refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
 // refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
 // feat(update): авто-обновление фронта через version.json (v2.37.0)
 // fix(reactions): единый таймер автоскрытия (v2.36.7)
@@ -64,7 +66,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.4';
+const VERSION = '2.37.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -141,7 +143,7 @@ const ClipIcon = () => (
   </svg>
 );
 
-// [2.37.2] Одноразовый маркер: показать, добрался ли React до рендера Chat.
+// [2.37.2] Одноразовый маркер.
 let __chatRenderStartLogged = false;
 
 const Chat = () => {
@@ -196,7 +198,6 @@ const Chat = () => {
   const voiceLongPressTimerRef = useRef(null);
   const voiceStartXRef = useRef(0);
 
-  const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [showDialogs, setShowDialogs] = useState(false);
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
@@ -226,14 +227,6 @@ const Chat = () => {
   const inputTouchStartYRef = useRef(null);
   const inputTouchStartXRef = useRef(null);
   const inputDragYRef = useRef(0);
-
-  const capsuleSwipeRef = useRef({
-    startX: 0,
-    startY: 0,
-    active: false,
-    didSwipe: false,
-    direction: null,
-  });
 
   const fsGestureRef = useRef({
     startX: 0,
@@ -624,8 +617,7 @@ const Chat = () => {
     return () => { cancelled = true; };
   }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
 
-  // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам —
-  // зовём принудительно. Универсальная страховка от любых сбоев.
+  // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам — зовём принудительно.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
     const t = setTimeout(() => {
@@ -869,6 +861,20 @@ const Chat = () => {
   const togglePlayers = () => {
     setShowPlayers(prev => !prev);
   };
+
+  const {
+    capsuleOpen,
+    handleCapsuleTap,
+    handlePlayersCapsuleTap,
+    handleWriteCapsuleTap,
+    handleCapsuleTouchStart,
+    handleCapsuleTouchMove,
+    handleCapsuleTouchEnd,
+  } = useCapsuleGestures({
+    showMobileInput,
+    setShowMobileInput,
+    togglePlayers,
+  });
 
   const handleOpenInfo = useCallback(() => {
     setShowPlayers(false);
@@ -1304,98 +1310,6 @@ const Chat = () => {
     forceLogout('');
   };
 
-  const CAPSULE_SWIPE_UP = 30;
-  const CAPSULE_SWIPE_DOWN = 40;
-  const CAPSULE_DIRECTION_LOCK = 8;
-
-  const handleCapsuleTap = () => {
-    if (capsuleSwipeRef.current.didSwipe) return;
-    if (!capsuleOpen) setCapsuleOpen(true);
-  };
-
-  const handlePlayersCapsuleTap = (e) => {
-    e.stopPropagation();
-    togglePlayers();
-    setCapsuleOpen(false);
-  };
-
-  const handleWriteCapsuleTap = (e) => {
-    e.stopPropagation();
-    setShowMobileInput(v => !v);
-    setCapsuleOpen(false);
-  };
-
-  const handleCapsuleTouchStart = (e) => {
-    if (e.touches.length !== 1) return;
-    const t = e.touches[0];
-    capsuleSwipeRef.current = {
-      startX: t.clientX,
-      startY: t.clientY,
-      active: true,
-      didSwipe: false,
-      direction: null,
-    };
-  };
-
-  const handleCapsuleTouchMove = (e) => {
-    const s = capsuleSwipeRef.current;
-    if (!s.active) return;
-    if (e.touches.length !== 1) return;
-
-    const t = e.touches[0];
-    const dx = t.clientX - s.startX;
-    const dy = t.clientY - s.startY;
-
-    if (!s.direction) {
-      if (
-        Math.abs(dx) < CAPSULE_DIRECTION_LOCK &&
-        Math.abs(dy) < CAPSULE_DIRECTION_LOCK
-      ) {
-        return;
-      }
-      s.direction = Math.abs(dy) > Math.abs(dx) ? 'vertical' : 'horizontal';
-    }
-    if (s.direction === 'horizontal') return;
-
-    if (e.cancelable) e.preventDefault();
-
-    if (dy <= -CAPSULE_SWIPE_UP) {
-      s.didSwipe = true;
-      s.active = false;
-
-      if (!capsuleOpen) {
-        setCapsuleOpen(true);
-        setShowMobileInput(true);
-      } else if (!showMobileInput) {
-        setShowMobileInput(true);
-      }
-      return;
-    }
-
-    if (dy >= CAPSULE_SWIPE_DOWN) {
-      s.didSwipe = true;
-      s.active = false;
-
-      if (showMobileInput) {
-        setShowMobileInput(false);
-      } else if (capsuleOpen) {
-        setCapsuleOpen(false);
-      }
-    }
-  };
-
-  const handleCapsuleTouchEnd = () => {
-    const s = capsuleSwipeRef.current;
-    s.active = false;
-    if (s.didSwipe) {
-      setTimeout(() => {
-        if (capsuleSwipeRef.current) {
-          capsuleSwipeRef.current.didSwipe = false;
-        }
-      }, 250);
-    }
-  };
-
   const handleBanConfirm = useCallback((userId, nickname) => {
     setBanConfirm({ userId, nickname });
   }, []);
@@ -1471,7 +1385,7 @@ const Chat = () => {
 
   const voiceRecording = voiceRecActive;
 
-  // [2.37.0] Занят ли юзер чем-то важным — тогда тост обновления не мешаем
+  // [2.37.0] Занят ли юзер чем-то важным
   const isBusyForReload =
     !!fullscreenImage ||
     voiceRecActive ||
