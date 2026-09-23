@@ -50,6 +50,7 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 
+// fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
 // [2.35.44] свои сообщения справа без синего + стикер 220px
@@ -60,7 +61,7 @@ import '../styles/Chat.toasts.css';
 // [2.35.16] стикеры: панель, отправка в чат и личку
 // [2.35.12] Android PWA баннер
 // [2.35.4] дуэль: резолв clientId через userId
-const VERSION = '2.35.55';
+const VERSION = '2.35.56';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

@@ -34,6 +34,7 @@ const ReactionWheel = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [center, setCenter] = useState(null);
+  const [timerKey, setTimerKey] = useState(0); // [2.35.56] сброс таймера
 
   useEffect(() => {
     if (!open) {
@@ -73,7 +74,7 @@ const ReactionWheel = ({
     if (!open) return;
     const t = setTimeout(() => onClose?.(), AUTOHIDE_MS);
     return () => clearTimeout(t);
-  }, [open, expanded, onClose]);
+  }, [open, expanded, timerKey, onClose]);
 
   // [2.35.55] Любой pointerdown вне boundsRef (и вне самого колеса) — закрыть.
   //           Внутри boundsRef — пусть MessageList/PrivateChat решает сам.
@@ -160,7 +161,10 @@ const ReactionWheel = ({
           <button
             type="button"
             className="reaction-wheel-toggle"
-            onClick={() => setExpanded(v => !v)}
+            onClick={() => {
+              setExpanded(v => !v);
+              setTimerKey(k => k + 1);
+            }}
             aria-label={expanded ? 'Свернуть' : 'Ещё эмодзи'}
           >
             {expanded ? '−' : '＋'}
