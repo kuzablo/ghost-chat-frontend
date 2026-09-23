@@ -62,7 +62,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.2';
+const VERSION = '2.37.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -635,15 +635,41 @@ const Chat = () => {
     return () => { cancelled = true; };
   }, [isAuth, isHistoryLoaded, isAvatarsLoaded, avatarCache, messagesContainerRef]);
 
+  // [2.37.3] Watchdog: если через 6 секунд __ready не позвался сам —
+  // зовём принудительно. Универсальная страховка от любых сбоев
+  // (WS не поднялся, banned, сеть, что угодно). Сплэш больше не
+  // может висеть вечно.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.__ready) return;
+    const t = setTimeout(() => {
+      if (typeof window.__clientLog === 'function') {
+        window.__clientLog('boot-watchdog', 'forcing __ready after 6s');
+      }
+      window.__ready();
+    }, 6000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // [2.37.3] Спец-маркеры от useWebSocket (onclose 4003/4006/4001).
+  // Без этого сплэш висел вечно: WS закрылось, history не пришло,
+  // useEffect ниже выходил до вызова __ready().
   useEffect(() => {
     if (wsError) {
+      if (wsError === 'banned-forever') {
+        forceLogout('У нас тут таких не любят');
+        return;
+      }
+      if (wsError === 'auth-failed' || wsError === 'auth-timeout') {
+        forceLogout('Сессия истекла. Войди заново.');
+        return;
+      }
       setErrorMessage(wsError);
       const timer = setTimeout(() => setErrorMessage(''), 5000);
       return () => clearTimeout(timer);
     } else {
       setErrorMessage('');
     }
-  }, [wsError, setErrorMessage]);
+  }, [wsError, forceLogout, setErrorMessage]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

@@ -5,9 +5,10 @@ const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
 
 /*
+  [2.37.3] onclose ставит setError с маркером при спец-кодах:
+           4003 → 'auth-failed', 4006 → 'banned-forever',
+           4001 → 'auth-timeout'. Chat.jsx реагирует forceLogout-ом.
   [2.28.5] onerror больше не ставит setError/setIsConnected.
-           iOS рвёт WS при сворачивании — это норма, onclose + reconnect
-           сами поднимут соединение.
   [2.28.4] 4000 (Replaced by new connection) — не реконнектим.
   [2.28.2] sendLog() — диагностика на сервер.
   [2.28.1] heartbeat + переподключение из фона.
@@ -130,9 +131,6 @@ export const useWebSocket = (url, token, onMessage) => {
     socket.onerror = () => {
       console.error('[useWebSocket] Error');
       sendLog('onerror');
-      // [2.28.5] Не показываем ошибку и не дёргаем isConnected.
-      // iOS рвёт WS при сворачивании — это норма, onclose отработает,
-      // а scheduleReconnect сам поднимет соединение.
     };
 
     socket.onclose = (e) => {
@@ -145,19 +143,23 @@ export const useWebSocket = (url, token, onMessage) => {
       sendLog(`onclose code=${e.code} reason=${e.reason || ''} clean=${e.wasClean}`);
 
       if (unmountedRef.current) return;
-      if (e.code === 1000) return;
 
-      // [2.28.4] 4000 — Replaced by new connection. Не реконнектим.
-      if (
-        e.code === 4000 ||
-        e.code === 4001 ||
-        e.code === 4002 ||
-        e.code === 4003 ||
-        e.code === 4005 ||
-        e.code === 4006
-      ) {
+      // [2.37.3] Спец-коды: сообщаем Chat.jsx причину.
+      if (e.code === 4003) {
+        setError('auth-failed');
         return;
       }
+      if (e.code === 4006) {
+        setError('banned-forever');
+        return;
+      }
+      if (e.code === 4001) {
+        setError('auth-timeout');
+        return;
+      }
+
+      if (e.code === 1000) return;
+      if (e.code === 4000 || e.code === 4005) return;
 
       scheduleReconnect();
     };

@@ -156,6 +156,7 @@
               stack: String(stack || '').slice(0, 1500),
               url: String(location.href || '').slice(0, 300),
               ua: String(navigator.userAgent || '').slice(0, 300),
+              ver: window.__frontVersion || 'unknown',
               ts: Date.now(),
             });
             if (navigator.sendBeacon) {
