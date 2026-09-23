@@ -593,7 +593,6 @@ const PrivateChat = ({
                       onTouchMove={handleMsgTouchMove}
                       onTouchEnd={handleMsgTouchEnd}
                     >
-                      <div className="private-msg-sticker-nick">{isOwn ? 'Я' : nickname}</div>
                       {forwardLabel}
                       <img src={m.stickerUrl} alt="" className="private-msg-sticker" draggable={false} loading="lazy" />
                     </div>

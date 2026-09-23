@@ -16,6 +16,7 @@ import RoomPulse from './components/RoomPulse';
 import StickerPanel from './components/StickerPanel';
 import PrivateMessageToasts from './components/PrivateMessageToasts';
 import ForwardPickerModal from './components/ForwardPickerModal';
+import ReactionWheel from './components/ReactionWheel';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import {
@@ -52,13 +53,14 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 
+// feat(reactions): fullscreen использует общий ReactionWheel (v2.36.4)
 // feat(voice): оверлей записи с маскотом (v2.35.58)
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
 // [2.35.44] свои сообщения справа без синего + стикер 220px
-const VERSION = '2.36.2';
+const VERSION = '2.36.5';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -67,6 +69,9 @@ const FS_CLOSE_THRESHOLD = 120;
 const FS_DOUBLE_TAP_MS = 250;
 const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
+
+// [2.36.4] колесо реакций требует места: 104 (R_EXTRA) + 18 (BTN/2) + 14 (PAD)
+const WHEEL_NEED_PX = 136;
 
 const urlBase64ToUint8Array = (base64String) => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -171,6 +176,7 @@ const Chat = () => {
   const [duelNotice, setDuelNotice] = useState('');
   const [fsHeart, setFsHeart] = useState(null);
   const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
+  const [fsReactionAnchor, setFsReactionAnchor] = useState(null);
   const [inputDragY, setInputDragY] = useState(0);
   const [volumeTipVisible, setVolumeTipVisible] = useState(false);
   const [trackTitleVisible, setTrackTitleVisible] = useState(false);
@@ -1494,6 +1500,37 @@ const Chat = () => {
     setLogoutConfirm(false);
   }, []);
 
+  // [2.36.4] клик по «😀» в fullscreen — toggle общего ReactionWheel
+  const handleFullscreenReactionToggle = useCallback((e) => {
+    if (showFullscreenReactions) {
+      setShowFullscreenReactions(false);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const x = Math.max(
+      WHEEL_NEED_PX,
+      Math.min(window.innerWidth - WHEEL_NEED_PX, cx)
+    );
+    const y = Math.max(
+      WHEEL_NEED_PX,
+      Math.min(window.innerHeight - WHEEL_NEED_PX, cy)
+    );
+    setFsReactionAnchor({ x, y });
+    setShowFullscreenReactions(true);
+  }, [showFullscreenReactions, setShowFullscreenReactions]);
+
+  const handleFullscreenReactionPick = useCallback((emoji) => {
+    if (!fullscreenImage) return;
+    sendReaction(fullscreenImage.messageId, emoji);
+    setShowFullscreenReactions(false);
+  }, [fullscreenImage, sendReaction, setShowFullscreenReactions]);
+
+  const handleFullscreenReactionClose = useCallback(() => {
+    setShowFullscreenReactions(false);
+  }, [setShowFullscreenReactions]);
+
   const voiceRecording = voiceRecActive;
 
   return (
@@ -2125,35 +2162,24 @@ const Chat = () => {
             <button
               type="button"
               className={`fs-reaction-toggle ${showFullscreenReactions ? 'active' : ''}`}
-              onClick={() => setShowFullscreenReactions(v => !v)}
+              onClick={handleFullscreenReactionToggle}
               aria-label="Реакции"
             >
               😀
             </button>
           </div>
 
-          {showFullscreenReactions && (
-            <div
-              className="fs-reaction-picker"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {['👍', '👎', '❤️', '🔥', '😢'].map(emoji => {
-                const isActive = fullscreenMessage?.reactions?.[emoji]?.includes(nickname);
-                return (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className={`fs-reaction-picker-btn ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      sendReaction(fullscreenImage.messageId, emoji);
-                      setShowFullscreenReactions(false);
-                    }}
-                  >
-                    {emoji}
-                  </button>
-                );
-              })}
-            </div>
+          {showFullscreenReactions && fsReactionAnchor && fullscreenMessage && (
+            <ReactionWheel
+              open
+              anchorX={fsReactionAnchor.x}
+              anchorY={fsReactionAnchor.y}
+              reactions={fullscreenMessage.reactions || {}}
+              nickname={nickname}
+              onPick={handleFullscreenReactionPick}
+              onClose={handleFullscreenReactionClose}
+              ignoreSelector=".fs-reaction-toggle"
+            />
           )}
 
           {fsReactionListEmoji &&

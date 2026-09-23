@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 
 /*
-  [2.35.53] Радиальный пикер реакций — отдельный компонент.
+  [2.36.4] Закрытие при скролле/свайпе/wheel за пределами колеса.
+           Таймер явно продлевается при «+» через timerKey.
+  [2.35.56] + сбрасывает таймер автоскрытия.
   [2.35.55] Таймер сбрасывается при клике на +. Любой клик вне
             boundsRef (контейнер сообщений) моментально закрывает.
+  [2.35.53] Радиальный пикер реакций — отдельный компонент.
 */
 
 const REACTIONS_MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
@@ -14,6 +17,7 @@ const WHEEL_R_EXTRA = 104;
 const WHEEL_BTN = 36;
 const WHEEL_PAD = 14;
 const AUTOHIDE_MS = 5000;
+const SWIPE_SLOP = 12;
 
 const polar = (r, angleDeg) => {
   const rad = (angleDeg - 90) * (Math.PI / 180);
@@ -34,8 +38,9 @@ const ReactionWheel = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [center, setCenter] = useState(null);
-  const [timerKey, setTimerKey] = useState(0); // [2.35.56] сброс таймера
+  const [timerKey, setTimerKey] = useState(0); // сброс таймера
 
+  // Центр колеса + сброс таймера при открытии на новом месте
   useEffect(() => {
     if (!open) {
       setExpanded(false);
@@ -67,17 +72,17 @@ const ReactionWheel = ({
 
     setCenter({ cx, cy, ax: anchorX, ay: anchorY, shift, angle });
     setExpanded(false);
+    setTimerKey(k => k + 1);
   }, [open, anchorX, anchorY, boundsRef]);
 
-  // [2.35.55] Таймер автоскрытия. Расширение/сворачивание + сбрасывает его.
+  // Автоскрытие. Расширение/сворачивание + timerKey сбрасывают таймер.
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => onClose?.(), AUTOHIDE_MS);
     return () => clearTimeout(t);
   }, [open, expanded, timerKey, onClose]);
 
-  // [2.35.55] Любой pointerdown вне boundsRef (и вне самого колеса) — закрыть.
-  //           Внутри boundsRef — пусть MessageList/PrivateChat решает сам.
+  // Тап/клик вне колеса (но внутри boundsRef — решает родитель)
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => {
@@ -93,6 +98,68 @@ const ReactionWheel = ({
     return () => document.removeEventListener('pointerdown', onDown, true);
   }, [open, boundsRef, onClose]);
 
+  // Любой скролл / колесо мыши — закрыть.
+  // [2.36.4] ловим и контейнер сообщений, и скролл страницы.
+  useEffect(() => {
+    if (!open) return;
+    const onScrollOrWheel = () => onClose?.();
+    document.addEventListener('scroll', onScrollOrWheel, true);
+    document.addEventListener('wheel', onScrollOrWheel, { passive: true });
+    return () => {
+      document.removeEventListener('scroll', onScrollOrWheel, true);
+      document.removeEventListener('wheel', onScrollOrWheel);
+    };
+  }, [open, onClose]);
+
+  // Свайп пальцем за пределами колеса — закрыть.
+  // [2.36.4] порог SWIPE_SLOP, чтобы отличить тап от свайпа.
+  useEffect(() => {
+    if (!open) return;
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    const onTouchStart = (e) => {
+      if (e.touches.length !== 1) return;
+      const t = e.target;
+      if (t?.closest && (t.closest('.reaction-wheel') || t.closest('.reaction-wheel-anchor'))) {
+        tracking = false;
+        return;
+      }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    };
+
+    const onTouchMove = (e) => {
+      if (!tracking) return;
+      if (e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > SWIPE_SLOP || Math.abs(dy) > SWIPE_SLOP) {
+        tracking = false;
+        onClose?.();
+      }
+    };
+
+    const onTouchEnd = () => {
+      tracking = false;
+    };
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchcancel', onTouchEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [open, onClose]);
+
+  // Esc
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };

@@ -37,7 +37,7 @@
 
   --ring-color: #3BB5E8;
   --ring-color-faded: rgba(59, 181, 232, 0.15);
-  --ring-duration-msg: 1s;
+  --ring-duration-msg: 250ms;
   --ring-duration-player: 0.5s;
   --ring-thickness: 3px;
 }
