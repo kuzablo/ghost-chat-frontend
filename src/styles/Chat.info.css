@@ -1377,3 +1377,696 @@ body.dark .info-block-unblock {
   border-color: #3BB5E8;
   color: #3BB5E8;
 }
+
+/* ============================================================= */
+/* [2.36.0] InfoPanel — 5 глав, орбита-оглавление, живой маскот   */
+/* ============================================================= */
+
+.info-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(17, 17, 17, 0.45);
+  z-index: 1500;
+  animation: infoOverlayIn 0.2s ease-out;
+  touch-action: none;
+}
+
+body.dark .info-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+@keyframes infoOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ===== Панель ===== */
+
+.info-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 94vw;
+  background: var(--card-bg);
+  border-left: 3px solid var(--card-border);
+  z-index: 1501;
+  display: flex;
+  flex-direction: column;
+  touch-action: pan-y;
+  animation: infoPanelIn 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+  overflow: hidden;
+  will-change: transform;
+}
+
+@keyframes infoPanelIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* ===== Шапка ===== */
+
+.info-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 2px solid var(--card-border);
+  background: var(--card-bg);
+  position: relative;
+  z-index: 2;
+}
+
+.info-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Маскот — живой, дышит */
+.info-brand-mascot {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--card-border);
+  background: #FFF;
+  cursor: pointer;
+  padding: 0;
+  overflow: visible;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s;
+}
+
+.info-brand-mascot:active {
+  transform: scale(0.92);
+}
+
+.info-brand-mascot img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  animation: infoMascotBreathe 3.2s ease-in-out infinite;
+}
+
+.info-brand-mascot-halo {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(245, 169, 192, 0.55) 0%,
+    rgba(245, 169, 192, 0) 70%
+  );
+  pointer-events: none;
+  z-index: -1;
+  animation: infoMascotHalo 2.6s ease-in-out infinite;
+}
+
+body.dark .info-brand-mascot-halo {
+  background: radial-gradient(
+    circle,
+    rgba(59, 181, 232, 0.55) 0%,
+    rgba(59, 181, 232, 0) 70%
+  );
+}
+
+body.dark .info-brand-mascot {
+  background: #1D2A42;
+  border-color: #3BB5E8;
+}
+
+@keyframes infoMascotBreathe {
+  0%, 100% { transform: scale(1);     filter: brightness(1); }
+  50%      { transform: scale(1.05);  filter: brightness(1.06); }
+}
+
+@keyframes infoMascotHalo {
+  0%, 100% { transform: scale(1);     opacity: 0.6; }
+  50%      { transform: scale(1.18);  opacity: 0.9; }
+}
+
+.info-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.info-brand-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.3px;
+}
+
+.info-brand-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.info-close {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--input-bg);
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.12s, background 0.15s;
+  touch-action: manipulation;
+}
+
+.info-close:hover { background: var(--messages-bg); }
+.info-close:active { transform: scale(0.9); }
+
+/* ===== Орбита-оглавление ===== */
+
+.info-orbit {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px dashed var(--card-border);
+  background: var(--card-bg);
+  position: relative;
+  z-index: 2;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.info-orbit::-webkit-scrollbar { display: none; }
+
+.info-orbit-btn {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: transparent;
+  border: 2px solid transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s, border-color 0.18s, background 0.18s;
+}
+
+.info-orbit-btn:active {
+  transform: scale(0.94);
+}
+
+.info-orbit-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--messages-bg);
+  border: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 0.18s, background 0.18s, border-color 0.18s;
+}
+
+.info-orbit-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  transition: color 0.18s;
+}
+
+.info-orbit-btn--active .info-orbit-icon {
+  background: var(--btn-bg);
+  border-color: var(--btn-border);
+  transform: scale(1.08);
+}
+
+.info-orbit-btn--active .info-orbit-label {
+  color: var(--nick-color);
+}
+
+/* ===== Тело ===== */
+
+.info-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 20px 40px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+.info-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.info-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.info-body::-webkit-scrollbar-thumb {
+  background: var(--btn-bg);
+  border-radius: 8px;
+}
+
+.info-intro {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  background: var(--messages-bg);
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--card-border);
+  font-style: italic;
+}
+
+/* ===== Глава ===== */
+
+.info-chapter {
+  margin-bottom: 30px;
+  padding-bottom: 28px;
+  border-bottom: 1px dashed var(--card-border);
+  scroll-margin-top: 20px;
+}
+
+.info-chapter:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.info-chapter-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.info-chapter-num {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--btn-bg);
+  letter-spacing: -1px;
+  line-height: 1;
+  font-family: 'Unbounded', 'Segoe UI', sans-serif;
+  min-width: 42px;
+  transition: transform 0.2s;
+}
+
+body.dark .info-chapter-num {
+  color: var(--btn-bg);
+}
+
+.info-chapter-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.2px;
+  line-height: 1.15;
+}
+
+.info-chapter-lede {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ===== Блоки ===== */
+
+.info-block {
+  margin-bottom: 16px;
+}
+
+.info-block-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: 0.2px;
+}
+
+.info-block p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.info-block p:last-child { margin-bottom: 0; }
+
+.info-block-note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.info-block b {
+  color: var(--nick-color);
+  font-weight: 800;
+}
+
+body.dark .info-block b {
+  color: #3BB5E8;
+}
+
+/* ===== Списки ===== */
+
+.info-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.info-list li {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.info-list li::before {
+  content: '·';
+  position: absolute;
+  left: -12px;
+  color: var(--btn-bg);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+/* ===== Заблокированные ===== */
+
+.info-chapter--outro .info-chapter-num {
+  color: var(--danger);
+}
+
+.info-blocks-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.info-blocks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-block-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--messages-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+}
+
+.info-block-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFF;
+  border: 1.5px solid var(--card-border);
+  overflow: hidden;
+}
+
+.info-block-nick {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-block-unblock {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: transparent;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+}
+
+.info-block-unblock:active {
+  transform: scale(0.95);
+  background: var(--card-bg);
+}
+
+body.dark .info-block-unblock {
+  border-color: #3BB5E8;
+  color: #3BB5E8;
+}
+
+/* ===== Финал ===== */
+
+.info-chapter--end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px dashed var(--card-border);
+  margin-top: 20px;
+}
+
+.info-end-line {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 700;
+  margin: 0 0 4px;
+  font-family: 'Caveat', cursive;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.info-end-line--muted {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+
+.info-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: var(--btn-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  color: var(--btn-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.info-admin-btn:active {
+  transform: scale(0.96);
+}
+
+/* ===== Пасхалка ===== */
+
+.info-easter {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.85);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: infoEasterIn 0.28s ease-out;
+}
+
+body.dark .info-easter {
+  background: rgba(0, 0, 0, 0.92);
+}
+
+@keyframes infoEasterIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.info-easter-inner {
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 26px 22px 22px;
+  max-width: 320px;
+  text-align: center;
+  animation: infoEasterInner 0.36s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes infoEasterInner {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.info-easter-mascot {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 3px solid var(--card-border);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  animation: infoEasterMascot 1.6s ease-in-out infinite;
+}
+
+body.dark .info-easter-mascot {
+  border-color: #3BB5E8;
+  background-color: #1D2A42;
+}
+
+@keyframes infoEasterMascot {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.06); }
+}
+
+.info-easter-text {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.3;
+  letter-spacing: 0.2px;
+}
+
+.info-easter-sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  font-style: italic;
+  font-family: 'Caveat', cursive;
+  font-size: 16px;
+}
+
+.info-easter-close {
+  padding: 10px 22px;
+  background: var(--btn-bg);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  color: var(--btn-text);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s;
+}
+
+.info-easter-close:active {
+  transform: scale(0.96);
+}
+
+/* ===== Мобильная версия ===== */
+
+@media (max-width: 600px) {
+  .info-panel {
+    width: 100vw;
+    max-width: 100vw;
+    border-left-width: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .info-header { padding: 10px 12px; }
+
+  .info-brand-mascot { width: 40px; height: 40px; }
+  .info-brand-title { font-size: 16px; }
+  .info-brand-subtitle { font-size: 10px; }
+  .info-close { width: 44px; height: 44px; }
+
+  .info-orbit {
+    padding: 8px 8px 10px;
+    gap: 4px;
+    justify-content: flex-start;
+  }
+
+  .info-orbit-icon { width: 28px; height: 28px; font-size: 13px; }
+  .info-orbit-label { font-size: 8px; }
+  .info-orbit-btn { padding: 5px 8px; }
+
+  .info-body { padding: 14px 14px 32px; }
+
+  .info-intro {
+    font-size: 13px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+  }
+
+  .info-chapter { margin-bottom: 24px; padding-bottom: 22px; }
+  .info-chapter-num { font-size: 22px; min-width: 34px; }
+  .info-chapter-title { font-size: 18px; }
+  .info-chapter-lede { font-size: 13px; }
+  .info-block-title { font-size: 13.5px; }
+  .info-block p, .info-list li { font-size: 13px; }
+
+  .info-end-line { font-size: 18px; }
+  .info-end-line--muted { font-size: 13px; }
+
+  .info-easter-inner { padding: 22px 18px 18px; }
+  .info-easter-mascot { width: 72px; height: 72px; }
+  .info-easter-text { font-size: 15px; }
+  .info-easter-sub { font-size: 15px; }
+}
