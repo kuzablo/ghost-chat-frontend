@@ -1,13 +1,10 @@
 /*
-  [2.39.0] .chat-header-mascot-wrap::after — закрашивание маскота
-           цветом фона карточки (var(--card-bg)). Плавное исчезновение
-           в шапку, когда маскот «ушёл» в панель или в центр экрана.
-           Добавлен .players-header-mascot-solo — одиночный маскот
-           в шапке PlayersPanel, когда непрочитанных нет.
-  [2.37.7] Добавлен .mascot-flying — летающий элемент.
-  [2.32.13] без изменений по логике
-  [2.32.12] добавлен стиль .mascot-start-hint
-  [2.15.23] Стили маскота-радио.
+  [2.39.1] Убрано закрашивание ::after (давало прямоугольник поверх
+           круглого маскота). Проявление/исчезновение — через
+           opacity на самом .chat-header-logo по классу mascot-hidden.
+  [2.39.0] .players-header-mascot-solo — одиночный маскот в шапке
+           PlayersPanel, когда непрочитанных нет.
+  [2.37.7] .mascot-flying — летающий элемент.
 */
 
 .yt-hidden-host {
@@ -63,32 +60,20 @@
   flex-shrink: 0;
 }
 
-/* [2.39.0] Закрашивание маскота цветом фона шапки.
-   Псевдоэлемент поверх маскота, opacity 0→1 по классу mascot-hidden.
-   Эффект — маскот растворяется в фоне шапки. */
-.chat-header-mascot-wrap::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--card-bg);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 240ms ease-out;
-  z-index: 20;
-}
-
-.chat-header-mascot-wrap.mascot-hidden::after {
-  opacity: 1;
-}
-
 .chat-header-logo {
   cursor: grab;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  transition: transform 0.15s ease-out;
+  transition: transform 0.15s ease-out, opacity 240ms ease-out;
+}
+
+/* [2.39.1] Плавное растворение маскота в шапке. Оригинал и летающий
+   элемент меняются местами через эту прозрачность — без пустых кадров. */
+.chat-header-logo.mascot-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .chat-header-logo.mascot-playing {
@@ -198,7 +183,7 @@
 }
 
 /* ============================================================= */
-/* [2.37.7] Летающий маскот — императивный элемент из useMascotFlight */
+/* [2.37.7] Летающий маскот                                        */
 /* ============================================================= */
 
 .mascot-flying {
@@ -219,7 +204,7 @@ body.dark .mascot-flying {
 }
 
 /* ============================================================= */
-/* [2.39.0] Одиночный маскот в шапке PlayersPanel (когда нет unread) */
+/* [2.39.0] Одиночный маскот в шапке PlayersPanel                  */
 /* ============================================================= */
 
 .players-header-mascot-solo {

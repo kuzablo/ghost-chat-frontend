@@ -71,7 +71,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.39.0';
+const VERSION = '2.39.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -211,8 +211,10 @@ const Chat = () => {
   // [2.39.0] Полёт маскота: ref на маскота в шапке и на узел орбиты в PlayersPanel.
   const headerMascotRef = useRef(null);
   const panelOrbitRef = useRef(null);
-  // [2.39.0] Где сейчас «находится» маскот: 'header' | 'panel'.
+  // [2.39.1] Где сейчас «находится» маскот: 'header' | 'panel' | 'toast'.
+  // 'toast' — временно ушёл в центр показать уведомление на 8 секунд.
   const mascotPlaceRef = useRef('header');
+  const toastTimerRef = useRef(null);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -513,21 +515,84 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.39.0] Маскот летит при открытии/закрытии PlayersPanel.
-  // Открылась — из шапки в узел орбиты. Закрылась — обратно.
-  // Пока летит, орбита не рендерится (orbitHidden=mascotFlying).
+  // [2.39.1] Возврат маскота из тоста в шапку через 8с.
+  const scheduleToastReturn = useCallback(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      toastTimerRef.current = null;
+      if (mascotPlaceRef.current !== 'toast') return;
+      mascotPlaceRef.current = 'header';
+      startMascotFlight({ reverse: true });
+    }, 8000);
+  }, [startMascotFlight]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  // [2.39.1] Три состояния маскота: 'header' | 'panel' | 'toast'.
+  // Переходы:
+  //   header → panel : открыли панель
+  //   panel → header : закрыли панель, непрочитанных нет
+  //   panel → toast  : закрыли панель, непрочитанные есть
+  //   header → toast : пришли непрочитанные, панель закрыта
+  //   toast → header : прочитали или истекли 8 секунд
   useEffect(() => {
     const wantInPanel = showPlayers;
-    const currentPlace = mascotPlaceRef.current;
+    const place = mascotPlaceRef.current;
+    const hasUnread = unreadUserObjects.length > 0;
 
-    if (wantInPanel && currentPlace === 'header') {
-      mascotPlaceRef.current = 'panel';
-      startMascotFlight({ toRef: panelOrbitRef });
-    } else if (!wantInPanel && currentPlace === 'panel') {
+    // Открылась панель — летим в неё из любого места
+    if (wantInPanel) {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+      if (place !== 'panel') {
+        mascotPlaceRef.current = 'panel';
+        if (place === 'header') {
+          startMascotFlight({ toRef: panelOrbitRef });
+        } else {
+          startMascotFlight({ fromLanded: true, toRef: panelOrbitRef });
+        }
+      }
+      return;
+    }
+
+    // Панель закрыта
+    if (place === 'panel') {
+      if (hasUnread) {
+        // Панель закрылась, есть непрочитанные → в центр на 8с
+        mascotPlaceRef.current = 'toast';
+        startMascotFlight({ fromLanded: true });
+        scheduleToastReturn();
+      } else {
+        mascotPlaceRef.current = 'header';
+        startMascotFlight({ reverse: true });
+      }
+      return;
+    }
+
+    if (place === 'header' && hasUnread) {
+      // Пришли непрочитанные, маскот в шапке → в центр
+      mascotPlaceRef.current = 'toast';
+      startMascotFlight();
+      scheduleToastReturn();
+      return;
+    }
+
+    if (place === 'toast' && !hasUnread) {
+      // Прочитали до истечения 8с → сразу назад
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
       mascotPlaceRef.current = 'header';
       startMascotFlight({ reverse: true });
     }
-  }, [showPlayers, startMascotFlight]);
+  }, [showPlayers, unreadUserObjects.length, startMascotFlight, scheduleToastReturn]);
 
   useEffect(() => {
     document.title = totalUnread > 0 ? `(${totalUnread}) ${BASE_TITLE}` : BASE_TITLE;
@@ -1243,13 +1308,12 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.39.0] Маскот в шапке скрыт (закрашен цветом фона), если:
-  //   1) летит; 2) уже в панели; 3) панель закрыта и есть непрочитанные
-  //   (в этом случае маскот-орбита в центре экрана).
+  // [2.39.1] Маскот в шапке скрыт, пока летит или пока находится
+  // в панели либо в центре экрана (toast). После возврата — снова виден.
   const hideHeaderMascot =
     mascotFlying ||
     mascotPlaceRef.current === 'panel' ||
-    (!showPlayers && unreadUserObjects.length > 0);
+    mascotPlaceRef.current === 'toast';
 
   return (
     <>
@@ -1434,19 +1498,15 @@ const Chat = () => {
       <div className="chat-container">
         <div className={`chat-main ${showMobileInput ? 'mobile-input-open' : ''}`}>
           <div className="chat-header">
-            <div
-              className={
-                `chat-header-mascot-wrap` +
-                (hideHeaderMascot ? ' mascot-hidden' : '')
-              }
-            >
+            <div className="chat-header-mascot-wrap">
               <img
                 ref={headerMascotRef}
                 src="/mascot.png"
                 alt="banjoboy"
                 className={
                   `chat-header-logo` +
-                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '')
+                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '') +
+                  (hideHeaderMascot ? ' mascot-hidden' : '')
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}

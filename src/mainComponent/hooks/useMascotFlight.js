@@ -1,15 +1,20 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /*
+  [2.39.1] Не удаляем летающий элемент мгновенно по onfinish.
+           Даём 240мс — пока оригинал в шапке проявляется через
+           opacity transition. Без этого между исчезновением
+           летающего и появлением оригинала — пустой кадр.
+           Добавлен fromLanded — старт из lastLandedRect (для
+           переходов panel → toast без возврата в шапку).
   [2.39.0] Двусторонний полёт. startFlight({ toRef, reverse }).
-           toRef можно задать в момент вызова. reverse летит обратно
-           к fromRef из точки последней посадки.
-  [2.37.9] Fallback на центр экрана, если цель скрыта.
-  [2.37.7] Полёт маскота через Web Animations API.
+  [2.37.9] Fallback на центр экрана.
+  [2.37.7] Web Animations API.
 */
 
 const DEFAULT_DURATION = 600;
 const CENTER_SIZE = 80;
+const HANDOFF_MS = 240;
 
 const getRect = (el) => {
   if (!el) return null;
@@ -59,7 +64,7 @@ export const useMascotFlight = ({
   }, []);
 
   const startFlight = useCallback((options = {}) => {
-    const { reverse = false, toRef: toRefOverride } = options;
+    const { reverse = false, fromLanded = false, toRef: toRefOverride } = options;
 
     if (flyingRef.current) return;
 
@@ -69,6 +74,9 @@ export const useMascotFlight = ({
     if (reverse) {
       from = lastLandedRectRef.current;
       to = getRect(fromRef?.current);
+    } else if (fromLanded) {
+      from = lastLandedRectRef.current;
+      to = getRect(toRefOverride?.current || toRef?.current);
     } else {
       from = getRect(fromRef?.current);
       const targetEl = toRefOverride?.current || toRef?.current;
@@ -120,7 +128,11 @@ export const useMascotFlight = ({
         el.remove();
         return;
       }
-      el.remove();
+      // [2.39.1] Держим элемент на месте 240мс — пока оригинал в шапке
+      // проявляется через opacity transition. Иначе пустой кадр.
+      setTimeout(() => {
+        try { el.remove(); } catch { /* noop */ }
+      }, HANDOFF_MS);
       nodeRef.current = null;
       animRef.current = null;
       flyingRef.current = false;
