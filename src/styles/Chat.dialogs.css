@@ -1017,3 +1017,42 @@ body.dark .dialogs-bg-loading-mascot {
   background: var(--text-muted);
   opacity: 0.55;
 }
+
+/* ============================================================= */
+/* [2.36.3] Админская кнопка «Установить всем»                    */
+/* ============================================================= */
+
+.dialogs-bg-global {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--danger);
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius-md);
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.3px;
+}
+
+.dialogs-bg-global:hover {
+  background: #C4163B;
+}
+
+.dialogs-bg-global:active {
+  transform: scale(0.97) translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+body.dark .dialogs-bg-global {
+  background: #F87171;
+  border-color: #2C3E5A;
+  color: #0E1726;
+}
+
+body.dark .dialogs-bg-global:hover {
+  background: #EF4444;
+}

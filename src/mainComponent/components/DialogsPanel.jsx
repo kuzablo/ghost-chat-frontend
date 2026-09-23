@@ -3,13 +3,8 @@ import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 import DialogsBgPicker, { PRESETS_MAP } from './DialogsBgPicker';
 
 /*
-  [2.35.28] Поиск по имени диалога + плейсхолдер для URL-фона.
-  [2.34.4] URL-фон без двойного затемнения
-  [2.34.3] Фон окна диалогов + кнопка кастомизации.
-  [2.34.2] Аватарки 64px, сжатые отступы.
-  [2.34.1] Мини-пульс, разделители, long-press → профиль.
-  [2.34.0] Редизайн карточек.
-  [2.33.7] React.memo.
+  [2.36.3] globalDialogsBg — эффективный фон = личный || глобальный
+  [2.35.28] Поиск по имени + плейсхолдер для URL-фона.
 */
 const LONG_PRESS_MS = 500;
 const MOVE_CANCEL_PX = 8;
@@ -34,13 +29,18 @@ const DialogsPanel = forwardRef(({
   players,
   myId,
   dialogsBg,
+  globalDialogsBg,
   onSaveDialogsBg,
+  onSetGlobalBg,
+  isAdmin,
   token,
   onOpen,
   onClose,
   onOpenProfile,
 }, ref) => {
   const isOnline = (userId) => players.some(p => p.userId === userId);
+
+  const effectiveBg = dialogsBg || globalDialogsBg || null;
 
   const panelRef = useRef(null);
   const swipeRef = useRef({
@@ -72,24 +72,24 @@ const DialogsPanel = forwardRef(({
     if (pressRef.current.timer) clearTimeout(pressRef.current.timer);
   }, []);
 
-  // [2.35.28] Преload URL-фона — показываем маскота пока картинка не загружена.
   useEffect(() => {
-    const isUrl = isUrlBg(dialogsBg);
+    const isUrl = isUrlBg(effectiveBg);
     if (!isUrl) {
       setBgLoaded(true);
       return;
     }
     setBgLoaded(false);
-    const url = dialogsBg.slice('url:'.length);
+    const url = effectiveBg.slice('url:'.length);
     const img = new Image();
     img.onload = () => setBgLoaded(true);
-    img.onerror = () => setBgLoaded(true); // не крутим маскота вечно при ошибке
+    img.onerror = () => setBgLoaded(true);
     img.src = url;
     return () => {
       img.onload = null;
       img.onerror = null;
     };
-  }, [dialogsBg]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveBg]);
 
   const cancelPress = () => {
     if (pressRef.current.timer) {
@@ -149,7 +149,6 @@ const DialogsPanel = forwardRef(({
     old: 'Раньше',
   };
 
-  // [2.35.28] Фильтр по имени + отделяем себя
   const visibleDialogs = dialogs.filter(d => d.userId !== myId);
 
   const query = searchQuery.trim().toLowerCase();
@@ -299,11 +298,10 @@ const DialogsPanel = forwardRef(({
     );
   };
 
-  const bgCss = getBgCss(dialogsBg);
+  const bgCss = getBgCss(effectiveBg);
   const hasBg = !!bgCss;
-  const bgIsUrl = isUrlBg(dialogsBg);
+  const bgIsUrl = isUrlBg(effectiveBg);
 
-  // [2.35.28] Пока URL-фон грузится — фон не рисуем, показываем маскота-плейсхолдер
   const showBgLoading = bgIsUrl && !bgLoaded;
 
   const panelStyle = hasBg && !showBgLoading
@@ -394,7 +392,6 @@ const DialogsPanel = forwardRef(({
           </button>
         </header>
 
-        {/* [2.35.28] Поиск по имени */}
         <div className="dialogs-search-wrap">
           <input
             className="dialogs-search-input"
@@ -416,7 +413,6 @@ const DialogsPanel = forwardRef(({
         </div>
 
         <div className="dialogs-list">
-          {/* [2.35.28] Плейсхолдер-маскот пока URL-фон грузится */}
           {showBgLoading && (
             <div className="dialogs-bg-loading" aria-hidden="true">
               <div className="dialogs-bg-loading-mascot" />
@@ -432,7 +428,7 @@ const DialogsPanel = forwardRef(({
               </div>
               <div className="dialogs-empty-title">Здесь пока тихо</div>
               <div className="dialogs-empty-text">
-                Открой панель игроков <b>👥</b>, найди кого-нибудь,
+                Открой панель пользователей <b>👥</b>, найди кого-нибудь,
                 нажми <b>✉️</b> — и начнётся первый разговор.
               </div>
             </div>
@@ -499,6 +495,8 @@ const DialogsPanel = forwardRef(({
           onClose={() => setShowBgPicker(false)}
           onSave={onSaveDialogsBg}
           token={token}
+          isAdmin={isAdmin}
+          onSetGlobalForAll={onSetGlobalBg}
         />
       )}
     </>

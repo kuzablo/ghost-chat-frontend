@@ -1,16 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.35.23] samePlayerList / sameFriendList — не менять ссылку, если данные те же
+  [2.36.3] globalDialogsBg + setGlobalDialogsBgAdmin
+  [2.35.23] samePlayerList / sameFriendList
   [2.35.16] stickers_list
-  [2.34.4] dialogsBg из auth_ok
-  [2.33.5] avatars_map
-  [2.33.4] blockedUsers
-  [2.33.3] rejectCount
-  [2.33.0] friendshipRitual
-  [2.32.42] avatarCache
-  [2.32.41] bannedUsers
 */
+
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
@@ -42,6 +37,7 @@ export const useChat = ({
   const [friendshipRitual, setFriendshipRitual] = useState(null);
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [dialogsBg, setDialogsBg] = useState(null);
+  const [globalDialogsBg, setGlobalDialogsBg] = useState(null);
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
   const [isAvatarsLoaded, setIsAvatarsLoaded] = useState(false);
   const [stickers, setStickers] = useState([]);
@@ -74,7 +70,6 @@ export const useChat = ({
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  // ===== Эффект «ник зашёл/вышел» =====
   useEffect(() => {
     const currentNicks = new Set(players.map(p => p.nickname));
 
@@ -114,7 +109,6 @@ export const useChat = ({
     });
   }, [players, nicknameRef]);
 
-  // [2.35.23] Сравнение списков по значимым полям.
   const samePlayerList = (a, b) => {
     if (a === b) return true;
     if (!a || !b) return false;
@@ -165,7 +159,6 @@ export const useChat = ({
     });
   }, []);
 
-  // ===== Методы =====
   const handleSendMessage = useCallback(() => {
     if (sending || !sendMessageRef.current || !isAuthRef.current) return;
     const text = input.trim();
@@ -180,7 +173,6 @@ export const useChat = ({
     setReplyTo(null);
     sendMessageRef.current({ type: 'typing', data: { isTyping: false } });
     setTimeout(() => setSending(false), 800);
-
     try { localStorage.removeItem('ghost-chat-draft'); } catch { /* noop */ }
   }, [input, sending]);
 
@@ -215,9 +207,7 @@ export const useChat = ({
         body: formData,
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Upload failed');
-      }
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
       sendMessageRef.current({
         type: 'message',
         data: { text: '', imageUrl: data.imageUrl, replyTo: replyToRef.current || null },
@@ -330,6 +320,12 @@ export const useChat = ({
     }
   }, []);
 
+  const setGlobalDialogsBgAdmin = useCallback((bg) => {
+    if (sendMessageRef.current) {
+      sendMessageRef.current({ type: 'admin_set_global_bg', data: { bg } });
+    }
+  }, []);
+
   const sendSticker = useCallback((stickerUrl) => {
     if (!stickerUrl) return;
     if (!sendMessageRef.current || !isAuthRef.current) return;
@@ -344,11 +340,11 @@ export const useChat = ({
     setStickers(Array.isArray(list) ? list : []);
   }, []);
 
-  // ===== WS-фильтр =====
   const handleWs = useCallback((msg) => {
     switch (msg.type) {
       case 'auth_ok':
         setDialogsBg(msg.data?.dialogsBg || null);
+        setGlobalDialogsBg(msg.data?.globalDialogsBg || null);
         return false;
 
       case 'friends_list':
@@ -364,10 +360,7 @@ export const useChat = ({
       case 'message':
         setMessages(prev => [...prev, msg.data]);
         if (audioRef.current) audioRef.current.playNotification();
-        if (
-          document.hidden &&
-          msg.data.nickname !== nicknameRef.current
-        ) {
+        if (document.hidden && msg.data.nickname !== nicknameRef.current) {
           setHiddenUnread(n => n + 1);
         }
         return true;
@@ -424,6 +417,10 @@ export const useChat = ({
 
       case 'dialogs_bg_updated':
         setDialogsBg(msg.data?.bg || null);
+        return true;
+
+      case 'global_bg_updated':
+        setGlobalDialogsBg(msg.data?.bg || null);
         return true;
 
       case 'dialogs_bg_error':
@@ -550,6 +547,7 @@ export const useChat = ({
     friendshipRitual,
     blockedUsers,
     dialogsBg,
+    globalDialogsBg,
     stickers,
     errorMessage,
     setErrorMessage,
@@ -582,6 +580,7 @@ export const useChat = ({
     blockUser,
     unblockUser,
     saveDialogsBg,
+    setGlobalDialogsBgAdmin,
     sendSticker,
     setStickersList,
   };

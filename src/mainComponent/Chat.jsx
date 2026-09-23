@@ -58,7 +58,7 @@ import '../styles/Chat.toasts.css';
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
 // [2.35.44] свои сообщения справа без синего + стикер 220px
-const VERSION = '2.36.1';
+const VERSION = '2.36.2';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -401,6 +401,8 @@ const Chat = () => {
     friendshipRitual,
     blockedUsers,
     dialogsBg,
+    globalDialogsBg,
+    setGlobalDialogsBgAdmin,
     stickers,
     errorMessage,
     setErrorMessage,
@@ -480,6 +482,7 @@ const Chat = () => {
     () => new Set(blockedUsers.map(u => u.userId)),
     [blockedUsers]
   );
+  const effectiveDialogsBg = dialogsBg || globalDialogsBg || null;
 
   const currentImageIndex = fullscreenImage
     ? imageMessages.findIndex(m => m.id === fullscreenImage.messageId)
@@ -1532,7 +1535,7 @@ const Chat = () => {
           ref={playersOverlayRef}
           visible={showPlayers}
           players={players}
-          dialogsBg={dialogsBg}
+          dialogsBg={effectiveDialogsBg}
           unreadUserObjects={unreadUserObjects}
           onOpenDialogs={handleOpenDialogs}
           friends={friends}
@@ -1563,7 +1566,10 @@ const Chat = () => {
           players={players}
           myId={myId}
           dialogsBg={dialogsBg}
+          globalDialogsBg={globalDialogsBg}
           onSaveDialogsBg={saveDialogsBg}
+          onSetGlobalBg={setGlobalDialogsBgAdmin}
+          isAdmin={isAdmin}
           token={token}
           onOpen={handleOpenFromDialogs}
           onClose={handleCloseDialogs}
@@ -1605,7 +1611,7 @@ const Chat = () => {
           sendMessage={sendMessage}
           initialMessages={privateChat.messages || []}
           historyLoaded={privateChat.historyLoaded}
-          dialogsBg={dialogsBg}
+          dialogsBg={effectiveDialogsBg}
           typingUser={privateTypingUser}
           onClose={handleClosePrivate}
           stickers={stickers}

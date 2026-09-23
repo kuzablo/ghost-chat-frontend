@@ -2,8 +2,10 @@ import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.36.1] InfoPanel — 5 глав + живые игрушечные демо.
-  [2.36.0] 5 глав, орбита-оглавление, живой маскот, свайп-закрытие.
+  [2.36.2] InfoPanel — яркий блок установки PWA (RU/EN), демо-реакции
+           с ＋, текст «пользователи», пасхалка без анонса.
+  [2.36.1] живые демо.
+  [2.36.0] 5 глав, орбита-оглавление, живой маскот.
 */
 
 const CHAPTERS = [
@@ -17,6 +19,133 @@ const CHAPTERS = [
 const SWIPE_THRESHOLD = 90;
 const SWIPE_MAX = 220;
 const DIRECTION_LOCK = 10;
+
+/* ============================================================ */
+/* УСТАНОВКА PWA                                                */
+/* ============================================================ */
+
+const INSTALL_TEXTS = {
+  ru: {
+    title: 'Установи crew как приложение',
+    sub: 'Откроется без адресной строки, во весь экран, с бейджем непрочитанного.',
+    ios: 'iPhone / iPad',
+    android: 'Android',
+    install: 'Установить',
+    collapse: 'Свернуть',
+    iosSteps: [
+      'Открой этот сайт в Safari.',
+      'Нажми иконку «Поделиться» (квадрат со стрелкой вверх) внизу.',
+      'Пролистай и выбери «На экран "Домой"».',
+      'Нажми «Добавить» в правом верхнем углу.',
+    ],
+    androidSteps: [
+      'Открой этот сайт в Chrome.',
+      'Нажми три точки в правом верхнем углу.',
+      'Выбери «Установить приложение» или «Добавить на главный экран».',
+      'Подтверди — иконка появится на домашнем экране.',
+    ],
+  },
+  en: {
+    title: 'Install crew as an app',
+    sub: 'Opens without an address bar, full-screen, with an unread badge.',
+    ios: 'iPhone / iPad',
+    android: 'Android',
+    install: 'Install',
+    collapse: 'Collapse',
+    iosSteps: [
+      'Open this site in Safari.',
+      'Tap the Share icon (square with arrow up) at the bottom.',
+      'Scroll and choose "Add to Home Screen".',
+      'Tap "Add" in the top-right corner.',
+    ],
+    androidSteps: [
+      'Open this site in Chrome.',
+      'Tap the three dots in the top-right corner.',
+      'Choose "Install app" or "Add to Home screen".',
+      'Confirm — the icon appears on your home screen.',
+    ],
+  },
+};
+
+const InstallPwaBlock = () => {
+  const [lang, setLang] = useState('ru');
+  const [open, setOpen] = useState(null);
+  const t = INSTALL_TEXTS[lang];
+
+  return (
+    <div className="info-install">
+      <div className="info-install-mascot">
+        <img src="/mascot.png" alt="" draggable={false} />
+        <span className="info-install-mascot-halo" aria-hidden="true" />
+      </div>
+
+      <div className="info-install-head">
+        <div className="info-install-title">{t.title}</div>
+        <div className="info-install-langs" role="tablist">
+          <button
+            type="button"
+            className={`info-install-lang ${lang === 'ru' ? 'info-install-lang--active' : ''}`}
+            onClick={() => setLang('ru')}
+            aria-label="Русский"
+          >
+            RU
+          </button>
+          <button
+            type="button"
+            className={`info-install-lang ${lang === 'en' ? 'info-install-lang--active' : ''}`}
+            onClick={() => setLang('en')}
+            aria-label="English"
+          >
+            EN
+          </button>
+        </div>
+      </div>
+
+      <div className="info-install-sub">{t.sub}</div>
+
+      <div className="info-install-cards">
+        <button
+          type="button"
+          className={`info-install-card ${open === 'ios' ? 'info-install-card--open' : ''}`}
+          onClick={() => setOpen(open === 'ios' ? null : 'ios')}
+        >
+          <span className="info-install-card-icon">🍏</span>
+          <span className="info-install-card-name">{t.ios}</span>
+        </button>
+        <button
+          type="button"
+          className={`info-install-card ${open === 'android' ? 'info-install-card--open' : ''}`}
+          onClick={() => setOpen(open === 'android' ? null : 'android')}
+        >
+          <span className="info-install-card-icon">🤖</span>
+          <span className="info-install-card-name">{t.android}</span>
+        </button>
+      </div>
+
+      {open === 'ios' && (
+        <ol className="info-install-steps">
+          {t.iosSteps.map((s, i) => (
+            <li key={i}>
+              <span className="info-install-step-num">{i + 1}</span>
+              <span className="info-install-step-text">{s}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {open === 'android' && (
+        <ol className="info-install-steps">
+          {t.androidSteps.map((s, i) => (
+            <li key={i}>
+              <span className="info-install-step-num">{i + 1}</span>
+              <span className="info-install-step-text">{s}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+};
 
 /* ============================================================ */
 /* ЖИВЫЕ ДЕМО                                                  */
@@ -75,13 +204,7 @@ const DemoRoomPulse = () => {
   return (
     <div className="info-demo-live">
       <div className="info-demo-roompulse">
-        <svg
-          ref={svgRef}
-          viewBox="0 0 100 8"
-          preserveAspectRatio="none"
-          width="100%"
-          height="8"
-        >
+        <svg ref={svgRef} viewBox="0 0 100 8" preserveAspectRatio="none" width="100%" height="8">
           <defs>
             <linearGradient id="info-roompulse-grad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="var(--btn-bg)" stopOpacity="0" />
@@ -108,46 +231,66 @@ const DemoRoomPulse = () => {
 };
 
 const DemoReactions = () => {
+  const [expanded, setExpanded] = useState(false);
   const [hit, setHit] = useState(null);
-  const emojis = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
+
+  const MAIN = ['👍', '❤️', '🔥', '😂', '😮', '😢'];
+  const EXTRA = ['💀', '🎉', '🥰', '🤔', '✨', '👀', '🙈', '👏', '🤝', '🍕', '☕', '💯'];
 
   const handleTap = (emoji) => {
     setHit(emoji);
     setTimeout(() => setHit(null), 900);
   };
 
+  const renderOrbit = (emojis, r, isExtra) =>
+    emojis.map((e, i) => {
+      const angle = (360 / emojis.length) * i - 90;
+      const rad = (angle * Math.PI) / 180;
+      const x = Math.cos(rad) * r;
+      const y = Math.sin(rad) * r;
+      return (
+        <button
+          key={`${isExtra ? 'x-' : ''}${e}`}
+          type="button"
+          className={
+            `info-demo-reaction-btn` +
+            (isExtra ? ' info-demo-reaction-btn--extra' : '') +
+            (!isExtra && expanded ? ' info-demo-reaction-btn--dimmed' : '') +
+            (hit === e ? ' info-demo-reaction-btn--hit' : '')
+          }
+          style={{
+            left: `calc(50% + ${x}px - 16px)`,
+            top: `calc(50% + ${y}px - 16px)`,
+            animationDelay: `${i * 0.035}s`,
+          }}
+          onClick={() => handleTap(e)}
+          aria-label={e}
+        >
+          {e}
+        </button>
+      );
+    });
+
   return (
     <div className="info-demo-live">
-      <div className="info-demo-reactions-wheel">
-        <div className="info-demo-reactions-center">
-          <span>＋</span>
-        </div>
-        {emojis.map((e, i) => {
-          const angle = (360 / emojis.length) * i - 90;
-          const rad = (angle * Math.PI) / 180;
-          const r = 52;
-          const x = Math.cos(rad) * r;
-          const y = Math.sin(rad) * r;
-          return (
-            <button
-              key={e}
-              type="button"
-              className={`info-demo-reaction-btn ${hit === e ? 'info-demo-reaction-btn--hit' : ''}`}
-              style={{
-                left: `calc(50% + ${x}px - 18px)`,
-                top: `calc(50% + ${y}px - 18px)`,
-                animationDelay: `${i * 0.05}s`,
-              }}
-              onClick={() => handleTap(e)}
-              aria-label={e}
-            >
-              {e}
-            </button>
-          );
-        })}
+      <div className={`info-demo-reactions-wheel ${expanded ? 'info-demo-reactions-wheel--expanded' : ''}`}>
+        <button
+          type="button"
+          className="info-demo-reactions-center"
+          onClick={() => setExpanded(v => !v)}
+          aria-label={expanded ? 'Свернуть' : 'Ещё эмодзи'}
+        >
+          {expanded ? '−' : '＋'}
+        </button>
+        {renderOrbit(MAIN, 46, false)}
+        {expanded && renderOrbit(EXTRA, 86, true)}
       </div>
       <div className="info-demo-caption">
-        {hit ? `реакция ${hit}` : 'тапни — попробуй'}
+        {hit
+          ? `реакция ${hit}`
+          : expanded
+            ? 'шесть внутри · двенадцать снаружи'
+            : 'тапни ＋ — раскроются все'}
       </div>
     </div>
   );
@@ -327,12 +470,8 @@ const DemoThemeSwitcher = () => {
         onClick={() => setDark(v => !v)}
         aria-label="Переключить тему"
       >
-        <span className="info-demo-theme-icon">
-          {dark ? '🌙' : '☀️'}
-        </span>
-        <span className="info-demo-theme-hint">
-          {dark ? 'тёмная' : 'светлая'}
-        </span>
+        <span className="info-demo-theme-icon">{dark ? '🌙' : '☀️'}</span>
+        <span className="info-demo-theme-hint">{dark ? 'тёмная' : 'светлая'}</span>
       </button>
       <div className="info-demo-caption">тапни — растекается кругом</div>
     </div>
@@ -358,9 +497,7 @@ const DemoMascotRadio = () => {
           </span>
         )}
       </button>
-      <div className="info-demo-caption">
-        {playing ? '♪ трек играет' : 'пауза'}
-      </div>
+      <div className="info-demo-caption">{playing ? '♪ трек играет' : 'пауза'}</div>
     </div>
   );
 };
@@ -384,29 +521,6 @@ const DemoCapsule = () => {
       <div className="info-demo-caption">
         {open ? 'развёрнута' : 'тапни — раскроется'}
       </div>
-    </div>
-  );
-};
-
-const DemoPwaBanner = () => {
-  const [visible, setVisible] = useState(false);
-  return (
-    <div className="info-demo-live">
-      <button
-        type="button"
-        className="info-demo-pwa-trigger"
-        onClick={() => setVisible(v => !v)}
-        aria-label="Показать баннер"
-      >
-        {visible ? 'Скрыть' : 'Показать баннер'}
-      </button>
-      {visible && (
-        <div className="info-demo-pwa-banner">
-          <span className="info-demo-pwa-num">1</span>
-          <span>Нажми <b>Поделиться</b></span>
-        </div>
-      )}
-      <div className="info-demo-caption">iPhone: Safari → Поделиться</div>
     </div>
   );
 };
@@ -594,28 +708,30 @@ const InfoPanel = forwardRef(({
           </button>
         </header>
 
-        <nav className="info-orbit" aria-label="Оглавление">
-          {CHAPTERS.map(c => (
-            <button
-              key={c.id}
-              type="button"
-              className={`info-orbit-btn ${activeChapter === c.id ? 'info-orbit-btn--active' : ''}`}
-              onClick={() => scrollToChapter(c.id)}
-              aria-label={c.label}
-              title={c.label}
-            >
-              <span className="info-orbit-icon">{c.icon}</span>
-              <span className="info-orbit-label">{c.label}</span>
-            </button>
-          ))}
-        </nav>
-
         <div className="info-body" ref={scrollRef}>
+
+          <InstallPwaBlock />
 
           <p className="info-intro">
             Это не список. Это короткий разговор о том, как устроен crew.
             Пять глав. Прочитаешь — поймёшь всё.
           </p>
+
+          <nav className="info-orbit info-orbit--sticky" aria-label="Оглавление">
+            {CHAPTERS.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                className={`info-orbit-btn ${activeChapter === c.id ? 'info-orbit-btn--active' : ''}`}
+                onClick={() => scrollToChapter(c.id)}
+                aria-label={c.label}
+                title={c.label}
+              >
+                <span className="info-orbit-icon">{c.icon}</span>
+                <span className="info-orbit-label">{c.label}</span>
+              </button>
+            ))}
+          </nav>
 
           {/* ===== 1. ГОЛОС ===== */}
           <section ref={voiceRef} className="info-chapter">
@@ -640,7 +756,12 @@ const InfoPanel = forwardRef(({
               <div className="info-block-title">Реакции</div>
               <p>
                 Тап по сообщению — из точки тапа расцветает колесо.
-                Шесть главных эмодзи — на внутренней орбите.
+                Шесть главных эмодзи — на внутренней орбите:
+                👍 ❤️ 🔥 😂 😮 😢.
+              </p>
+              <p>
+                В центре — ＋. Тапни — раскроются двенадцать свежих:
+                💀 🎉 🥰 🤔 ✨ 👀 🙈 👏 🤝 🍕 ☕ 💯.
               </p>
               <DemoReactions />
             </div>
@@ -778,13 +899,14 @@ const InfoPanel = forwardRef(({
               <h3 className="info-chapter-title">Мелочи</h3>
             </div>
             <p className="info-chapter-lede">
-              Жесты и пасхалки. Всё, что делает crew — живым.
+              Жесты и движение. Всё, что делает crew — живым.
             </p>
 
             <div className="info-block">
               <div className="info-block-title">Капсула</div>
               <p>
-                Внизу на телефоне — розовая полоска. Внутри — игроки и написать.
+                Внизу на телефоне — розовая полоска.
+                Внутри — пользователи и написать.
               </p>
               <DemoCapsule />
             </div>
@@ -792,29 +914,13 @@ const InfoPanel = forwardRef(({
             <div className="info-block">
               <div className="info-block-title">Свайпы</div>
               <ul className="info-list">
-                <li>Слева от края — панель игроков.</li>
+                <li>Слева от края — панель пользователей.</li>
                 <li>Справа от края — диалоги.</li>
                 <li>Влево по сообщению — ответ.</li>
                 <li>Вправо по своему — удалить.</li>
                 <li>Вниз по фото — закрыть.</li>
                 <li>Вверх по капсуле — открыть меню.</li>
               </ul>
-            </div>
-
-            <div className="info-block">
-              <div className="info-block-title">PWA</div>
-              <p>
-                iPhone: Safari → Поделиться → «На экран "Домой"».
-                Android: меню браузера → Установить приложение.
-              </p>
-              <DemoPwaBanner />
-            </div>
-
-            <div className="info-block">
-              <div className="info-block-title">Пасхалка</div>
-              <p className="info-block-note">
-                Пять тапов по маскоту в шапке. Дальше — тишина и ты.
-              </p>
             </div>
           </section>
 

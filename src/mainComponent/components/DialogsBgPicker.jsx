@@ -1,49 +1,22 @@
 import { useState, useRef } from 'react';
+import ConfirmModal from './ConfirmModal';
 
 /*
-  [2.34.3] Пикер фона окна диалогов.
-           7 пресетов + загрузка своей картинки.
+  [2.36.3] Кнопка «Установить всем» — только у админа.
+  [2.34.3] Пикер фона окна диалогов. 7 пресетов + загрузка + сброс.
 */
 const MAX_BG_MB = 15;
 const MAX_BG_BYTES = MAX_BG_MB * 1024 * 1024;
 const API_URL = 'https://api.banjoboy420.ru';
 
 const PRESETS = [
-  {
-    id: 'sunrise',
-    name: 'Рассвет',
-    css: 'linear-gradient(160deg, #FFB6C1 0%, #FFE4B5 60%, #FFF8DC 100%)',
-  },
-  {
-    id: 'night',
-    name: 'Ночь',
-    css: 'linear-gradient(160deg, #0E1726 0%, #1E3A5F 60%, #2C3E5A 100%)',
-  },
-  {
-    id: 'space',
-    name: 'Космос',
-    css: 'radial-gradient(circle at 30% 20%, #3a4a6a 0%, #1a1e2e 45%, #0a0c14 100%)',
-  },
-  {
-    id: 'sakura',
-    name: 'Сакура',
-    css: 'linear-gradient(160deg, #FBC2EB 0%, #A6C1EE 100%)',
-  },
-  {
-    id: 'sunset',
-    name: 'Закат',
-    css: 'linear-gradient(160deg, #FF7E5F 0%, #FEB47B 100%)',
-  },
-  {
-    id: 'mint',
-    name: 'Мята',
-    css: 'linear-gradient(160deg, #B2E0D4 0%, #E0F5EE 100%)',
-  },
-  {
-    id: 'paper',
-    name: 'Бумага',
-    css: 'linear-gradient(160deg, #F5F0E8 0%, #EDE4D3 100%)',
-  },
+  { id: 'sunrise', name: 'Рассвет', css: 'linear-gradient(160deg, #FFB6C1 0%, #FFE4B5 60%, #FFF8DC 100%)' },
+  { id: 'night',   name: 'Ночь',    css: 'linear-gradient(160deg, #0E1726 0%, #1E3A5F 60%, #2C3E5A 100%)' },
+  { id: 'space',   name: 'Космос',  css: 'radial-gradient(circle at 30% 20%, #3a4a6a 0%, #1a1e2e 45%, #0a0c14 100%)' },
+  { id: 'sakura',  name: 'Сакура',  css: 'linear-gradient(160deg, #FBC2EB 0%, #A6C1EE 100%)' },
+  { id: 'sunset',  name: 'Закат',   css: 'linear-gradient(160deg, #FF7E5F 0%, #FEB47B 100%)' },
+  { id: 'mint',    name: 'Мята',    css: 'linear-gradient(160deg, #B2E0D4 0%, #E0F5EE 100%)' },
+  { id: 'paper',   name: 'Бумага',  css: 'linear-gradient(160deg, #F5F0E8 0%, #EDE4D3 100%)' },
 ];
 
 export const PRESETS_MAP = PRESETS.reduce((acc, p) => {
@@ -56,9 +29,12 @@ const DialogsBgPicker = ({
   onClose,
   onSave,
   token,
+  isAdmin = false,
+  onSetGlobalForAll,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmGlobal, setConfirmGlobal] = useState(false);
   const fileRef = useRef(null);
 
   const currentPresetId = current && current.startsWith('preset:')
@@ -117,6 +93,11 @@ const DialogsBgPicker = ({
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleSetGlobalConfirm = () => {
+    if (onSetGlobalForAll) onSetGlobalForAll(current || null);
+    setConfirmGlobal(false);
   };
 
   return (
@@ -178,8 +159,29 @@ const DialogsBgPicker = ({
           Сбросить фон
         </button>
 
+        {isAdmin && onSetGlobalForAll && (
+          <button
+            type="button"
+            className="dialogs-bg-global"
+            onClick={() => setConfirmGlobal(true)}
+          >
+            ✨ Установить всем
+          </button>
+        )}
+
         {error && <div className="dialogs-bg-error">{error}</div>}
       </div>
+
+      <ConfirmModal
+        open={confirmGlobal}
+        title="Установить этот фон всем?"
+        description="Все пользователи без своего фона увидят его. Кто поставил свой — не тронем."
+        confirmText="Установить"
+        danger
+        zIndex={1200}
+        onConfirm={handleSetGlobalConfirm}
+        onCancel={() => setConfirmGlobal(false)}
+      />
     </>
   );
 };
