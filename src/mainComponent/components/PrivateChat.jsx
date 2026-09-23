@@ -10,7 +10,18 @@ import VoiceRecordingOverlay from './VoiceRecordingOverlay';
 import ConfirmModal from './ConfirmModal';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 
-const PICKER_AUTOHIDE_MS = 5000;
+/*
+  [2.36.7] Убран автоскрывающий таймер pickerFor (5000мс). Он закрывал
+           ReactionWheel раньше, чем пользователь успевал выбрать из
+           раскрытых 12 реакций. Автоскрытие теперь только в ReactionWheel
+           (8 секунд, сбрасывается при «+»).
+  [2.36.5] Убран ник над gif-стикером в личке.
+  [2.35.60] private_message_deleted — удаление + пересчёт preview в dialogs
+  [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update
+  [2.35.41] historyLoaded в privateChat
+  [2.28.7] восстанавливаем unreadByUser из dialogs_list
+*/
+
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
@@ -129,13 +140,10 @@ const PrivateChat = ({
 
   useEffect(() => { setLocalTypingUser(typingUser); }, [typingUser]);
 
+  // [2.36.7] Автоскрытие пикера теперь полностью в ReactionWheel.
+  // Здесь только сбрасываем якорь, когда пикер уже закрыт.
   useEffect(() => {
-    if (!pickerFor) {
-      setPickerAnchor(null);
-      return;
-    }
-    const t = setTimeout(() => setPickerFor(null), PICKER_AUTOHIDE_MS);
-    return () => clearTimeout(t);
+    if (!pickerFor) setPickerAnchor(null);
   }, [pickerFor]);
 
   useEffect(() => {

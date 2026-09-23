@@ -60,7 +60,7 @@ import '../styles/Chat.toasts.css';
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
 // [2.35.45] пересылка сообщений — меню long-press + выбор получателя
 // [2.35.44] свои сообщения справа без синего + стикер 220px
-const VERSION = '2.36.6';
+const VERSION = '2.36.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 
 /*
-  [2.36.4] Закрытие при скролле/свайпе/wheel за пределами колеса.
-           Таймер явно продлевается при «+» через timerKey.
+  [2.36.7] AUTOHIDE_MS 5000 → 8000. Внешние таймеры в useChatUI и
+           PrivateChat убраны — логика автоскрытия теперь только здесь.
+           Раньше родитель unmount-ил компонент раньше нашего таймера,
+           из-за чего «+» не давал дополнительного времени.
+  [2.36.4] ignoreSelector — не закрывать при pointerdown по элементу,
+           совпавшему с селектором (нужно для кнопки-триггера в fullscreen).
+           Плюс закрытие при скролле/свайпе/wheel за пределами колеса.
   [2.35.56] + сбрасывает таймер автоскрытия.
-  [2.35.55] Таймер сбрасывается при клике на +. Любой клик вне
-            boundsRef (контейнер сообщений) моментально закрывает.
   [2.35.53] Радиальный пикер реакций — отдельный компонент.
 */
 
@@ -16,7 +19,7 @@ const WHEEL_R_MAIN = 56;
 const WHEEL_R_EXTRA = 104;
 const WHEEL_BTN = 36;
 const WHEEL_PAD = 14;
-const AUTOHIDE_MS = 5000;
+const AUTOHIDE_MS = 8000;
 const SWIPE_SLOP = 12;
 
 const polar = (r, angleDeg) => {
@@ -35,10 +38,11 @@ const ReactionWheel = ({
   nickname,
   onPick,
   onClose,
+  ignoreSelector = null,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [center, setCenter] = useState(null);
-  const [timerKey, setTimerKey] = useState(0); // сброс таймера
+  const [timerKey, setTimerKey] = useState(0);
 
   // Центр колеса + сброс таймера при открытии на новом месте
   useEffect(() => {
@@ -75,14 +79,15 @@ const ReactionWheel = ({
     setTimerKey(k => k + 1);
   }, [open, anchorX, anchorY, boundsRef]);
 
-  // Автоскрытие. Расширение/сворачивание + timerKey сбрасывают таймер.
+  // Автоскрытие. Единственный таймер для пикера.
+  // Нажатие «+» меняет expanded → эффект пересоздаётся → 8 секунд заново.
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => onClose?.(), AUTOHIDE_MS);
     return () => clearTimeout(t);
   }, [open, expanded, timerKey, onClose]);
 
-  // Тап/клик вне колеса (но внутри boundsRef — решает родитель)
+  // Тап/клик вне колеса
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => {
@@ -90,16 +95,16 @@ const ReactionWheel = ({
       if (!t || !t.closest) { onClose?.(); return; }
       if (t.closest('.reaction-wheel')) return;
       if (t.closest('.reaction-wheel-anchor')) return;
+      if (ignoreSelector && t.closest(ignoreSelector)) return;
       const bounds = boundsRef?.current;
       if (bounds && bounds.contains(t)) return;
       onClose?.();
     };
     document.addEventListener('pointerdown', onDown, true);
     return () => document.removeEventListener('pointerdown', onDown, true);
-  }, [open, boundsRef, onClose]);
+  }, [open, boundsRef, onClose, ignoreSelector]);
 
-  // Любой скролл / колесо мыши — закрыть.
-  // [2.36.4] ловим и контейнер сообщений, и скролл страницы.
+  // Скролл / wheel — закрыть
   useEffect(() => {
     if (!open) return;
     const onScrollOrWheel = () => onClose?.();
@@ -111,8 +116,7 @@ const ReactionWheel = ({
     };
   }, [open, onClose]);
 
-  // Свайп пальцем за пределами колеса — закрыть.
-  // [2.36.4] порог SWIPE_SLOP, чтобы отличить тап от свайпа.
+  // Свайп пальцем за пределами колеса
   useEffect(() => {
     if (!open) return;
     let startX = 0;
@@ -123,6 +127,10 @@ const ReactionWheel = ({
       if (e.touches.length !== 1) return;
       const t = e.target;
       if (t?.closest && (t.closest('.reaction-wheel') || t.closest('.reaction-wheel-anchor'))) {
+        tracking = false;
+        return;
+      }
+      if (ignoreSelector && t?.closest && t.closest(ignoreSelector)) {
         tracking = false;
         return;
       }
@@ -157,7 +165,7 @@ const ReactionWheel = ({
       document.removeEventListener('touchend', onTouchEnd);
       document.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [open, onClose]);
+  }, [open, onClose, ignoreSelector]);
 
   // Esc
   useEffect(() => {

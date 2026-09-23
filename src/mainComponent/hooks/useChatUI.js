@@ -1,13 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 
 /*
+  [2.36.7] Убран автоскрывающий таймер activeMessageId (2000мс).
+           Он unmount-ил ReactionWheel раньше его собственного таймера,
+           из-за чего «+» не давал пользователю дополнительного времени.
+           Сброс теперь только явный: по onClose из ReactionWheel или
+           по выбору реакции — оба пути идут через toggleReactions.
   [2.35.27] Тема вынесена из React state. Только DOM — нет ререндера при смене.
             Круг через View Transition сохраняется.
   [2.35.26] theme-switching гасит CSS transitions при смене темы
   [2.32.39] useCallback на toggleReactions/closeFullscreen
-  [2.32.19] активная реакция-пикер автоскрывается через 2 сек
 */
-const PICKER_AUTOHIDE_MS = 2000;
 
 export const useChatUI = () => {
   const [activeMessageId, setActiveMessageId] = useState(null);
@@ -26,12 +29,6 @@ export const useChatUI = () => {
     try { stored = localStorage.getItem('ghost-chat-theme') || 'light'; } catch { /* noop */ }
     document.body.classList.toggle('dark', stored === 'dark');
   }, []);
-
-  useEffect(() => {
-    if (!activeMessageId) return;
-    const t = setTimeout(() => setActiveMessageId(null), PICKER_AUTOHIDE_MS);
-    return () => clearTimeout(t);
-  }, [activeMessageId]);
 
   const toggleTheme = useCallback((event) => {
     // [2.35.27] Никакого setIsDark. Ноль ререндеров React.
