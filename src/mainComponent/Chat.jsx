@@ -36,6 +36,7 @@ import { useVersionCheck } from './hooks/useVersionCheck';
 import { useMascotGestures } from './hooks/useMascotGestures';
 import { useCapsuleGestures } from './hooks/useCapsuleGestures';
 import { useFullscreenGestures } from './hooks/useFullscreenGestures';
+import { useMascotFlight } from './hooks/useMascotFlight';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
@@ -68,7 +69,7 @@ import '../styles/Chat.update.css';
 // feat(voice): запись, отправка, плеер (v2.35.57)
 // fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
 // feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.37.6';
+const VERSION = '2.37.7';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -205,6 +206,10 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
+    // [2.37.7] Шаг 1: ref на маскота в шапке и на цель полёта (пока — кнопка диалогов).
+  const headerMascotRef = useRef(null);
+  const dialogsToggleRef = useRef(null);
+  const [mascotInFlight, setMascotInFlight] = useState(false);
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
   const infoPanelRef = useRef(null);
@@ -233,6 +238,20 @@ const Chat = () => {
     handleMascotPointerUp,
     handleMascotContextMenu,
   } = useMascotGestures(yt);
+
+  // [2.37.7] Каркас полёта. Пока триггер тестовый — кнопка в шапке.
+  // В Шаге 2 свяжем с unreadUserObjects.length.
+  const {
+    flying: mascotFlying,
+    flyingStyle: mascotFlyingStyle,
+    startFlight: startMascotFlight,
+  } = useMascotFlight({
+    fromRef: headerMascotRef,
+    toRef: dialogsToggleRef,
+    duration: 600,
+    onTakeoff: () => setMascotInFlight(true),
+    onLand: () => setMascotInFlight(false),
+  });
 
   const sendVoiceMessageRef = useRef(null);
 
@@ -1242,6 +1261,7 @@ const Chat = () => {
 
       {isAuth && (
         <button
+          ref={dialogsToggleRef}
           className="dialogs-toggle"
           onClick={handleOpenDialogs}
           title="Диалоги"
@@ -1250,6 +1270,32 @@ const Chat = () => {
           {Object.values(unreadByUser).filter(Boolean).length > 0 && (
             <span className="unread-badge">!</span>
           )}
+        </button>
+      )}
+
+      {/* [2.37.7] ТЕСТ Шаг 1: кнопка «Полёт маскота». Уберём в Шаге 2. */}
+      {isAuth && (
+        <button
+          onClick={startMascotFlight}
+          disabled={mascotFlying}
+          title="Тест: полёт маскота"
+          style={{
+            position: 'fixed',
+            top: 10,
+            left: 114,
+            zIndex: 2200,
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            background: 'var(--card-bg)',
+            border: '3px solid var(--card-border)',
+            color: 'var(--text)',
+            fontSize: 16,
+            cursor: 'pointer',
+            opacity: mascotFlying ? 0.5 : 1,
+          }}
+        >
+          ✈️
         </button>
       )}
 
@@ -1402,11 +1448,13 @@ const Chat = () => {
           <div className="chat-header">
             <div className="chat-header-mascot-wrap">
               <img
+                ref={headerMascotRef}
                 src="/mascot.png"
                 alt="banjoboy"
                 className={
                   `chat-header-logo` +
-                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '')
+                  (yt.isPlaying || voiceRecording ? ' mascot-playing' : '') +
+                  (mascotInFlight ? ' mascot-in-flight' : '')
                 }
                 draggable={false}
                 onPointerDown={handleMascotPointerDown}
@@ -1902,6 +1950,11 @@ const Chat = () => {
               </div>
             )}
         </div>
+      )}
+
+      {/* [2.37.7] Летающий маскот: показывается пока mascotFlying === true */}
+      {mascotFlying && mascotFlyingStyle && (
+        <div className="mascot-flying" style={mascotFlyingStyle} aria-hidden="true" />
       )}
 
       <div className={`yt-hidden-host ${showMiniPlayer ? 'yt-hidden-host--visible' : ''}`}>
