@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
+  [2.37.1] Убран мёртвый case 'unread_private_list'. Бэк его не шлёт —
+           непрочитанные восстанавливаются из dialogs_list.
   [2.35.60] private_message_deleted — удаление + пересчёт preview в dialogs
   [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update
   [2.35.41] historyLoaded в privateChat
@@ -119,15 +121,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
           d.userId === msg.data.userId ? { ...d, lastIsRead: true } : d
         ));
         return true;
-
-      case 'unread_private_list': {
-        const newUnread = {};
-        (msg.data || []).forEach(senderId => {
-          newUnread[senderId] = true;
-        });
-        setUnreadByUser(prev => ({ ...prev, ...newUnread }));
-        return true;
-      }
 
       case 'private_message': {
         setPrivateChat(prev => {
