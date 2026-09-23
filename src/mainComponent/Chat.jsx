@@ -1429,7 +1429,6 @@ const Chat = () => {
                 onPointerUp={handleMascotPointerUp}
                 onPointerCancel={handleMascotPointerUp}
                 onContextMenu={handleMascotContextMenu}
-                onDoubleClick={startMascotFlight}
               />
               {volumeTipVisible && (
                 <div className="mascot-volume-tip">🔊 {yt.volume}</div>
@@ -1441,7 +1440,11 @@ const Chat = () => {
               )}
             </div>
 
-            <div className="chat-header-text">
+            <div
+              className="chat-header-text"
+              onDoubleClick={startMascotFlight}
+              title="Двойной клик — тест: полёт маскота"
+            >
               {trackTitleVisible && yt.trackTitle ? (
                 <div className="chat-header-track-title" title={yt.trackTitle}>
                   ♫ {yt.trackTitle}
