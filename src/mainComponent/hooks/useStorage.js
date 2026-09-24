@@ -43,12 +43,15 @@ export const useStorage = ({ sendMessage, isAuth }) => {
         const ids = msg.data.ids || [];
         setItems(prev => {
           const map = new Map(prev.map(i => [i.id, i]));
+          const idsSet = new Set(ids);
           const next = ids.map((id, idx) => {
             const it = map.get(id);
             return it ? { ...it, sortOrder: idx } : null;
           }).filter(Boolean);
-          // добавим те, что не попали в ids (защита)
-          prev.forEach(i => { if (!ids.includes(i.id)) next.push(i); });
+          for (let i = 0; i < prev.length; i++) {
+            const it = prev[i];
+            if (!idsSet.has(it.id)) next.push(it);
+          }
           return next;
         });
         return true;
@@ -82,13 +85,15 @@ export const useStorage = ({ sendMessage, isAuth }) => {
     // storage_reordered — окно, в котором карточки прыгают обратно.
     setItems(prev => {
       const map = new Map(prev.map(i => [i.id, i]));
+      const idsSet = new Set(ids);
       const next = ids.map((id, idx) => {
         const it = map.get(id);
         return it ? { ...it, sortOrder: idx } : null;
       }).filter(Boolean);
-      prev.forEach(i => {
-        if (!ids.includes(i.id)) next.push(i);
-      });
+      for (let i = 0; i < prev.length; i++) {
+        const it = prev[i];
+        if (!idsSet.has(it.id)) next.push(it);
+      }
       return next;
     });
 

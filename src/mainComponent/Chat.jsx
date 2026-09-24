@@ -635,7 +635,6 @@ const Chat = () => {
   useEffect(() => { showDialogsRef.current = showDialogs; }, [showDialogs]);
 
   const handleWebSocketMessage = useCallback((msg) => {
-    console.log('📩 Входящее сообщение:', msg.type, msg.data);
 
     if (duel.handleWs(msg)) return;
     if (handlePrivateWs(msg)) return;
@@ -1415,8 +1414,6 @@ const Chat = () => {
 
   const myAvatarUrl = myId ? (avatarCache[myId] || null) : null;
   const inputActive = !!input.trim() || inputFocused;
-
-  console.log('[RENDER] voiceRecActive=', voiceRecActive, 'videoRecActive=', videoRecActive);
 
   const isBusySending = isUploading || voiceUploading || videoUploading;
   const sendingLabel = voiceUploading
