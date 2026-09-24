@@ -282,18 +282,13 @@ body.dark .video-rec-info-tip {
 }
 
 @media (max-width: 600px) {
-  .video-rec-square {
-    width: min(78vw, 320px);
-  }
+  .video-rec-square { width: min(78vw, 320px); }
   .video-rec-top-hint,
-  .video-rec-bottom-hint {
-    font-size: 11px;
-    padding: 5px 10px;
-  }
+  .video-rec-bottom-hint { font-size: 11px; padding: 5px 10px; }
 }
 
 /* ============================================================= */
-/* [2.42.0] VideoMessage — плеер-квадрат в сообщении              */
+/* [2.42.2] VideoMessage — плеер-квадрат, резкие рамки как у gif   */
 /* ============================================================= */
 
 .video-msg {
@@ -305,16 +300,17 @@ body.dark .video-rec-info-tip {
   position: relative;
   width: 220px;
   height: 220px;
-  border-radius: 14px;
+  border-radius: 0;
   overflow: hidden;
   background: #000;
-  border: 2px solid var(--msg-border);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  border: none;
+  box-shadow: none;
   touch-action: manipulation;
 }
 
 body.dark .video-msg-square {
-  border-color: var(--msg-border);
+  border: none;
+  box-shadow: none;
 }
 
 .video-msg-video {
@@ -406,7 +402,7 @@ body.dark .video-msg-square {
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: 0;
   background: #000;
 }
 

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
+  [2.42.2] poster — превью первого кадра до play.
+           preload="auto" — подгружаем метаданные и первый кадр.
   [2.42.0] Плеер видео-кружка. Квадрат как gif-стикер.
            Кнопки: play/pause, mute/unmute, fullscreen.
-           Тап по телу — пропускаем наверх (родитель откроет реакции).
 */
 
 let currentlyPlayingVideo = null;
@@ -123,7 +124,7 @@ const VideoMessage = ({ url, isOwn = false }) => {
             src={url}
             className="video-msg-video"
             playsInline
-            preload="metadata"
+            preload="auto"
             muted={muted}
             onClick={handlePlayToggle}
           />
