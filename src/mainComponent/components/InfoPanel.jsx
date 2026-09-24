@@ -2,9 +2,11 @@ import { forwardRef, useState, useRef, useEffect, useCallback } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
-  [2.36.2] InfoPanel — яркий блок установки PWA (RU/EN), демо-реакции
-           с ＋, текст «пользователи», пасхалка без анонса.
-  [2.36.1] живые демо.
+  [2.49.0] InfoPanel — шесть глав. Добавлено «Хранилище». Обновлены
+           «Голос» (видео-кружки), «Личное» (даты, авто-фильтр),
+           «Ты» (refresh, избранные стикеры), «Мелочи» (сон маскота,
+           dragndrop). Пасхалка: 7 тапов — «Слово».
+  [2.36.2] яркий блок установки PWA, живые демо.
   [2.36.0] 5 глав, орбита-оглавление, живой маскот.
 */
 
@@ -12,6 +14,7 @@ const CHAPTERS = [
   { id: 'voice',    icon: '💬', label: 'Голос' },
   { id: 'personal', icon: '✉️', label: 'Личное' },
   { id: 'circle',   icon: '🤝', label: 'Круг' },
+  { id: 'storage',  icon: '🗄️', label: 'Хранилище' },
   { id: 'you',      icon: '👤', label: 'Ты' },
   { id: 'small',    icon: '✨', label: 'Мелочи' },
 ];
@@ -176,7 +179,7 @@ const DemoRoomPulse = () => {
 
         s.phase += s.speed;
         const midY = s.height / 2;
-        const step = 4;
+        const step = 6;
         const pointsCount = Math.ceil(s.width / step);
         let d = '';
         for (let i = 0; i <= pointsCount; i++) {
@@ -368,6 +371,74 @@ const DemoVoiceMessage = () => {
   );
 };
 
+const DemoVideoCircle = () => {
+  const [playing, setPlaying] = useState(true);
+  const [muted, setMuted] = useState(true);
+
+  const toggle = () => setPlaying(p => !p);
+  const toggleMute = (e) => { e.stopPropagation(); setMuted(m => !m); };
+
+  return (
+    <div className="info-demo-live">
+      <div className="info-video-demo">
+        <div className="info-video-demo-square" onClick={toggle}>
+          <div className="info-video-demo-ph">
+            <div className="info-video-demo-mascot" />
+          </div>
+
+          {!playing && (
+            <span className="info-video-demo-play" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+          )}
+
+          <div className="info-video-demo-controls">
+            <button
+              type="button"
+              className="info-video-demo-btn"
+              onClick={toggleMute}
+              aria-label={muted ? 'Включить звук' : 'Выключить звук'}
+            >
+              {muted ? (
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5L6 9H3v6h3l5 4V5z" />
+                  <line x1="22" y1="9" x2="16" y2="15" />
+                  <line x1="16" y1="9" x2="22" y2="15" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5L6 9H3v6h3l5 4V5z" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                </svg>
+              )}
+            </button>
+            <button
+              type="button"
+              className="info-video-demo-btn"
+              onClick={(e) => e.stopPropagation()}
+              aria-label="На весь экран"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            </button>
+          </div>
+
+          <span className="info-video-demo-badge">0:07</span>
+        </div>
+      </div>
+      <div className="info-demo-caption">
+        {playing ? 'кружок играет сам · без звука' : 'пауза — тапни'}
+      </div>
+    </div>
+  );
+};
+
 const DemoDialogCard = () => {
   return (
     <div className="info-demo-live">
@@ -428,6 +499,30 @@ const DemoSearch = () => {
   );
 };
 
+const DemoDates = () => (
+  <div className="info-demo-live">
+    <div className="info-dates-list">
+      <div className="info-date-row">
+        <span className="info-date-value">сегодня в 19:42</span>
+        <span className="info-date-hint">только что</span>
+      </div>
+      <div className="info-date-row">
+        <span className="info-date-value">вчера в 19:42</span>
+        <span className="info-date-hint">один день</span>
+      </div>
+      <div className="info-date-row">
+        <span className="info-date-value">19:42 21 сентября</span>
+        <span className="info-date-hint">этот год</span>
+      </div>
+      <div className="info-date-row">
+        <span className="info-date-value">19:42 21 сентября 2025</span>
+        <span className="info-date-hint">прошлый год</span>
+      </div>
+    </div>
+    <div className="info-demo-caption">год — только если он не текущий</div>
+  </div>
+);
+
 const DemoFriendshipRitual = () => {
   return (
     <div className="info-demo-live">
@@ -456,6 +551,53 @@ const DemoFriendshipRitual = () => {
         </div>
       </div>
       <div className="info-demo-caption">огонь · вода · нить</div>
+    </div>
+  );
+};
+
+/* [2.49.0] Демо хранилища — карточка с drag-подсказкой */
+
+const DemoStorageCard = () => {
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setDragging(d => !d);
+    }, 1800);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="info-demo-live">
+      <div className="info-storage-demo">
+        <div className={`info-storage-tile ${dragging ? 'info-storage-tile--drag' : ''}`}>
+          <div className="info-storage-tile-media">
+            <div className="info-storage-tile-mascot" />
+          </div>
+          <div className="info-storage-tile-meta">
+            <span className="info-storage-tile-type">🎤</span>
+            <span className="info-storage-tile-nick">
+              <span className="info-storage-tile-avatar" style={{ background: getAvatarColor('admin') }}>A</span>
+              admin
+            </span>
+          </div>
+        </div>
+        <div className="info-storage-tile info-storage-tile--ghost">
+          <div className="info-storage-tile-media">
+            <div className="info-storage-tile-mascot" />
+          </div>
+          <div className="info-storage-tile-meta">
+            <span className="info-storage-tile-type">🎤</span>
+            <span className="info-storage-tile-nick">
+              <span className="info-storage-tile-avatar" style={{ background: getAvatarColor('admin') }}>A</span>
+              admin
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="info-demo-caption">
+        {dragging ? 'удерживай · соседи расступаются' : 'перетаскивание — как у себя'}
+      </div>
     </div>
   );
 };
@@ -525,6 +667,61 @@ const DemoCapsule = () => {
   );
 };
 
+/* [2.49.0] Демо: маскот засыпает, если долго молчишь */
+
+const DemoMascotSleep = () => {
+  const [asleep, setAsleep] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setAsleep(a => !a);
+    }, 2600);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="info-demo-live">
+      <div className="info-sleep-demo">
+        <div className={`info-sleep-mascot ${asleep ? 'info-sleep-mascot--sleep' : ''}`}>
+          <img src="/mascot.png" alt="" draggable={false} />
+          {asleep && (
+            <span className="info-sleep-zzz" aria-hidden="true">
+              <span>z</span><span>z</span><span>z</span>
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="info-demo-caption">
+        {asleep ? 'дремлет · ждёт тебя' : 'бодрый · при деле'}
+      </div>
+    </div>
+  );
+};
+
+/* [2.49.0] Демо: избранные стикеры */
+
+const DemoFavoriteSticker = () => {
+  const [fav, setFav] = useState(true);
+
+  return (
+    <div className="info-demo-live">
+      <button
+        type="button"
+        className={`info-fav-demo ${fav ? 'info-fav-demo--active' : ''}`}
+        onClick={() => setFav(v => !v)}
+      >
+        <span className="info-fav-demo-img" aria-hidden="true">
+          <img src="/mascot.png" alt="" draggable={false} />
+        </span>
+        <span className="info-fav-demo-star" aria-hidden="true">⭐</span>
+      </button>
+      <div className="info-demo-caption">
+        {fav ? 'в избранных · удержание снимает' : 'тапни — добавить в избранные'}
+      </div>
+    </div>
+  );
+};
+
 /* ============================================================ */
 /* InfoPanel                                                    */
 /* ============================================================ */
@@ -546,6 +743,7 @@ const InfoPanel = forwardRef(({
   const voiceRef = useRef(null);
   const personalRef = useRef(null);
   const circleRef = useRef(null);
+  const storageRef = useRef(null);
   const youRef = useRef(null);
   const smallRef = useRef(null);
 
@@ -553,6 +751,7 @@ const InfoPanel = forwardRef(({
     voice: voiceRef,
     personal: personalRef,
     circle: circleRef,
+    storage: storageRef,
     you: youRef,
     small: smallRef,
   };
@@ -603,6 +802,7 @@ const InfoPanel = forwardRef(({
     if (!el || !container) return;
     container.scrollTo({ top: el.offsetTop - 70, behavior: 'smooth' });
     setActiveChapter(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTouchStart = (e) => {
@@ -661,9 +861,10 @@ const InfoPanel = forwardRef(({
     s.lastDx = 0;
   };
 
+  // [2.49.0] Пасхалка: 7 тапов вместо 5. Ритм задан ритуалом.
   const handleMascotTap = () => {
     const next = easterTaps + 1;
-    if (next >= 5) {
+    if (next >= 7) {
       setEasterOpen(true);
       setEasterTaps(0);
     } else {
@@ -714,7 +915,7 @@ const InfoPanel = forwardRef(({
 
           <p className="info-intro">
             Это не список. Это короткий разговор о том, как устроен crew.
-            Пять глав. Прочитаешь — поймёшь всё.
+            Шесть глав. Прочитаешь — поймёшь всё.
           </p>
 
           <nav className="info-orbit info-orbit--sticky" aria-label="Оглавление">
@@ -774,6 +975,16 @@ const InfoPanel = forwardRef(({
               </p>
               <DemoVoiceMessage />
             </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Кружок</div>
+              <p>
+                Свайп вверх по кнопке камеры — запись видео-кружка.
+                Отправленный — играет сам, без звука. В полноэкранном
+                режиме — mute слева, реакции снизу, ✕ в углу.
+              </p>
+              <DemoVideoCircle />
+            </div>
           </section>
 
           {/* ===== 2. ЛИЧНОЕ ===== */}
@@ -801,6 +1012,24 @@ const InfoPanel = forwardRef(({
                 Строка сверху. Ищешь по тексту — совпадения пульсируют голубым.
               </p>
               <DemoSearch />
+            </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Даты</div>
+              <p>
+                Время — число — месяц. Год показываем, только если он
+                не текущий. Сегодня, вчера, позавчера — с префиксом.
+              </p>
+              <DemoDates />
+            </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Фильтр по дате</div>
+              <p>
+                Внутри диалога — четыре чипа: «Всё», «Сегодня», «7 дней»,
+                «30 дней». При открытии сам подбирает удобный: если
+                последнее сообщение сегодня — покажет «Сегодня».
+              </p>
             </div>
 
             <div className="info-block">
@@ -848,10 +1077,60 @@ const InfoPanel = forwardRef(({
             </div>
           </section>
 
-          {/* ===== 4. ТЫ ===== */}
-          <section ref={youRef} className="info-chapter">
+          {/* ===== 4. ХРАНИЛИЩЕ ===== */}
+          <section ref={storageRef} className="info-chapter">
             <div className="info-chapter-head">
               <span className="info-chapter-num">04</span>
+              <h3 className="info-chapter-title">Хранилище</h3>
+            </div>
+            <p className="info-chapter-lede">
+              Твоё. Приватное. Только ты видишь.
+            </p>
+
+            <div className="info-block">
+              <div className="info-block-title">Что это</div>
+              <p>
+                Личная коллекция контента из чата. Сохраняешь любое сообщение —
+                текст, фото, гифку, голосовое, кружок. Даже если оригинал
+                удалят, копия останется у тебя.
+              </p>
+              <p>
+                Открывается из профиля — кнопка <b>🗄️ Моё хранилище</b>.
+              </p>
+            </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Как сохранить</div>
+              <p>
+                Долгое нажатие на сообщение в ленте → пункт{' '}
+                <b>🗄️ В хранилище</b>. Если сообщение уже сохранено,
+                пункт станет <b>✓ Уже в хранилище</b>.
+              </p>
+            </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Порядок</div>
+              <p>
+                Внутри — сетка карточек. Долгое нажатие и перетаскивание —
+                меняешь местами. Соседи расступаются. Отпустил — порядок
+                сохранён. Работает только в полном списке, без фильтров.
+              </p>
+              <DemoStorageCard />
+            </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Мягко</div>
+              <p>
+                Удаление — через confirm. Лимит — 500 записей.
+                Фильтр по типу и поиск по тексту внутри.
+              </p>
+            </div>
+          </section>
+
+          {/* ===== 5. ТЫ ===== */}
+          <section ref={youRef} className="info-chapter">
+            <div className="info-chapter-head">
+              <span className="info-chapter-num">05</span>
               <h3 className="info-chapter-title">Ты</h3>
             </div>
             <p className="info-chapter-lede">
@@ -875,6 +1154,26 @@ const InfoPanel = forwardRef(({
             </div>
 
             <div className="info-block">
+              <div className="info-block-title">Обновление страницы</div>
+              <p>
+                Кнопка с круговыми стрелками. Слева-сверху на десктопе,
+                в шапке слева — на телефоне. Один тап — стрелки крутятся,
+                страница обновляется. Видна только на главном экране,
+                в панелях не мешает.
+              </p>
+            </div>
+
+            <div className="info-block">
+              <div className="info-block-title">Избранные стикеры</div>
+              <p>
+                Долгое нажатие на гифку в панели — 500мс добавит
+                в избранные, 1000мс на избранной — уберёт.
+                В ленте — через меню действий.
+              </p>
+              <DemoFavoriteSticker />
+            </div>
+
+            <div className="info-block">
               <div className="info-block-title">Радио</div>
               <p>
                 Маскот в шапке — это радио. Три трека по кругу.
@@ -892,15 +1191,25 @@ const InfoPanel = forwardRef(({
             </div>
           </section>
 
-          {/* ===== 5. МЕЛОЧИ ===== */}
+          {/* ===== 6. МЕЛОЧИ ===== */}
           <section ref={smallRef} className="info-chapter">
             <div className="info-chapter-head">
-              <span className="info-chapter-num">05</span>
+              <span className="info-chapter-num">06</span>
               <h3 className="info-chapter-title">Мелочи</h3>
             </div>
             <p className="info-chapter-lede">
               Жесты и движение. Всё, что делает crew — живым.
             </p>
+
+            <div className="info-block">
+              <div className="info-block-title">Маскот</div>
+              <p>
+                Он умеет больше, чем кажется. Дремлет, если ты молчишь.
+                Летает из шапки в панель. Возвращается. Крутится на орбите,
+                когда приходят личные. Следи за ним — он живой.
+              </p>
+              <DemoMascotSleep />
+            </div>
 
             <div className="info-block">
               <div className="info-block-title">Капсула</div>
@@ -919,6 +1228,7 @@ const InfoPanel = forwardRef(({
                 <li>Влево по сообщению — ответ.</li>
                 <li>Вправо по своему — удалить.</li>
                 <li>Вниз по фото — закрыть.</li>
+                <li>Вниз по видео в fullscreen — закрыть.</li>
                 <li>Вверх по капсуле — открыть меню.</li>
               </ul>
             </div>
@@ -988,10 +1298,11 @@ const InfoPanel = forwardRef(({
                 <img src="/mascot.png" alt="" draggable={false} />
               </div>
               <p className="info-easter-text">
-                Ты нашёл это. Значит, ты — свой.
+                Слово десятого
               </p>
               <p className="info-easter-sub">
-                Здесь пахнет розовым, звучит нить дружбы, и живёт маскот, который ждал.
+                Слово — не награда за финал. Это след. Миг проходит тихо,
+                если его не записать. Сделай так, чтобы было что прочитать.
               </p>
               <button
                 type="button"
