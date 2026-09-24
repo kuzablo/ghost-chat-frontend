@@ -185,5 +185,15 @@ export const useMascotFlight = ({
     };
   }, [fromRef, toRef, duration, onLand]);
 
-  return { flying, startFlight };
+  const cancelFlight = useCallback(() => {
+    if (!flyingRef.current) return;
+    try { animRef.current?.cancel(); } catch { /* noop */ }
+    try { nodeRef.current?.remove(); } catch { /* noop */ }
+    nodeRef.current = null;
+    animRef.current = null;
+    flyingRef.current = false;
+    setFlying(false);
+  }, []);
+
+  return { flying, startFlight, cancelFlight };
 };

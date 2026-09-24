@@ -3,4 +3,5 @@
 // 2.48.2 — оптимистичный реордер в useStorage.
 // [2.48.4] Refresh на мобиле — в шапке слева.
 // [2.48.7] Маскот: фикс центр→панель, мгновенное скрытие в modalOpen, пауза RAF.
-export const VERSION = '2.48.7';
+// [2.48.8] Маскот: cancelFlight при modalOpen — без провисания.
+export const VERSION = '2.48.8';

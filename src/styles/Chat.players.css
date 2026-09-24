@@ -118,8 +118,8 @@ body.dark .players-bg-loading-mascot {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  z-index: 2;
+  overflow: visible;
+  z-index: 5;
   flex-shrink: 0;
 }
 

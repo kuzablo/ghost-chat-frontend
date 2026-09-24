@@ -218,7 +218,11 @@ const Chat = () => {
     handleMascotContextMenu,
   } = useMascotGestures(yt);
 
-  const { flying: mascotFlying, startFlight: startMascotFlight } = useMascotFlight({
+  const {
+    flying: mascotFlying,
+    startFlight: startMascotFlight,
+    cancelFlight: cancelMascotFlight,
+  } = useMascotFlight({
     fromRef: headerMascotRef,
     duration: 700,
   });
@@ -508,18 +512,19 @@ const Chat = () => {
   });
 
   useEffect(() => {
-    if (mascotFlying) return;
-
     const hasUnread = unreadUserObjects.length > 0;
     const modalOpen = showDialogs || privateChat || !!profileTarget || storageOpen;
 
-    // [2.48.7] В modalOpen маскот полностью скрыт — нигде.
+    // [2.48.8] modalOpen обрабатываем даже во время полёта —
+    // отменяем полёт и мгновенно скрываем маскота.
     if (modalOpen) {
+      if (mascotFlying) cancelMascotFlight();
       if (mascotPlace !== 'hidden') setMascotPlace('hidden');
       return;
     }
 
-    // Вышли из modal — маскот появляется в шапке (без полёта).
+    if (mascotFlying) return;
+
     if (mascotPlace === 'hidden') {
       setMascotPlace('header');
       return;
@@ -536,8 +541,12 @@ const Chat = () => {
       if (mascotPlace === 'header') {
         startMascotFlight({ toRef: panelOrbitRef, toSize: size });
       } else if (mascotPlace === 'center') {
-        // [2.48.7] Явный fromRef центра — не полагаемся на lastLandedRect.
-        startMascotFlight({ fromRef: centerMascotRef, toRef: panelOrbitRef, toSize: size });
+        const el = document.querySelector('.pm-orbit-mascot-wrap');
+        startMascotFlight({
+          fromRef: { current: el },
+          toRef: panelOrbitRef,
+          toSize: size,
+        });
       } else {
         startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: size });
       }
@@ -547,7 +556,6 @@ const Chat = () => {
     if (wantCenter && mascotPlace !== 'center') {
       setMascotPlace('center');
       const wasHeader = mascotPlace === 'header';
-      // Даём React кадр на монтирование PrivateMessageToasts.
       requestAnimationFrame(() => {
         const el = document.querySelector('.pm-orbit-mascot-wrap');
         const toRefSafe = { current: el };
@@ -574,6 +582,7 @@ const Chat = () => {
     mascotPlace,
     mascotFlying,
     startMascotFlight,
+    cancelMascotFlight,
   ]);
 
   useEffect(() => {
