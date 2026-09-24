@@ -492,7 +492,7 @@ const Chat = () => {
     if (mascotFlying) return;
 
     const hasUnread = unreadUserObjects.length > 0;
-    const modalOpen = showDialogs || privateChat;
+    const modalOpen = showDialogs || privateChat || !!profileTarget || storageOpen;
     const wantPanel = showPlayers && !modalOpen;
     const centerAlreadyShown =
       centerDismissedForCountRef.current === unreadUserObjects.length;
@@ -533,6 +533,8 @@ const Chat = () => {
     showPlayers,
     showDialogs,
     privateChat,
+    profileTarget,
+    storageOpen,
     unreadUserObjects.length,
     mascotPlace,
     mascotFlying,
@@ -786,6 +788,18 @@ const Chat = () => {
       }
 
       if (target && target.closest && target.closest('.mobile-capsule')) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+
+      if (target && target.closest && (
+        target.closest('.profile-panel') ||
+        target.closest('.profile-overlay') ||
+        target.closest('.storage-panel') ||
+        target.closest('.storage-overlay') ||
+        target.closest('.info-panel') ||
+        target.closest('.info-overlay')
+      )) {
         swipeDirectionRef.current = null;
         return;
       }

@@ -535,3 +535,23 @@ body.dark .storage-toast-icon {
   color: var(--text);
   letter-spacing: 0.2px;
 }
+
+.storage-tile-video { cursor: pointer; }
+.storage-tile-video-play {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  color: #FFF;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s, background 0.15s;
+}
+.storage-tile-video:hover .storage-tile-video-play {
+  transform: translate(-50%, -50%) scale(1.08);
+  background: rgba(0, 0, 0, 0.7);
+}

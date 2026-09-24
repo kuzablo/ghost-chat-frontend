@@ -115,20 +115,7 @@ const StorageTile = ({ item, onDelete }) => {
       );
     }
     if (type === 'video') {
-      return (
-        <div className="storage-tile-video">
-          <video
-            src={payload.videoUrl}
-            className="storage-tile-video-el"
-            preload="metadata"
-            muted
-            playsInline
-            onMouseEnter={(e) => { try { e.currentTarget.currentTime = 0.001; } catch {} }}
-            onLoadedMetadata={(e) => { try { e.currentTarget.currentTime = 0.001; } catch {} }}
-          />
-          <span className="storage-tile-video-badge">{fmt(payload.videoDuration || 0)}</span>
-        </div>
-      );
+      return <StorageTileVideo payload={payload} />;
     }
     return null;
   };
@@ -163,6 +150,42 @@ const StorageTile = ({ item, onDelete }) => {
           </span>
         )}
       </div>
+    </div>
+  );
+};
+
+const StorageTileVideo = ({ payload }) => {
+  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+
+  const toggle = (e) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    if (playing) { v.pause(); setPlaying(false); }
+    else { v.play().then(() => setPlaying(true)).catch(() => {}); }
+  };
+
+  return (
+    <div className="storage-tile-video" onClick={toggle}>
+      <video
+        ref={videoRef}
+        src={payload.videoUrl}
+        className="storage-tile-video-el"
+        preload="metadata"
+        muted
+        playsInline
+        onLoadedMetadata={(e) => { try { e.currentTarget.currentTime = 0.001; } catch {} }}
+        onEnded={() => setPlaying(false)}
+      />
+      {!playing && (
+        <span className="storage-tile-video-play" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </span>
+      )}
+      <span className="storage-tile-video-badge">{fmt(payload.videoDuration || 0)}</span>
     </div>
   );
 };
