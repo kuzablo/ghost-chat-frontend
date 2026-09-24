@@ -785,7 +785,7 @@ const PrivateChat = ({
 
         {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
-        {(voiceRecActive || videoRecActive) ? (
+        {false ? (
           <div className="private-input-row private-input-row--voice-placeholder" aria-hidden="true" />
         ) : (
           <div className="private-input-row">

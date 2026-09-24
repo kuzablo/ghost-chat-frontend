@@ -1113,7 +1113,6 @@ const Chat = () => {
     if (isUploading) return;
     if (voiceRecActive) return;
 
-    // Если видео-запись активна — принудительно закрываем её.
     if (videoRecActive) {
       videoRec.cancel();
       await videoRec.stop();
@@ -1157,7 +1156,6 @@ const Chat = () => {
     if (isUploading || !isAuth) return;
     if (videoRecActive) return;
 
-    // Если voice-запись активна — принудительно закрываем её.
     if (voiceRecActive) {
       voiceRec.cancel();
       await voiceRec.stop();
@@ -1628,7 +1626,7 @@ const Chat = () => {
             </div>
           )}
 
-          {(voiceRecActive || videoRecActive) ? (
+          {false ? (
             <div className="input-row input-row--voice-placeholder" aria-hidden="true" />
           ) : (
             <div
