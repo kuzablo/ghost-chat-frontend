@@ -796,6 +796,22 @@ const Chat = () => {
         swipeDirectionRef.current = null;
         return;
       }
+      if (target && target.closest && (
+        target.closest('.profile-panel') ||
+        target.closest('.profile-overlay') ||
+        target.closest('.storage-panel') ||
+        target.closest('.storage-overlay') ||
+        target.closest('.info-panel') ||
+        target.closest('.info-overlay')
+      )) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+
+      if (target && target.closest && target.closest('.sticker-menu-overlay')) {
+        swipeDirectionRef.current = null;
+        return;
+      }
 
       if (target && target.closest && (
         target.closest('.profile-panel') ||

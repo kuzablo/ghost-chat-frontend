@@ -830,6 +830,16 @@ const PrivateChat = ({
                           nickname={myId}
                           onReact={sendReaction}
                         />
+                        {m.reactions && Object.keys(m.reactions).length > 0 && (
+                          <div className="msg-video-reactions">
+                            {Object.entries(m.reactions).map(([emoji, users]) => (
+                              <span key={emoji} className={`msg-video-reaction-badge ${users.includes(myId) ? 'own' : ''}`}>
+                                {emoji}
+                                {users.length > 1 && <span className="msg-video-reaction-count">{users.length}</span>}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   }

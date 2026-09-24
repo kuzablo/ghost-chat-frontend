@@ -611,6 +611,16 @@ const MessageList = ({
                       nickname={nickname}
                       onReact={sendReaction}
                     />
+                    {hasReactions(m) && (
+                      <div className="msg-video-reactions">
+                        {Object.entries(m.reactions).map(([emoji, users]) => (
+                          <span key={emoji} className={`msg-video-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}>
+                            {emoji}
+                            {users.length > 1 && <span className="msg-video-reaction-count">{users.length}</span>}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </React.Fragment>

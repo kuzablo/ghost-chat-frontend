@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import ReactionWheel from './ReactionWheel';
 
 /*
-  [2.47.2] Кнопка ✕ — fixed, независимо от структуры topbar. Свайп вниз
-           по оверлею закрывает (как у картинок).
-  [2.47.1] Fullscreen через Portal в document.body.
+  [2.47.2] Fullscreen видео — свои контролы, без нативных. Раньше <video controls>
+           перекрывал наш .fs-bottombar — реакции были не видны. Теперь:
+           тап по видео = play/pause, ✕ сверху-справа, mute + 😀 снизу.
+  [2.47.1] Fullscreen через createPortal в body.
   [2.45.0] Маскот-плейсхолдер до loadeddata. Автоплей свежих (< 8с).
 */
 
@@ -39,16 +40,14 @@ const VideoMessage = ({
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [fsOpen, setFsOpen] = useState(false);
+  const [fsPlaying, setFsPlaying] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [fsWheel, setFsWheel] = useState(null);
+  const [fsReactionListEmoji, setFsReactionListEmoji] = useState(null);
   const autoPlayedRef = useRef(false);
 
   const fsGestureRef = useRef({
-    active: false,
-    startX: 0,
-    startY: 0,
-    lastY: 0,
-    direction: null,
+    active: false, startX: 0, startY: 0, lastY: 0, direction: null,
   });
 
   const hasReactions = !!reactions && Object.keys(reactions).length > 0;
@@ -97,10 +96,15 @@ const VideoMessage = ({
     if (v && fsOpen) { try { v.pause(); } catch { /* noop */ } setPlaying(false); }
   }, [fsOpen]);
 
-  // Esc
   useEffect(() => {
     if (!fsOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') { setFsOpen(false); setFsWheel(null); } };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setFsOpen(false);
+        setFsWheel(null);
+        setFsReactionListEmoji(null);
+      }
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [fsOpen]);
@@ -124,32 +128,36 @@ const VideoMessage = ({
 
   const handleMuteToggle = (e) => {
     e.stopPropagation();
-    const v = videoRef.current;
-    if (!v) return;
     const next = !muted;
-    v.muted = next;
     setMuted(next);
+    const mv = videoRef.current;
+    if (mv) mv.muted = next;
     const fv = fsVideoRef.current;
     if (fv) fv.muted = next;
   };
 
-  const openFs = (e) => { e.stopPropagation(); setFsOpen(true); };
-  const closeFs = (e) => { if (e) e.stopPropagation(); setFsOpen(false); setFsWheel(null); };
+  const handleFsPlayToggle = (e) => {
+    e.stopPropagation();
+    const v = fsVideoRef.current;
+    if (!v) return;
+    if (fsPlaying) { v.pause(); setFsPlaying(false); }
+    else { v.play().then(() => setFsPlaying(true)).catch(() => {}); }
+  };
 
-  // ===== Свайп-закрытие =====
+  const openFs = (e) => { e.stopPropagation(); setFsOpen(true); };
+  const closeFs = (e) => {
+    if (e) e.stopPropagation();
+    setFsOpen(false);
+    setFsWheel(null);
+    setFsReactionListEmoji(null);
+  };
+
+  // Свайп вниз — закрыть
   const onOverlayTouchStart = (e) => {
-    // Свайп только с фона, не с плеера (у плеера свои контролы)
-    if (e.target.closest('video')) return;
-    if (e.target.closest('.fs-reaction-toggle')) return;
-    if (e.target.closest('.fs-close')) return;
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
     fsGestureRef.current = {
-      active: true,
-      startX: t.clientX,
-      startY: t.clientY,
-      lastY: t.clientY,
-      direction: null,
+      active: true, startX: t.clientX, startY: t.clientY, lastY: t.clientY, direction: null,
     };
   };
 
@@ -167,10 +175,8 @@ const VideoMessage = ({
       g.direction = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h';
     }
     if (g.direction !== 'v') return;
-
     if (e.cancelable) e.preventDefault();
 
-    // Свайп вниз — тянем оверлей за пальцем
     if (dy > 0) {
       const el = fsOverlayRef.current;
       const stage = fsStageRef.current;
@@ -190,16 +196,13 @@ const VideoMessage = ({
     const dy = g.lastY - g.startY;
     g.active = false;
 
-    const el = fsOverlayRef.current;
-    const stage = fsStageRef.current;
-
     if (g.direction === 'v' && dy > SWIPE_CLOSE_PX) {
       closeFs();
-      // сброс стилей — но closeFs размонтирует оверлей, стили уйдут вместе с ним
       return;
     }
 
-    // Возврат на место
+    const el = fsOverlayRef.current;
+    const stage = fsStageRef.current;
     if (el) { el.style.transition = 'background 0.24s'; el.style.background = ''; }
     if (stage) {
       stage.style.transition = 'transform 0.24s cubic-bezier(0.25,1,0.5,1), opacity 0.24s';
@@ -210,7 +213,6 @@ const VideoMessage = ({
         if (el) el.style.transition = '';
       }, 260);
     }
-
     g.direction = null;
   };
 
@@ -238,52 +240,68 @@ const VideoMessage = ({
       onTouchEnd={onOverlayTouchEnd}
       onTouchCancel={onOverlayTouchEnd}
     >
-      <button
-        className="fs-close"
-        style={{
-          position: 'fixed',
-          top: 'calc(env(safe-area-inset-top, 0px) + 14px)',
-          right: '14px',
-          zIndex: 20,
-        }}
-        onClick={(e) => { e.stopPropagation(); closeFs(); }}
-        aria-label="Закрыть"
-      >
-        <Icon.Close />
-      </button>
+      <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
+        <div className="fs-author" />
+        <button
+          type="button"
+          className="fs-close"
+          onClick={closeFs}
+          aria-label="Закрыть"
+        >
+          <Icon.Close />
+        </button>
+      </div>
 
-      <div
-        className="fs-stage"
-        ref={fsStageRef}
-        onClick={closeFs}
-      >
+      <div className="fs-stage" ref={fsStageRef} onClick={closeFs}>
         <video
           ref={fsVideoRef}
           src={url}
           className="fs-image"
-          autoPlay
           playsInline
-          controls
           muted={muted}
-          onClick={(e) => e.stopPropagation()}
+          onClick={handleFsPlayToggle}
+          onPlay={() => setFsPlaying(true)}
+          onPause={() => setFsPlaying(false)}
+          onEnded={() => setFsPlaying(false)}
         />
+
+        {!fsPlaying && (
+          <button
+            type="button"
+            className="fs-video-play"
+            onClick={handleFsPlayToggle}
+            aria-label="Воспроизвести"
+          >
+            <Icon.Play />
+          </button>
+        )}
       </div>
 
-      {(hasReactions || canReact) && (
-        <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
-          {hasReactions && (
-            <div className="fs-reactions-strip">
-              {reactionEntries.map(([emoji, users]) => (
-                <span
-                  key={emoji}
-                  className={`fs-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
-                >
-                  <span className="fs-reaction-badge-emoji">{emoji}</span>
-                  <span className="fs-reaction-badge-count">{users.length}</span>
-                </span>
-              ))}
-            </div>
-          )}
+      <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
+        {reactionEntries.length > 0 && (
+          <div className="fs-reactions-strip">
+            {reactionEntries.map(([emoji, users]) => (
+              <button
+                key={emoji}
+                type="button"
+                className={`fs-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
+                onClick={() => setFsReactionListEmoji(prev => prev === emoji ? null : emoji)}
+              >
+                <span className="fs-reaction-badge-emoji">{emoji}</span>
+                <span className="fs-reaction-badge-count">{users.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="fs-bottombar-right">
+          <button
+            type="button"
+            className="fs-reaction-toggle"
+            onClick={handleMuteToggle}
+            aria-label={muted ? 'Включить звук' : 'Выключить звук'}
+          >
+            {muted ? <Icon.Mute /> : <Icon.Sound />}
+          </button>
           {canReact && (
             <button
               type="button"
@@ -294,6 +312,29 @@ const VideoMessage = ({
               😀
             </button>
           )}
+        </div>
+      </div>
+
+      {fsReactionListEmoji && reactions?.[fsReactionListEmoji] && (
+        <div className="fs-reaction-list" onClick={(e) => e.stopPropagation()}>
+          <div className="fs-reaction-list-header">
+            <span className="fs-reaction-list-emoji">{fsReactionListEmoji}</span>
+            <span className="fs-reaction-list-count">
+              {reactions[fsReactionListEmoji].length}
+            </span>
+          </div>
+          <div className="fs-reaction-list-users">
+            {reactions[fsReactionListEmoji].map((u, i) => (
+              <span key={i} className="fs-reaction-user">{u}</span>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="fs-reaction-list-close"
+            onClick={() => setFsReactionListEmoji(null)}
+          >
+            Закрыть
+          </button>
         </div>
       )}
 
@@ -349,7 +390,6 @@ const VideoMessage = ({
               className="video-msg-btn"
               onClick={handleMuteToggle}
               aria-label={muted ? 'Включить звук' : 'Выключить звук'}
-              title={muted ? 'Включить звук' : 'Выключить звук'}
             >
               {muted ? <Icon.Mute /> : <Icon.Sound />}
             </button>
@@ -358,7 +398,6 @@ const VideoMessage = ({
               className="video-msg-btn"
               onClick={openFs}
               aria-label="На весь экран"
-              title="На весь экран"
             >
               <Icon.Fullscreen />
             </button>
