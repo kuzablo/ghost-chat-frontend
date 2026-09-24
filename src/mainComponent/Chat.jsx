@@ -515,8 +515,6 @@ const Chat = () => {
     const hasUnread = unreadUserObjects.length > 0;
     const modalOpen = showDialogs || privateChat || !!profileTarget || storageOpen;
 
-    // [2.48.8] modalOpen обрабатываем даже во время полёта —
-    // отменяем полёт и мгновенно скрываем маскота.
     if (modalOpen) {
       if (mascotFlying) cancelMascotFlight();
       if (mascotPlace !== 'hidden') setMascotPlace('hidden');
@@ -535,42 +533,63 @@ const Chat = () => {
       centerDismissedForCountRef.current === unreadUserObjects.length;
     const wantCenter = !showPlayers && hasUnread && !centerAlreadyShown;
 
+    const measure = (el) => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return null;
+      return { left: r.left, top: r.top, width: r.width, height: r.height };
+    };
+
     if (wantPanel && mascotPlace !== 'panel') {
-      setMascotPlace('panel');
+      const fromEl = mascotPlace === 'header'
+        ? headerMascotRef.current
+        : centerMascotRef.current;
+      const fromRect = measure(fromEl);
       const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
-      if (mascotPlace === 'header') {
-        startMascotFlight({ toRef: panelOrbitRef, toSize: size });
-      } else if (mascotPlace === 'center') {
-        const el = document.querySelector('.pm-orbit-mascot-wrap');
+
+      setMascotPlace('panel');
+      requestAnimationFrame(() => {
         startMascotFlight({
-          fromRef: { current: el },
+          fromRect,
           toRef: panelOrbitRef,
           toSize: size,
         });
-      } else {
-        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: size });
-      }
+      });
       return;
     }
 
     if (wantCenter && mascotPlace !== 'center') {
+      const fromEl = mascotPlace === 'header'
+        ? headerMascotRef.current
+        : mascotPlace === 'panel'
+          ? panelOrbitRef.current
+          : null;
+      const fromRect = measure(fromEl);
+
       setMascotPlace('center');
-      const wasHeader = mascotPlace === 'header';
       requestAnimationFrame(() => {
-        const el = document.querySelector('.pm-orbit-mascot-wrap');
-        const toRefSafe = { current: el };
-        if (wasHeader) {
-          startMascotFlight({ toRef: toRefSafe, toSize: MASCOT_SIZE_CENTER });
-        } else {
-          startMascotFlight({ fromLanded: true, toRef: toRefSafe, toSize: MASCOT_SIZE_CENTER });
-        }
+        startMascotFlight({
+          fromRect,
+          toRef: centerMascotRef,
+          toSize: MASCOT_SIZE_CENTER,
+        });
       });
       return;
     }
 
     if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
+      const fromEl = mascotPlace === 'panel'
+        ? panelOrbitRef.current
+        : centerMascotRef.current;
+      const fromRect = measure(fromEl);
+
       setMascotPlace('header');
-      startMascotFlight({ reverse: true });
+      requestAnimationFrame(() => {
+        startMascotFlight({
+          fromRect,
+          reverse: true,
+        });
+      });
     }
   }, [
     showPlayers,
@@ -1469,7 +1488,7 @@ const Chat = () => {
         <PlayersPanel
           ref={playersOverlayRef}
           visible={showPlayers}
-          orbitSlotRef={panelOrbitRef}
+          orbitMascotRef={panelOrbitRef}
           orbitHidden={mascotFlying || mascotPlace !== 'panel'}
           players={players}
           dialogsBg={effectiveDialogsBg}

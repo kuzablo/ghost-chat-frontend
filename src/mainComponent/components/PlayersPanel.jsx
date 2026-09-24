@@ -39,7 +39,7 @@ const PlayersPanel = forwardRef(({
   blockedIds = new Set(),
   dialogsBg = null,
   unreadUserObjects = [],
-  orbitSlotRef = null,
+  orbitMascotRef = null,
   orbitHidden = false,
   onWatchChat,
   onBanConfirm,
@@ -255,19 +255,18 @@ const PlayersPanel = forwardRef(({
         )}
 
         {/* [2.39.0] Узел орбиты рендерится всегда. Ref валиден в любой момент */}
-        <div
-          ref={orbitSlotRef}
-          className="players-header players-header--orbit"
-        >
+        <div className="players-header players-header--orbit">
           {!orbitHidden && (
             unreadUserObjects.length > 0 ? (
               <OrbitNotification
                 users={unreadUserObjects}
                 onClick={onOpenDialogs}
                 className="pm-orbit--header"
+                mascotRef={orbitMascotRef}
               />
             ) : (
               <img
+                ref={orbitMascotRef}
                 src="/mascot.png"
                 alt=""
                 className="players-header-mascot-solo"

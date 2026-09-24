@@ -4,4 +4,5 @@
 // [2.48.4] Refresh на мобиле — в шапке слева.
 // [2.48.7] Маскот: фикс центр→панель, мгновенное скрытие в modalOpen, пауза RAF.
 // [2.48.8] Маскот: cancelFlight при modalOpen — без провисания.
-export const VERSION = '2.48.8';
+// [2.48.9] Маскот: panelMascotRef, замер rect до смены стейта.
+export const VERSION = '2.48.9';
