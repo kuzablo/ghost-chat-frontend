@@ -1426,14 +1426,17 @@ const Chat = () => {
 
   return (
     <>
-      <button
-        className={`refresh-toggle${refreshing ? ' refresh-toggle--spinning' : ''}`}
-        onClick={handleRefresh}
-        aria-label="Обновить страницу"
-        title="Обновить"
-      >
-        <RefreshIcon />
-      </button>
+      {isAuth && !showPlayers && !showDialogs && !showInfo && !profileTarget
+        && !storageOpen && !privateChat && !stickerPanelOpen && !fullscreenImage && (
+        <button
+          className={`refresh-toggle${refreshing ? ' refresh-toggle--spinning' : ''}`}
+          onClick={handleRefresh}
+          aria-label="Обновить страницу"
+          title="Обновить"
+        >
+          <RefreshIcon />
+        </button>
+      )}
 
       <button
         className="theme-toggle"

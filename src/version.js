@@ -11,4 +11,5 @@
 // [2.48.13] Производительность: OrbitNotification кэширует nodes,
 //          RoomPulse реже, масштабирование вместо left/top/width/height.
 // [2.48.15] Avatar через React.memo.
-export const VERSION = '2.48.15';
+// [2.48.16] Refresh — только на главном экране.
+export const VERSION = '2.48.16';
