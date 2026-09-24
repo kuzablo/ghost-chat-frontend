@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { VERSION } from '../version'; 
 import PrivateChat from './components/PrivateChat';
 import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
@@ -60,9 +61,9 @@ import '../styles/Chat.update.css';
 import '../styles/Chat.input.css';
 import '../styles/Chat.video.css';
 
+// [2.42.14] VERSION импортируется из ../version — единый источник.
 // fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
 // feat(video): кружки (v2.42.0)
-const VERSION = '2.42.13';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";

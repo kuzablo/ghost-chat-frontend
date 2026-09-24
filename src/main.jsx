@@ -1,7 +1,12 @@
+// [2.42.14] __frontVersion берётся из единственного источника —
+//           ./version.js. Раньше здесь была мёртвая строка '2.37.3',
+//           она уходила в client-error → ver=2.37.3 при живой 2.42.13.
+//           Теперь в логах Amvera всегда фактическая версия бандла.
 // [2.37.2] Диагностика: chat-render-start в Chat.jsx + ErrorBoundary
 // + перехват console.error в index.html.
-// [2.37.3] Метка версии фронта — прилетит в логи Amvera через client-error.
-window.__frontVersion = '2.37.3';
+import { VERSION as FRONT_VERSION } from './version';
+
+window.__frontVersion = FRONT_VERSION;
 
 if (typeof window !== 'undefined' && typeof window.__clientLog === 'function') {
   window.__clientLog('module-load-start', 'main.jsx top reached');
