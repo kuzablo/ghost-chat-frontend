@@ -10,4 +10,5 @@
 // [2.48.12] Маскот: fromSize для панели — конец овалу.
 // [2.48.13] Производительность: OrbitNotification кэширует nodes,
 //          RoomPulse реже, масштабирование вместо left/top/width/height.
-export const VERSION = '2.48.14';
+// [2.48.15] Avatar через React.memo.
+export const VERSION = '2.48.15';

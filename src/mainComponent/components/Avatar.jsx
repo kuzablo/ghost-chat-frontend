@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 
 /*
@@ -14,7 +14,7 @@ import { getAvatarColor, getInitial } from '../utils';
   просто вкладывает нужные слои внутрь.
 */
 
-const Avatar = ({
+const Avatar = memo(({
   src,
   nickname,
   className = '',
@@ -78,6 +78,6 @@ const Avatar = ({
       {children}
     </div>
   );
-};
+});
 
 export default Avatar;
