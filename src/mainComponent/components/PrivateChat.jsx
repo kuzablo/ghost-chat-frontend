@@ -1,16 +1,22 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { formatTime, formatMessageDate, getAvatarColor, getInitial } from '../utils';
 import ChatInput from './ChatInput';
+import InputActionButtons from './InputActionButtons';
 import InstagramCard, { extractInstagramUrl } from './InstagramCard';
 import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
 import VoiceRecordingOverlay from './VoiceRecordingOverlay';
+import VideoRecordingOverlay from './VideoRecordingOverlay';
 import ConfirmModal from './ConfirmModal';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
+import { useVideoRecorder, extFromVideoMime } from '../hooks/useVideoRecorder';
 
 /*
+  [2.42.0] Кнопка ввода — InputActionButtons (mic+cam ↔ send).
+           Запись видео-кружка (VideoRecordingOverlay).
+           VoiceRecordingOverlay — аватар юзера вместо маскота.
   [2.41.0] favoriteStickers / onToggleFavorite пробрасываются в StickerPanel.
   [2.36.7] Убран автоскрывающий таймер pickerFor.
   [2.36.5] Убран ник над gif-стикером.
@@ -22,6 +28,7 @@ import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 
 const MAX_UPLOAD_MB = 25;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+const API_URL = 'https://api.banjoboy420.ru';
 
 const SWIPE_THRESHOLD = 90;
 const SWIPE_MAX = 220;
@@ -74,8 +81,10 @@ const PrivateChat = ({
   typingUser = null, stickers = [], isAdmin = false, token = '',
   onStickersUpdated, onForward, avatarUrl = null,
   favoriteStickers = [], onToggleFavorite,
+  myAvatarUrl = null,
 }) => {
   const [input, setInput] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const [localTypingUser, setLocalTypingUser] = useState(typingUser);
   const [pickerFor, setPickerFor] = useState(null);
   const [pickerAnchor, setPickerAnchor] = useState(null);
@@ -97,6 +106,8 @@ const PrivateChat = ({
   const voiceLongPressTimerRef = useRef(null);
   const voiceStartXRef = useRef(0);
 
+  const [videoRecActive, setVideoRecActive] = useState(false);
+
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -106,10 +117,16 @@ const PrivateChat = ({
   const longPressRef = useRef({ timer: null, completedAt: 0 });
 
   const sendVoiceMessageRef = useRef(null);
+  const sendVideoMessageRef = useRef(null);
 
   const voiceRec = useVoiceRecorder({
     maxDurationSec: 60,
     onAutoStop: () => { sendVoiceMessageRef.current?.(); },
+  });
+
+  const videoRec = useVideoRecorder({
+    maxDurationSec: 60,
+    onAutoStop: () => { sendVideoMessageRef.current?.(); },
   });
 
   const swipeRef = useRef({ active: false, startX: 0, startY: 0, direction: null, lastDx: 0 });
@@ -234,6 +251,9 @@ const PrivateChat = ({
       voiceUrl: m.voiceUrl || null,
       voiceDuration: m.voiceDuration || null,
       voiceWaveform: m.voiceWaveform || null,
+      videoUrl: m.videoUrl || null,
+      videoDuration: m.videoDuration || null,
+      videoMime: m.videoMime || null,
       forwardedFrom,
     };
   };
@@ -330,7 +350,7 @@ const PrivateChat = ({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('https://api.banjoboy420.ru/api/upload', { method: 'POST', body: fd });
+      const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       sendMessage({ type: 'private_message', data: { recipientId: userId, text: '', imageUrl: data.imageUrl } });
@@ -357,6 +377,7 @@ const PrivateChat = ({
     if (e.target.closest('.ig-card')) return;
     if (e.target.closest('.private-msg-sticker')) return;
     if (e.target.closest('.voice-msg')) return;
+    if (e.target.closest('.video-msg')) return;
 
     if (pickerFor === id) { setPickerFor(null); return; }
 
@@ -408,7 +429,7 @@ const PrivateChat = ({
     const ext = extFromMime(result.mime);
     fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
     try {
-      const res = await fetch('https://api.banjoboy420.ru/api/upload-voice', {
+      const res = await fetch(`${API_URL}/api/upload-voice`, {
         method: 'POST',
         body: fd,
       });
@@ -483,7 +504,60 @@ const PrivateChat = ({
     stopVoicePressTimer();
   }, [stopVoicePressTimer]);
 
-  // ===== /VOICE =====
+  // ===== VIDEO =====
+
+  const uploadAndSendVideo = useCallback(async (result) => {
+    if (!result) return;
+    const fd = new FormData();
+    const ext = extFromVideoMime(result.mime);
+    fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
+    try {
+      const res = await fetch(`${API_URL}/api/upload-video`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      sendMessage({
+        type: 'private_message',
+        data: {
+          recipientId: userId,
+          text: '',
+          videoUrl: data.videoUrl,
+          videoDuration: result.duration,
+          videoMime: result.mime,
+        },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки видео:', err);
+      setUploadError('Не удалось отправить видео');
+      setTimeout(() => setUploadError(''), 4000);
+    }
+  }, [sendMessage, userId]);
+
+  const handleCameraClick = useCallback(async () => {
+    if (isUploading || !sendMessage) return;
+    const ok = await videoRec.start();
+    if (ok) setVideoRecActive(true);
+  }, [isUploading, sendMessage, videoRec]);
+
+  const finalizeVideo = useCallback(async () => {
+    if (!videoRecActive) return;
+    const result = await videoRec.stop();
+    setVideoRecActive(false);
+    if (result) await uploadAndSendVideo(result);
+  }, [videoRecActive, videoRec, uploadAndSendVideo]);
+
+  const sendVideoNow = useCallback(async () => { await finalizeVideo(); }, [finalizeVideo]);
+  const cancelVideoNow = useCallback(async () => {
+    videoRec.cancel();
+    await videoRec.stop();
+    setVideoRecActive(false);
+  }, [videoRec]);
+
+  sendVideoMessageRef.current = () => {
+    if (!videoRecActive) return;
+    sendVideoNow();
+  };
+
+  // ===== /VOICE /VIDEO =====
 
   const handleConfirmDelete = useCallback(() => {
     if (!confirmDelete) return;
@@ -513,6 +587,8 @@ const PrivateChat = ({
   const activeMessage = pickerFor
     ? filteredMessages.find(x => x.id === pickerFor)
     : null;
+
+  const inputActive = !!input.trim() || inputFocused;
 
   return (
     <>
@@ -672,7 +748,7 @@ const PrivateChat = ({
 
         {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
-        {voiceRecActive ? (
+        {(voiceRecActive || videoRecActive) ? (
           <div className="private-input-row private-input-row--voice-placeholder" aria-hidden="true" />
         ) : (
           <div className="private-input-row">
@@ -708,19 +784,16 @@ const PrivateChat = ({
               onSend={handleSend}
               placeholder="Напишите сообщение..."
               draftKey={null}
+              onFocusChange={setInputFocused}
             />
-            <button
-              className="btn"
-              onClick={input.trim() ? handleSend : undefined}
-              onPointerDown={handleVoicePointerDown}
-              onPointerUp={handleVoicePointerUp}
-              onPointerCancel={handleVoicePointerUp}
-              title={input.trim() ? 'Отправить' : 'Удерживай для записи'}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
+            <InputActionButtons
+              active={inputActive}
+              disabled={isUploading}
+              onSend={handleSend}
+              onVoicePointerDown={handleVoicePointerDown}
+              onVoicePointerUp={handleVoicePointerUp}
+              onCameraClick={handleCameraClick}
+            />
           </div>
         )}
       </div>
@@ -731,10 +804,22 @@ const PrivateChat = ({
         level={voiceRec.level}
         paused={voiceRec.paused}
         frozen={voiceRecFrozen}
+        avatarUrl={myAvatarUrl}
         onPause={voiceRec.pause}
         onResume={voiceRec.resume}
         onSend={sendVoiceNow}
         onCancel={cancelVoiceNow}
+      />
+
+      <VideoRecordingOverlay
+        open={videoRecActive}
+        stream={videoRec.stream}
+        duration={videoRec.duration}
+        facing={videoRec.facing}
+        frozen={false}
+        onSwitchCamera={videoRec.switchCamera}
+        onSend={sendVideoNow}
+        onCancel={cancelVideoNow}
       />
 
       {activeMessage && pickerAnchor && (

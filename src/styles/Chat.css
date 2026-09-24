@@ -1864,6 +1864,35 @@ body.dark .voice-rec-mascot-halo {
   z-index: 2;
 }
 
+/* [2.42.0] Инфо-подсказка про лимит 1 минуты (audio + video) */
+.voice-rec-info-tip {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  z-index: 5;
+  pointer-events: none;
+  animation: voiceInfoTipIn 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+body.dark .voice-rec-info-tip {
+  background: rgba(29, 42, 66, 0.96);
+  color: #EAF2FA;
+}
+
+@keyframes voiceInfoTipIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 body.dark .voice-rec-bar {
   background: rgba(20, 25, 40, 0.6);
   border-color: rgba(59, 181, 232, 0.3);
