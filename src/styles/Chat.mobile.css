@@ -2,12 +2,12 @@
 
 /* [2.35.24] Скрываем плавающие кнопки на тач-устройствах */
 @media (hover: none) and (pointer: coarse) {
-  .theme-toggle, .players-toggle, .dialogs-toggle, .refresh-toggle { display: none !important; }
+  .theme-toggle, .players-toggle, .dialogs-toggle { display: none !important; }
 }
 
 @media (max-width: 600px) {
   .qr-wrap { display: none; }
-  .theme-toggle, .players-toggle, .dialogs-toggle, .refresh-toggle { display: none !important; }
+  .theme-toggle, .players-toggle, .dialogs-toggle { display: none !important; }
 
   .mobile-capsule {
     display: block;
@@ -72,6 +72,22 @@
   }
   .chat-header-theme:active { transform: scale(0.9); }
   .chat-header-theme .theme-icon { width: 20px; height: 20px; }
+
+    /* [2.48.4] Refresh на мобиле — в шапке слева, зеркально теме */
+  .refresh-toggle {
+    top: max(10px, calc(env(safe-area-inset-top, 0px) + 4px));
+    left: 10px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--input-bg);
+    color: var(--text);
+    z-index: 2200;
+  }
+  .refresh-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
 
   .messages-wrapper {
     padding: 0 8px;
