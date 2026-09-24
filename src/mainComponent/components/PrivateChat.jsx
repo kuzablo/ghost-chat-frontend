@@ -40,15 +40,15 @@ const LONG_PRESS_MENU_MS = 500;
 const LONG_PRESS_IGNORE_MS = 500;
 
 const DATE_FILTERS = [
-  { id: 'all',   label: 'Всё',      days: null },
-  { id: 'today', label: 'Сегодня',  days: 0 },
-  { id: '7d',    label: '7 дней',   days: 7 },
-  { id: '30d',   label: '30 дней',  days: 30 },
+  { id: 'all', label: 'Всё', days: null },
+  { id: 'today', label: 'Сегодня', days: 0 },
+  { id: '7d', label: '7 дней', days: 7 },
+  { id: '30d', label: '30 дней', days: 30 },
 ];
 
 const StickerIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h7l7-7V6a3 3 0 0 0-3-3z" />
     <path d="M13 21v-5a3 3 0 0 1 3-3h5" />
   </svg>
@@ -56,7 +56,7 @@ const StickerIcon = () => (
 
 const ClipIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
   </svg>
 );
@@ -85,6 +85,8 @@ const PrivateChat = ({
   onStickersUpdated, onForward, avatarUrl = null,
   favoriteStickers = [], onToggleFavorite,
   myAvatarUrl = null,
+  storageSourceIds = new Set(),
+  onSaveToStorage,
 }) => {
   const [input, setInput] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -274,11 +276,11 @@ const PrivateChat = ({
     const forwardedFrom = m.forwardedFrom
       ? m.forwardedFrom
       : {
-          nickname: authorNick,
-          originalId: m.id,
-          originalTime: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
-          fromPrivate: true,
-        };
+        nickname: authorNick,
+        originalId: m.id,
+        originalTime: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+        fromPrivate: true,
+      };
     return {
       text: m.text || '',
       imageUrl: m.imageUrl || null,
@@ -292,6 +294,45 @@ const PrivateChat = ({
       forwardedFrom,
     };
   };
+
+  const buildStorageData = (m) => {
+    let type = 'text';
+    if (m.stickerUrl) type = 'sticker';
+    else if (m.videoUrl) type = 'video';
+    else if (m.voiceUrl) type = 'voice';
+    else if (m.imageUrl) type = 'image';
+
+    const payload = {};
+    if (type === 'text') {
+      payload.text = m.text || '';
+    } else if (type === 'image') {
+      payload.imageUrl = m.imageUrl;
+      if (m.text?.trim()) payload.text = m.text;
+    } else if (type === 'sticker') {
+      payload.stickerUrl = m.stickerUrl;
+    } else if (type === 'voice') {
+      payload.voiceUrl = m.voiceUrl;
+      payload.voiceDuration = m.voiceDuration || 0;
+      payload.voiceWaveform = m.voiceWaveform || [];
+    } else if (type === 'video') {
+      payload.videoUrl = m.videoUrl;
+      payload.videoDuration = m.videoDuration || 0;
+      payload.videoMime = m.videoMime || null;
+    }
+
+    const isOwn = m.senderId === myId;
+    const authorNick = isOwn ? (myNickname || 'Я') : nickname;
+
+    const source = {
+      nickname: authorNick,
+      messageId: m.id,
+      originalTime: m.created_at ? new Date(m.created_at).getTime() : Date.now(),
+      fromPrivate: true,
+    };
+
+    return { type, payload, source };
+  };
+
 
   const handlePanelTouchStart = (e) => {
     if (e.touches.length !== 1) return;
@@ -957,6 +998,17 @@ const PrivateChat = ({
         onToggleFavorite={
           onToggleFavorite && actionsMenu?.msg?.stickerUrl
             ? () => onToggleFavorite(actionsMenu.msg.stickerUrl)
+            : undefined
+        }
+        isInStorage={
+          actionsMenu?.msg ? storageSourceIds.has(actionsMenu.msg.id) : false
+        }
+        onSaveToStorage={
+          onSaveToStorage && actionsMenu?.msg
+            ? () => {
+              const { type, payload, source } = buildStorageData(actionsMenu.msg);
+              onSaveToStorage(type, payload, source);
+            }
             : undefined
         }
         onClose={closeActionsMenu}

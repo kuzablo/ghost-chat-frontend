@@ -22,6 +22,8 @@ const MessageActionsMenu = ({
   onEdit,
   onDelete,
   onToggleFavorite,
+  onSaveToStorage,
+  isInStorage = false,
   onClose,
 }) => {
   const ref = useRef(null);
@@ -46,6 +48,15 @@ const MessageActionsMenu = ({
 
   const items = [];
   items.push({ id: 'forward', icon: '↪', label: 'Переслать', onClick: onForward });
+
+  if (onSaveToStorage) {
+    items.push({
+      id: 'storage',
+      icon: isInStorage ? '✓' : '🗄️',
+      label: isInStorage ? 'Уже в хранилище' : 'В хранилище',
+      onClick: isInStorage ? undefined : onSaveToStorage,
+    });
+  }
 
   if (stickerUrl && onToggleFavorite) {
     items.push({

@@ -31,6 +31,8 @@ const MessageList = ({
   bannedUsers = new Set(),
   favoriteStickers = [],
   onToggleFavorite,
+  storageSourceIds = new Set(),
+  onSaveToStorage,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -243,6 +245,42 @@ const MessageList = ({
       videoMime: m.videoMime || null,
       forwardedFrom,
     };
+  };
+
+  const buildStorageData = (m) => {
+    // Определяем тип по содержимому
+    let type = 'text';
+    if (m.stickerUrl) type = 'sticker';
+    else if (m.videoUrl) type = 'video';
+    else if (m.voiceUrl) type = 'voice';
+    else if (m.imageUrl) type = 'image';
+
+    const payload = {};
+    if (type === 'text') {
+      payload.text = m.text || '';
+    } else if (type === 'image') {
+      payload.imageUrl = m.imageUrl;
+      if (m.text?.trim()) payload.text = m.text;
+    } else if (type === 'sticker') {
+      payload.stickerUrl = m.stickerUrl;
+    } else if (type === 'voice') {
+      payload.voiceUrl = m.voiceUrl;
+      payload.voiceDuration = m.voiceDuration || 0;
+      payload.voiceWaveform = m.voiceWaveform || [];
+    } else if (type === 'video') {
+      payload.videoUrl = m.videoUrl;
+      payload.videoDuration = m.videoDuration || 0;
+      payload.videoMime = m.videoMime || null;
+    }
+
+    const source = {
+      nickname: m.nickname,
+      messageId: m.id,
+      originalTime: m.time,
+      fromPrivate: false,
+    };
+
+    return { type, payload, source };
   };
 
   const handleMsgTouchStart = (e, m) => {
@@ -752,6 +790,17 @@ const MessageList = ({
         onToggleFavorite={
           onToggleFavorite && actionsMenu?.msg?.stickerUrl
             ? () => onToggleFavorite(actionsMenu.msg.stickerUrl)
+            : undefined
+        }
+        isInStorage={
+          actionsMenu?.msg ? storageSourceIds.has(actionsMenu.msg.id) : false
+        }
+        onSaveToStorage={
+          onSaveToStorage && actionsMenu?.msg
+            ? () => {
+              const { type, payload, source } = buildStorageData(actionsMenu.msg);
+              onSaveToStorage(type, payload, source);
+            }
             : undefined
         }
         onClose={closeActionsMenu}

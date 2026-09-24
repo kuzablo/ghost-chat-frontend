@@ -427,6 +427,14 @@ const Chat = () => {
     });
   }, [unreadByUser, dialogs, avatarCache]);
 
+  const storageSourceIds = useMemo(() => {
+    const s = new Set();
+    storage.items.forEach(it => {
+      if (it.source?.messageId) s.add(it.source.messageId);
+    });
+    return s;
+  }, [storage.items]);
+
   const blockedIds = useMemo(
     () => new Set(blockedUsers.map(u => u.userId)),
     [blockedUsers]
@@ -1069,33 +1077,33 @@ const Chat = () => {
 
   // ===== VOICE =====
 
-const uploadAndSendVoice = useCallback(async (result) => {
-  if (!result) return;
-  setVoiceUploading(true);
-  const fd = new FormData();
-  const ext = extFromMime(result.mime);
-  fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
-  try {
-    const res = await fetch(`${API_URL}/api/upload-voice`, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Upload failed');
-    sendMessage({
-      type: 'message',
-      data: {
-        text: '',
-        voiceUrl: data.voiceUrl,
-        voiceDuration: result.duration,
-        voiceWaveform: result.waveform,
-      },
-    });
-  } catch (err) {
-    console.error('Ошибка загрузки голосового:', err);
-    setErrorMessage('Не удалось отправить голосовое');
-    setTimeout(() => setErrorMessage(''), 4000);
-  } finally {
-    setVoiceUploading(false);
-  }
-}, [sendMessage, setErrorMessage]);
+  const uploadAndSendVoice = useCallback(async (result) => {
+    if (!result) return;
+    setVoiceUploading(true);
+    const fd = new FormData();
+    const ext = extFromMime(result.mime);
+    fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
+    try {
+      const res = await fetch(`${API_URL}/api/upload-voice`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      sendMessage({
+        type: 'message',
+        data: {
+          text: '',
+          voiceUrl: data.voiceUrl,
+          voiceDuration: result.duration,
+          voiceWaveform: result.waveform,
+        },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки голосового:', err);
+      setErrorMessage('Не удалось отправить голосовое');
+      setTimeout(() => setErrorMessage(''), 4000);
+    } finally {
+      setVoiceUploading(false);
+    }
+  }, [sendMessage, setErrorMessage]);
 
   const cancelVoice = useCallback(async () => {
     voiceRec.cancel();
@@ -1140,33 +1148,33 @@ const uploadAndSendVoice = useCallback(async (result) => {
 
   // ===== VIDEO =====
 
-const uploadAndSendVideo = useCallback(async (result) => {
-  if (!result) return;
-  setVideoUploading(true);
-  const fd = new FormData();
-  const ext = extFromVideoMime(result.mime);
-  fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
-  try {
-    const res = await fetch(`${API_URL}/api/upload-video`, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Upload failed');
-    sendMessage({
-      type: 'message',
-      data: {
-        text: '',
-        videoUrl: data.videoUrl,
-        videoDuration: result.duration,
-        videoMime: result.mime,
-      },
-    });
-  } catch (err) {
-    console.error('Ошибка загрузки видео:', err);
-    setErrorMessage('Не удалось отправить видео');
-    setTimeout(() => setErrorMessage(''), 4000);
-  } finally {
-    setVideoUploading(false);
-  }
-}, [sendMessage, setErrorMessage]);
+  const uploadAndSendVideo = useCallback(async (result) => {
+    if (!result) return;
+    setVideoUploading(true);
+    const fd = new FormData();
+    const ext = extFromVideoMime(result.mime);
+    fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
+    try {
+      const res = await fetch(`${API_URL}/api/upload-video`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      sendMessage({
+        type: 'message',
+        data: {
+          text: '',
+          videoUrl: data.videoUrl,
+          videoDuration: result.duration,
+          videoMime: result.mime,
+        },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки видео:', err);
+      setErrorMessage('Не удалось отправить видео');
+      setTimeout(() => setErrorMessage(''), 4000);
+    } finally {
+      setVideoUploading(false);
+    }
+  }, [sendMessage, setErrorMessage]);
 
   const handleCameraClick = useCallback(async () => {
     console.log('[CLICK] camera button pressed');
@@ -1469,6 +1477,8 @@ const uploadAndSendVideo = useCallback(async (result) => {
           favoriteStickers={favoriteStickers}
           onToggleFavorite={toggleFavoriteSticker}
           myAvatarUrl={myAvatarUrl}
+          storageSourceIds={storageSourceIds}
+          onSaveToStorage={storage.saveToStorage}
         />
       )}
 
@@ -1608,6 +1618,8 @@ const uploadAndSendVideo = useCallback(async (result) => {
               bannedUsers={bannedUsers}
               favoriteStickers={favoriteStickers}
               onToggleFavorite={toggleFavoriteSticker}
+              storageSourceIds={storageSourceIds}
+              onSaveToStorage={storage.saveToStorage}
             />
 
             {notices.length > 0 && (
