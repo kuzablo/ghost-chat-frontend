@@ -826,6 +826,8 @@ const PrivateChat = ({
             <InputActionButtons
               active={inputActive}
               disabled={isUploading}
+              sending={false}
+              rotating={true}
               onSend={handleSend}
               onVoiceClick={handleVoiceClick}
               onCameraClick={handleCameraClick}

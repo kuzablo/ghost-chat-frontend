@@ -62,7 +62,7 @@ import '../styles/Chat.video.css';
 
 // fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
 // feat(video): кружки (v2.42.0)
-const VERSION = '2.42.10';
+const VERSION = '2.42.11';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1689,6 +1689,7 @@ const Chat = () => {
                 active={inputActive}
                 disabled={!isAuth || isUploading}
                 sending={sending}
+                rotating={true}
                 onSend={handleSendMessage}
                 onVoiceClick={handleVoiceClick}
                 onCameraClick={handleCameraClick}

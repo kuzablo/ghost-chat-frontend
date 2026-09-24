@@ -36,6 +36,7 @@ const InputActionButtons = ({
   active,
   disabled = false,
   sending = false,
+  rotating = false,
   onSend,
   onVoiceClick,
   onCameraClick,
@@ -80,19 +81,21 @@ const InputActionButtons = ({
         title="Отправить"
         tabIndex={active ? 0 : -1}
       >
-        <span className="iab-rotating-text" aria-hidden="true">
-          {SEND_CHARS.map((char, idx) => {
-            const angle = (360 / SEND_CHARS.length) * idx;
-            return (
-              <span
-                key={idx}
-                style={{ transform: `rotate(${angle}deg) translate(0, -26px)` }}
-              >
-                {char}
-              </span>
-            );
-          })}
-        </span>
+        {rotating && (
+          <span className="iab-rotating-text" aria-hidden="true">
+            {SEND_CHARS.map((char, idx) => {
+              const angle = (360 / SEND_CHARS.length) * idx;
+              return (
+                <span
+                  key={idx}
+                  style={{ transform: `rotate(${angle}deg) translate(0, -26px)` }}
+                >
+                  {char}
+                </span>
+              );
+            })}
+          </span>
+        )}
         <SendIcon />
         <span className="iab-spinner" aria-hidden="true" />
       </button>
