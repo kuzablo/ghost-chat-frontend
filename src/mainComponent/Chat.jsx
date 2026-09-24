@@ -427,6 +427,11 @@ const Chat = () => {
     });
   }, [unreadByUser, dialogs, avatarCache]);
 
+  const blockedIds = useMemo(
+    () => new Set(blockedUsers.map(u => u.userId)),
+    [blockedUsers]
+  );
+
   const storageSourceIds = useMemo(() => {
     const s = new Set();
     storage.items.forEach(it => {
@@ -434,11 +439,7 @@ const Chat = () => {
     });
     return s;
   }, [storage.items]);
-
-  const blockedIds = useMemo(
-    () => new Set(blockedUsers.map(u => u.userId)),
-    [blockedUsers]
-  );
+  
   const effectiveDialogsBg = dialogsBg || globalDialogsBg || null;
 
   const currentImageIndex = fullscreenImage
