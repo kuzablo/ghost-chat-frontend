@@ -2,13 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import StorageTile from './StorageTile';
 
 /*
+  [2.47.7] itemsByIdRef — синхронно при каждом рендере. sortedItems
+           читает Map во время рендера, а не после useEffect. Без
+           этого на первом проходе Map пуста → пустой список.
   [2.47.6] Dragndrop с touch events — браузер не отменяет жест.
-  - touchstart passive: false — браузер ждёт нашего решения.
-  - touchmove passive: false + preventDefault при активном drag —
-    скролл не срабатывает, touchcancel не приходит.
-  - MOVE_CANCEL_PX = 10 — палец-дрожание не отменяет таймер.
-  - touch-action: pan-y на карточках — в норме вертикальный скролл ок.
-  - Mouse: те же правила для десктопа, но без touch-action.
 */
 
 const LONG_PRESS_MS = 400;
@@ -38,16 +35,17 @@ const StorageGrid = ({ items, onDelete, onReorder }) => {
     autoScrollRaf: null,
   });
 
-  useEffect(() => { onReorderRef.current = onReorder; }, [onReorder]);
+  // [2.47.7] Синхронно, до чтения в рендере.
+  itemsByIdRef.current = new Map(items.map(i => [i.id, i]));
 
-  useEffect(() => {
-    itemsByIdRef.current = new Map(items.map(i => [i.id, i]));
-  }, [items]);
+  useEffect(() => { onReorderRef.current = onReorder; }, [onReorder]);
 
   const currentOrder = orderPreview || items.map(i => i.id);
   useEffect(() => { currentOrderRef.current = currentOrder; }, [currentOrder]);
 
-  const sortedItems = currentOrder.map(id => itemsByIdRef.current.get(id)).filter(Boolean);
+  const sortedItems = currentOrder
+    .map(id => itemsByIdRef.current.get(id))
+    .filter(Boolean);
 
   const stopAutoScroll = useCallback(() => {
     const d = stateRef.current;
@@ -175,8 +173,6 @@ const StorageGrid = ({ items, onDelete, onReorder }) => {
       const d = stateRef.current;
 
       if (!d.active) {
-        // Пока не активен — считаем движение. Если двинули достаточно —
-        // отменяем таймер, это скролл.
         if (!d.timer) return;
         if (e.touches.length !== 1) return;
         const t = e.touches[0];
@@ -189,7 +185,6 @@ const StorageGrid = ({ items, onDelete, onReorder }) => {
         return;
       }
 
-      // Drag активен — блокируем скролл и обновляем ghost.
       if (e.cancelable) e.preventDefault();
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
