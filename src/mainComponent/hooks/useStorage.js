@@ -76,6 +76,22 @@ export const useStorage = ({ sendMessage, isAuth }) => {
   const reorder = useCallback((ids) => {
     if (!sendRef.current || !isAuthRef.current) return;
     if (!Array.isArray(ids) || ids.length === 0) return;
+
+    // [2.48.2] Оптимистично применяем новый порядок локально.
+    // Иначе между сбросом orderPreview в StorageGrid и ответом
+    // storage_reordered — окно, в котором карточки прыгают обратно.
+    setItems(prev => {
+      const map = new Map(prev.map(i => [i.id, i]));
+      const next = ids.map((id, idx) => {
+        const it = map.get(id);
+        return it ? { ...it, sortOrder: idx } : null;
+      }).filter(Boolean);
+      prev.forEach(i => {
+        if (!ids.includes(i.id)) next.push(i);
+      });
+      return next;
+    });
+
     sendRef.current({ type: 'storage_reorder', data: { ids } });
   }, []);
 
