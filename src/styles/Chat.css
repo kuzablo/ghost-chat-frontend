@@ -746,13 +746,15 @@ input[type="search"] {
   touch-action: manipulation;
   transition: border-color 0.22s ease, box-shadow 0.28s ease;
 
-  white-space: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
 
   min-height: 46px;
+  max-height: 120px;
   cursor: text;
 
   user-select: text;

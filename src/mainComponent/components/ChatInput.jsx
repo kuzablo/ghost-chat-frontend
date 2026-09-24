@@ -93,10 +93,7 @@ const ChatInput = forwardRef(({
     const el = e.currentTarget;
     let text = el.textContent || '';
 
-    if (text.includes('\n')) {
-      text = text.replace(/\n+/g, ' ').trim();
-      setText(text);
-    } else if (maxLength && text.length > maxLength) {
+    if (maxLength && text.length > maxLength) {
       text = text.slice(0, maxLength);
       setText(text);
     } else {

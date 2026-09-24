@@ -62,7 +62,7 @@ import '../styles/Chat.video.css';
 
 // fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
 // feat(video): кружки (v2.42.0)
-const VERSION = '2.42.12';
+const VERSION = '2.42.13';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1643,16 +1643,6 @@ const Chat = () => {
                 transition: inputDragY === 0 ? 'transform 0.2s ease-out' : 'none',
               }}
             >
-              <ChatInput
-                ref={inputRef}
-                value={input}
-                onChange={(text) => handleInputChange({ target: { value: text } })}
-                onSend={handleSendMessage}
-                disabled={!isAuth || isUploading}
-                placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
-                maxLength={2000}
-                onFocusChange={setInputFocused}
-              />
               <button
                 type="button"
                 className="input-icon-btn"
@@ -1684,6 +1674,16 @@ const Chat = () => {
                 onChange={handleFileUpload}
                 accept="image/*"
                 style={{ display: 'none' }}
+              />
+              <ChatInput
+                ref={inputRef}
+                value={input}
+                onChange={(text) => handleInputChange({ target: { value: text } })}
+                onSend={handleSendMessage}
+                disabled={!isAuth || isUploading}
+                placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
+                maxLength={2000}
+                onFocusChange={setInputFocused}
               />
               <InputActionButtons
                 active={inputActive}
