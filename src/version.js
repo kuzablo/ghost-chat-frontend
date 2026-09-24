@@ -5,4 +5,5 @@
 // [2.48.7] Маскот: фикс центр→панель, мгновенное скрытие в modalOpen, пауза RAF.
 // [2.48.8] Маскот: cancelFlight при modalOpen — без провисания.
 // [2.48.9] Маскот: panelMascotRef, замер rect до смены стейта.
-export const VERSION = '2.48.9';
+// [2.48.10] Маскот: поиск источника/цели через querySelector.
+export const VERSION = '2.48.10';

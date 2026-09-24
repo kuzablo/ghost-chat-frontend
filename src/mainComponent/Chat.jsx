@@ -511,7 +511,7 @@ const Chat = () => {
     sendReaction,
   });
 
-  useEffect(() => {
+   useEffect(() => {
     const hasUnread = unreadUserObjects.length > 0;
     const modalOpen = showDialogs || privateChat || !!profileTarget || storageOpen;
 
@@ -533,6 +533,12 @@ const Chat = () => {
       centerDismissedForCountRef.current === unreadUserObjects.length;
     const wantCenter = !showPlayers && hasUnread && !centerAlreadyShown;
 
+    // [2.48.10] Узлы ищем в DOM. querySelector надёжнее ref: класс
+    // .pm-orbit--header отличает панельную орбиту от центральной.
+    const findHeaderMascot = () => document.querySelector('.chat-header-logo');
+    const findCenterMascot = () => document.querySelector('.pm-orbit:not(.pm-orbit--header) .pm-orbit-mascot-wrap');
+    const findPanelMascot = () => document.querySelector('.pm-orbit--header .pm-orbit-mascot-wrap');
+
     const measure = (el) => {
       if (!el) return null;
       const r = el.getBoundingClientRect();
@@ -540,18 +546,24 @@ const Chat = () => {
       return { left: r.left, top: r.top, width: r.width, height: r.height };
     };
 
+    const fromElFor = (place) => {
+      if (place === 'header') return findHeaderMascot();
+      if (place === 'center') return findCenterMascot();
+      if (place === 'panel') return findPanelMascot();
+      return null;
+    };
+
     if (wantPanel && mascotPlace !== 'panel') {
-      const fromEl = mascotPlace === 'header'
-        ? headerMascotRef.current
-        : centerMascotRef.current;
-      const fromRect = measure(fromEl);
+      const fromRect = measure(fromElFor(mascotPlace));
       const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
 
       setMascotPlace('panel');
       requestAnimationFrame(() => {
+        const toEl = findPanelMascot();
+        if (!toEl) return;
         startMascotFlight({
           fromRect,
-          toRef: panelOrbitRef,
+          toRef: { current: toEl },
           toSize: size,
         });
       });
@@ -559,18 +571,15 @@ const Chat = () => {
     }
 
     if (wantCenter && mascotPlace !== 'center') {
-      const fromEl = mascotPlace === 'header'
-        ? headerMascotRef.current
-        : mascotPlace === 'panel'
-          ? panelOrbitRef.current
-          : null;
-      const fromRect = measure(fromEl);
+      const fromRect = measure(fromElFor(mascotPlace));
 
       setMascotPlace('center');
       requestAnimationFrame(() => {
+        const toEl = findCenterMascot();
+        if (!toEl) return;
         startMascotFlight({
           fromRect,
-          toRef: centerMascotRef,
+          toRef: { current: toEl },
           toSize: MASCOT_SIZE_CENTER,
         });
       });
@@ -578,16 +587,14 @@ const Chat = () => {
     }
 
     if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
-      const fromEl = mascotPlace === 'panel'
-        ? panelOrbitRef.current
-        : centerMascotRef.current;
-      const fromRect = measure(fromEl);
+      const fromRect = measure(fromElFor(mascotPlace));
+      const toEl = findHeaderMascot();
 
       setMascotPlace('header');
       requestAnimationFrame(() => {
         startMascotFlight({
           fromRect,
-          reverse: true,
+          toRef: { current: toEl },
         });
       });
     }
