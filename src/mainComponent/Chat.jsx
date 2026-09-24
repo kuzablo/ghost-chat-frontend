@@ -8,6 +8,7 @@ import InfoPanel from './components/InfoPanel';
 import DialogsPanel from './components/DialogsPanel';
 import ConfirmModal from './components/ConfirmModal';
 import ChatInput from './components/ChatInput';
+import InputActionButtons from './components/InputActionButtons';
 import NotificationPermissionModal from './components/NotificationPermissionModal';
 import ProfilePanel from './components/ProfilePanel';
 import FriendshipRitual from './components/FriendshipRitual';
@@ -40,7 +41,9 @@ import { useMascotFlight } from './hooks/useMascotFlight';
 import InstallPwaBanner from './components/InstallPwaBanner';
 import InstallPwaBannerAndroid from './components/InstallPwaBannerAndroid';
 import VoiceRecordingOverlay from './components/VoiceRecordingOverlay';
+import VideoRecordingOverlay from './components/VideoRecordingOverlay';
 import { useVoiceRecorder, extFromMime } from './hooks/useVoiceRecorder';
+import { useVideoRecorder, extFromVideoMime } from './hooks/useVideoRecorder';
 
 import '../styles/Chat.css';
 import '../styles/Chat.image.css';
@@ -58,24 +61,18 @@ import '../styles/Chat.roompulse.css';
 import '../styles/Chat.instagram.css';
 import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
+import '../styles/Chat.input.css';
+import '../styles/Chat.video.css';
 
+// feat(video): кружки, InputActionButtons mic+cam↔send (v2.42.0)
 // feat(stickers): избранные стикеры (v2.41.0)
 // fix(mascot): обводки, цикл 8с, мгновенный возврат при модалке (v2.39.5)
 // feat(mascot): три места, полёт шапка ↔ панель ↔ центр (v2.39.4)
-// fix(mascot): mascotPlace как state, удаление летающего через RAF (v2.39.2)
-// feat(mascot): маскот летит в шапку PlayersPanel (v2.39.0)
-// feat(mascot): двусторонний полёт + fallback на центр (v2.38.1)
 // refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
-// refactor(gestures): вынес useCapsuleGestures из Chat.jsx (v2.37.5)
-// refactor(gestures): вынес useMascotGestures из Chat.jsx (v2.37.4)
 // feat(update): авто-обновление фронта через version.json (v2.37.0)
-// fix(reactions): единый таймер автоскрытия (v2.36.7)
-// feat(reactions): fullscreen использует общий ReactionWheel (v2.36.4)
 // feat(voice): оверлей записи с маскотом (v2.35.58)
 // feat(voice): запись, отправка, плеер (v2.35.57)
-// fix(reactions): + сбрасывает таймер автоскрытия (v2.35.56)
-// feat(reactions): радиальный пикер — орбиты вокруг точки тапа (v2.35.52)
-const VERSION = '2.41.0';
+const VERSION = '2.42.0';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -83,7 +80,6 @@ const NOTIF_SNOOZE_MS = 24 * 60 * 60 * 1000;
 const VAPID_PUBLIC_KEY = 'BJVBCXRoQMBcgEAIrgMo8Wrs7wG_jCjriBY6yS7EkST7EyOhB7ohpMrbujcLtUPjAo7GcKB0Z7Jin-5Uj450muo';
 const UPDATE_DEFER_MS = 10 * 60 * 1000;
 const TOAST_LIFETIME_MS = 8000;
-// [2.39.5] Размеры маскота на трёх «остановках».
 const MASCOT_SIZE_PANEL_SOLO = 72;
 const MASCOT_SIZE_PANEL_ORBIT = 41;
 const MASCOT_SIZE_CENTER = 82;
@@ -99,62 +95,16 @@ const urlBase64ToUint8Array = (base64String) => {
 
 const ThemeIcon = () => (
   <span className="theme-icon" aria-hidden="true">
-    <svg
-      className="theme-icon-sun"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg className="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
     </svg>
-    <svg
-      className="theme-icon-moon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg className="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   </span>
 );
 
-const StickerIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h7l7-7V6a3 3 0 0 0-3-3z" />
-    <path d="M13 21v-5a3 3 0 0 1 3-3h5" />
-  </svg>
-);
-
-const ClipIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-  </svg>
-);
-
-// [2.37.2] Одноразовый маркер.
 let __chatRenderStartLogged = false;
 
 const Chat = () => {
@@ -203,6 +153,8 @@ const Chat = () => {
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [voiceRecActive, setVoiceRecActive] = useState(false);
   const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
+  const [videoRecActive, setVideoRecActive] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
   const voiceLongPressTimerRef = useRef(null);
   const voiceStartXRef = useRef(0);
 
@@ -217,7 +169,6 @@ const Chat = () => {
   const playersOverlayRef = useRef(null);
   const playersBtnRef = useRef(null);
   const mobilePlayersBtnRef = useRef(null);
-  // [2.39.5] Полёт маскота: три ref-цели.
   const headerMascotRef = useRef(null);
   const panelOrbitRef = useRef(null);
   const centerMascotRef = useRef(null);
@@ -255,18 +206,20 @@ const Chat = () => {
     duration: 700,
   });
 
-  // [2.39.5] Где сейчас маскот: 'header' | 'panel' | 'center'. State, не ref.
   const [mascotPlace, setMascotPlace] = useState('header');
-
-  // [2.39.5] Для какого количества непрочитанных тост в центре уже показан
-  // и истёк. Пока счётчик не изменится — в центр больше не летим.
   const centerDismissedForCountRef = useRef(null);
 
   const sendVoiceMessageRef = useRef(null);
+  const sendVideoMessageRef = useRef(null);
 
   const voiceRec = useVoiceRecorder({
     maxDurationSec: 60,
     onAutoStop: () => { sendVoiceMessageRef.current?.(); },
+  });
+
+  const videoRec = useVideoRecorder({
+    maxDurationSec: 60,
+    onAutoStop: () => { sendVideoMessageRef.current?.(); },
   });
 
   const subscribeToPush = useCallback(async () => {
@@ -529,8 +482,6 @@ const Chat = () => {
     sendReaction,
   });
 
-  // [2.39.5] Один управляющий эффект для полёта.
-  // Приоритеты: modal > панель > центр > шапка.
   useEffect(() => {
     if (mascotFlying) return;
 
@@ -542,13 +493,11 @@ const Chat = () => {
     const wantCenter =
       !showPlayers && !modalOpen && hasUnread && !centerAlreadyShown;
 
-    // Модалка (dialogs/private) открыта → мгновенно в шапку, без полёта.
     if (modalOpen) {
       if (mascotPlace !== 'header') setMascotPlace('header');
       return;
     }
 
-    // Хотим в панель.
     if (wantPanel && mascotPlace !== 'panel') {
       setMascotPlace('panel');
       const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
@@ -560,7 +509,6 @@ const Chat = () => {
       return;
     }
 
-    // Хотим в центр.
     if (wantCenter && mascotPlace !== 'center') {
       setMascotPlace('center');
       if (mascotPlace === 'header') {
@@ -571,7 +519,6 @@ const Chat = () => {
       return;
     }
 
-    // Возврат в шапку с полётом.
     if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
       setMascotPlace('header');
       startMascotFlight({ reverse: true });
@@ -586,9 +533,6 @@ const Chat = () => {
     startMascotFlight,
   ]);
 
-  // [2.39.5] Таймер возврата из центра — 8с. По истечении помечаем счётчик
-  // как «уже показано» — в центр для этого же количества непрочитанных
-  // больше не полетим.
   useEffect(() => {
     if (mascotPlace !== 'center') return;
     const t = setTimeout(() => {
@@ -599,8 +543,6 @@ const Chat = () => {
     return () => clearTimeout(t);
   }, [mascotPlace, unreadUserObjects.length, startMascotFlight]);
 
-  // [2.39.5] Если количество непрочитанных изменилось — сбрасываем «уже
-  // показано», чтобы новый тост мог появиться.
   useEffect(() => {
     if (centerDismissedForCountRef.current !== null
         && centerDismissedForCountRef.current !== unreadUserObjects.length) {
@@ -631,17 +573,9 @@ const Chat = () => {
     };
   }, []);
 
-  useEffect(() => {
-    showPlayersRef.current = showPlayers;
-  }, [showPlayers]);
-
-  useEffect(() => {
-    showInfoRef.current = showInfo;
-  }, [showInfo]);
-
-  useEffect(() => {
-    showDialogsRef.current = showDialogs;
-  }, [showDialogs]);
+  useEffect(() => { showPlayersRef.current = showPlayers; }, [showPlayers]);
+  useEffect(() => { showInfoRef.current = showInfo; }, [showInfo]);
+  useEffect(() => { showDialogsRef.current = showDialogs; }, [showDialogs]);
 
   const handleWebSocketMessage = useCallback((msg) => {
     console.log('📩 Входящее сообщение:', msg.type, msg.data);
@@ -669,9 +603,7 @@ const Chat = () => {
     }
   }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
 
-  useEffect(() => {
-    setIsConnected(wsConnected);
-  }, [wsConnected]);
+  useEffect(() => { setIsConnected(wsConnected); }, [wsConnected]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.__ready) return;
@@ -1073,6 +1005,9 @@ const Chat = () => {
           voiceUrl: forwardData.voiceUrl || null,
           voiceDuration: forwardData.voiceDuration || null,
           voiceWaveform: forwardData.voiceWaveform || null,
+          videoUrl: forwardData.videoUrl || null,
+          videoDuration: forwardData.videoDuration || null,
+          videoMime: forwardData.videoMime || null,
           forwardedFrom: forwardData.forwardedFrom,
         },
       });
@@ -1087,15 +1022,15 @@ const Chat = () => {
           voiceUrl: forwardData.voiceUrl || null,
           voiceDuration: forwardData.voiceDuration || null,
           voiceWaveform: forwardData.voiceWaveform || null,
+          videoUrl: forwardData.videoUrl || null,
+          videoDuration: forwardData.videoDuration || null,
+          videoMime: forwardData.videoMime || null,
           forwardedFrom: forwardData.forwardedFrom,
         },
       });
     }
     setForwardData(null);
   }, [forwardData, sendMessage]);
-
-  const sendText = 'ОТПРАВИТЬ';
-  const sendChars = sendText.split('');
 
   const INPUT_DRAG_THRESHOLD = 40;
 
@@ -1206,7 +1141,59 @@ const Chat = () => {
     stopVoicePressTimer();
   }, [stopVoicePressTimer]);
 
-  // ===== /VOICE =====
+  // ===== VIDEO =====
+
+  const uploadAndSendVideo = useCallback(async (result) => {
+    if (!result) return;
+    const fd = new FormData();
+    const ext = extFromVideoMime(result.mime);
+    fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
+    try {
+      const res = await fetch(`${API_URL}/api/upload-video`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      sendMessage({
+        type: 'message',
+        data: {
+          text: '',
+          videoUrl: data.videoUrl,
+          videoDuration: result.duration,
+          videoMime: result.mime,
+        },
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки видео:', err);
+      setErrorMessage('Не удалось отправить видео');
+      setTimeout(() => setErrorMessage(''), 4000);
+    }
+  }, [sendMessage, setErrorMessage]);
+
+  const handleCameraClick = useCallback(async () => {
+    if (isUploading || !isAuth) return;
+    const ok = await videoRec.start();
+    if (ok) setVideoRecActive(true);
+  }, [isUploading, isAuth, videoRec]);
+
+  const finalizeVideo = useCallback(async () => {
+    if (!videoRecActive) return;
+    const result = await videoRec.stop();
+    setVideoRecActive(false);
+    if (result) await uploadAndSendVideo(result);
+  }, [videoRecActive, videoRec, uploadAndSendVideo]);
+
+  const sendVideoNow = useCallback(async () => { await finalizeVideo(); }, [finalizeVideo]);
+  const cancelVideoNow = useCallback(async () => {
+    videoRec.cancel();
+    await videoRec.stop();
+    setVideoRecActive(false);
+  }, [videoRec]);
+
+  sendVideoMessageRef.current = () => {
+    if (!videoRecActive) return;
+    sendVideoNow();
+  };
+
+  // ===== /VOICE /VIDEO =====
 
   const handleNotifAllow = async () => {
     try {
@@ -1304,6 +1291,7 @@ const Chat = () => {
   const isBusyForReload =
     !!fullscreenImage ||
     voiceRecActive ||
+    videoRecActive ||
     sending ||
     isUploading ||
     !isAuth ||
@@ -1323,8 +1311,10 @@ const Chat = () => {
     !updateDeferred &&
     !isBusyForReload;
 
-  // [2.39.5] Маскот в шапке скрыт, если летит или уже не в шапке.
   const hideHeaderMascot = mascotFlying || mascotPlace !== 'header';
+
+  const myAvatarUrl = myId ? (avatarCache[myId] || null) : null;
+  const inputActive = !!input.trim() || inputFocused || showMobileInput;
 
   return (
     <>
@@ -1454,6 +1444,7 @@ const Chat = () => {
           avatarUrl={avatarCache[privateChat.userId] || null}
           favoriteStickers={favoriteStickers}
           onToggleFavorite={toggleFavoriteSticker}
+          myAvatarUrl={myAvatarUrl}
         />
       )}
 
@@ -1640,7 +1631,7 @@ const Chat = () => {
             </div>
           )}
 
-          {voiceRecActive ? (
+          {(voiceRecActive || videoRecActive) ? (
             <div className="input-row input-row--voice-placeholder" aria-hidden="true" />
           ) : (
             <div
@@ -1661,6 +1652,7 @@ const Chat = () => {
                 disabled={!isAuth || isUploading}
                 placeholder={isUploading ? 'Загрузка фото...' : 'Сообщение'}
                 maxLength={2000}
+                onFocusChange={setInputFocused}
               />
               <button
                 type="button"
@@ -1670,7 +1662,10 @@ const Chat = () => {
                 title="Стикеры"
                 aria-label="Стикеры"
               >
-                <StickerIcon />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h7l7-7V6a3 3 0 0 0-3-3z" />
+                  <path d="M13 21v-5a3 3 0 0 1 3-3h5" />
+                </svg>
               </button>
               <button
                 type="button"
@@ -1680,7 +1675,9 @@ const Chat = () => {
                 title="Прикрепить фото"
                 aria-label="Прикрепить фото"
               >
-                <ClipIcon />
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
               </button>
               <input
                 type="file"
@@ -1689,35 +1686,15 @@ const Chat = () => {
                 accept="image/*"
                 style={{ display: 'none' }}
               />
-              <button
-                className={`send-btn ${sending ? 'sending' : ''}`}
-                onClick={input.trim() ? handleSendMessage : undefined}
-                onPointerDown={handleVoicePointerDown}
-                onPointerUp={handleVoicePointerUp}
-                onPointerCancel={handleVoicePointerUp}
-                disabled={!isAuth || isUploading || sending}
-                title={input.trim() ? 'Отправить' : 'Удерживай для записи'}
-              >
-                <div className="rotating-text">
-                  {sendChars.map((char, idx) => {
-                    const angle = (360 / sendChars.length) * idx;
-                    return (
-                      <span
-                        key={idx}
-                        style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}
-                      >
-                        {char}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="send-icon">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                  </svg>
-                </div>
-                <div className="send-spinner" />
-              </button>
+              <InputActionButtons
+                active={inputActive}
+                disabled={!isAuth || isUploading}
+                sending={sending}
+                onSend={handleSendMessage}
+                onVoicePointerDown={handleVoicePointerDown}
+                onVoicePointerUp={handleVoicePointerUp}
+                onCameraClick={handleCameraClick}
+              />
             </div>
           )}
 
@@ -1789,10 +1766,22 @@ const Chat = () => {
         level={voiceRec.level}
         paused={voiceRec.paused}
         frozen={voiceRecFrozen}
+        avatarUrl={myAvatarUrl}
         onPause={voiceRec.pause}
         onResume={voiceRec.resume}
         onSend={sendVoiceNow}
         onCancel={cancelVoiceNow}
+      />
+
+      <VideoRecordingOverlay
+        open={videoRecActive}
+        stream={videoRec.stream}
+        duration={videoRec.duration}
+        facing={videoRec.facing}
+        frozen={false}
+        onSwitchCamera={videoRec.switchCamera}
+        onSend={sendVideoNow}
+        onCancel={cancelVideoNow}
       />
 
       {!isAuth && (
@@ -1811,8 +1800,6 @@ const Chat = () => {
         />
       )}
 
-      {/* [2.39.4] PrivateMessageToasts всегда в DOM — ref на маскота валиден
-          для полёта. Видимость через проп visible. */}
       <PrivateMessageToasts
         users={unreadUserObjects}
         visible={mascotPlace === 'center' && !mascotFlying}
