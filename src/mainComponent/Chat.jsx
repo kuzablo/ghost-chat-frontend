@@ -792,6 +792,11 @@ const Chat = () => {
         return;
       }
 
+      if (target && target.closest && target.closest('.sticker-menu-overlay')) {
+        swipeDirectionRef.current = null;
+        return;
+      }
+
       if (target && target.closest && (
         target.closest('.profile-panel') ||
         target.closest('.profile-overlay') ||
