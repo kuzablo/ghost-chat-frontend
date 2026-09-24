@@ -291,3 +291,195 @@ body.dark .video-rec-info-tip {
     padding: 5px 10px;
   }
 }
+
+/* ============================================================= */
+/* [2.42.0] VideoMessage — плеер-квадрат в сообщении              */
+/* ============================================================= */
+
+.video-msg {
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.video-msg-square {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid var(--msg-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  touch-action: manipulation;
+}
+
+body.dark .video-msg-square {
+  border-color: var(--msg-border);
+}
+
+.video-msg-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  cursor: pointer;
+}
+
+.video-msg-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #FFF;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s, background 0.15s;
+  z-index: 3;
+}
+
+.video-msg-play svg { width: 26px; height: 26px; margin-left: 3px; }
+.video-msg-play:active { transform: translate(-50%, -50%) scale(0.9); }
+
+.video-msg-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  z-index: 4;
+}
+
+.video-msg-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #FFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+}
+
+.video-msg-btn svg { width: 16px; height: 16px; }
+.video-msg-btn:active {
+  transform: scale(0.9);
+  background: rgba(0, 0, 0, 0.75);
+}
+
+/* Fullscreen оверлей */
+.video-msg-fs {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: videoMsgFsIn 0.18s ease-out;
+  touch-action: none;
+}
+
+@keyframes videoMsgFsIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.video-msg-fs-video {
+  max-width: 96vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000;
+}
+
+.video-msg-fs-close {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #FFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+  z-index: 2;
+}
+
+.video-msg-fs-close svg { width: 20px; height: 20px; }
+.video-msg-fs-close:active { transform: scale(0.9); }
+
+/* Мобильная адаптация */
+@media (max-width: 600px) {
+  .video-msg-square {
+    width: 180px;
+    height: 180px;
+  }
+  .video-msg-play { width: 48px; height: 48px; }
+  .video-msg-play svg { width: 22px; height: 22px; }
+  .video-msg-btn { width: 28px; height: 28px; }
+  .video-msg-btn svg { width: 14px; height: 14px; }
+}
+
+/* ============================================================= */
+/* [2.42.0] Универсальная обводка удержания (250мс) для gif/video */
+/* ============================================================= */
+
+@property --hold-p {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.hold-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 5;
+  padding: 3px;
+  background: conic-gradient(
+    from -90deg,
+    var(--ring-color) 0deg,
+    var(--ring-color) var(--hold-p),
+    var(--ring-color-faded) var(--hold-p),
+    var(--ring-color-faded) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: holdRingFill 250ms linear forwards;
+}
+
+@keyframes holdRingFill {
+  from { --hold-p: 0deg; }
+  to   { --hold-p: 360deg; }
+}
