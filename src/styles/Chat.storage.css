@@ -649,6 +649,9 @@ body.dark .storage-toast-icon {
   min-width: 0;
   min-height: 0;
   transition: transform 0.18s ease;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 .storage-grid-item--dragging {
