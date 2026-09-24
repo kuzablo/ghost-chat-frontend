@@ -1,192 +1,136 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
-  [2.42.0] Плеер видео-кружка. Квадрат как gif-стикер.
-           Кнопки: play/pause, mute/unmute, fullscreen.
-           Тап по телу — пропускаем наверх (родитель откроет реакции).
+  [2.42.5] Плеер голосового. Один играет за раз (module singleton).
+           Waveform — клик/тап по дорожке = перемотка.
 */
 
-let currentlyPlayingVideo = null;
+let currentlyPlaying = null;
 
-const Icon = {
-  Play: () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M8 5v14l11-7z" />
-    </svg>
-  ),
-  Pause: () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <rect x="6" y="5" width="4" height="14" rx="1" />
-      <rect x="14" y="5" width="4" height="14" rx="1" />
-    </svg>
-  ),
-  Mute: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M11 5L6 9H3v6h3l5 4V5z" />
-      <line x1="22" y1="9" x2="16" y2="15" />
-      <line x1="16" y1="9" x2="22" y2="15" />
-    </svg>
-  ),
-  Sound: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M11 5L6 9H3v6h3l5 4V5z" />
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-    </svg>
-  ),
-  Fullscreen: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-      <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-      <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-      <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-    </svg>
-  ),
-  Close: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
-         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="6" y1="6" x2="18" y2="18" />
-      <line x1="18" y1="6" x2="6" y2="18" />
-    </svg>
-  ),
+const fmt = (s) => {
+  const v = Math.max(0, Math.floor(s));
+  const m = Math.floor(v / 60);
+  const ss = String(v % 60).padStart(2, '0');
+  return `${m}:${ss}`;
 };
 
-const VideoMessage = ({ url, isOwn = false }) => {
-  const videoRef = useRef(null);
+const VoiceMessage = ({
+  url,
+  duration = 0,
+  waveform = [],
+  isOwn = false,
+}) => {
+  const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
-  const [fsOpen, setFsOpen] = useState(false);
+  const [current, setCurrent] = useState(0);
 
-  // остановка при размонтировании
+  const bars = Array.isArray(waveform) && waveform.length > 0
+    ? waveform
+    : Array(40).fill(0.35);
+
   useEffect(() => {
-    const v = videoRef.current;
-    return () => {
-      if (!v) return;
-      try { v.pause(); } catch { /* noop */ }
-      if (currentlyPlayingVideo === v) currentlyPlayingVideo = null;
+    const a = audioRef.current;
+    if (!a) return;
+
+    const onTime = () => setCurrent(a.currentTime || 0);
+    const onEnd = () => {
+      setPlaying(false);
+      setCurrent(0);
+      if (currentlyPlaying === a) currentlyPlaying = null;
     };
-  }, []);
-
-  // пауза при открытии fullscreen — маленький плеер не должен играть в фоне
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (fsOpen) {
-      try { v.pause(); } catch { /* noop */ }
+    const onStopped = () => {
       setPlaying(false);
-    }
-  }, [fsOpen]);
+      setCurrent(0);
+    };
 
-  const handlePlayToggle = (e) => {
-    e.stopPropagation();
-    const v = videoRef.current;
-    if (!v) return;
-    if (playing) {
-      try { v.pause(); } catch { /* noop */ }
-      setPlaying(false);
-      if (currentlyPlayingVideo === v) currentlyPlayingVideo = null;
-    } else {
-      if (currentlyPlayingVideo && currentlyPlayingVideo !== v) {
-        try { currentlyPlayingVideo.pause(); } catch { /* noop */ }
+    a.addEventListener('timeupdate', onTime);
+    a.addEventListener('ended', onEnd);
+    a.addEventListener('voice-stopped', onStopped);
+
+    return () => {
+      a.removeEventListener('timeupdate', onTime);
+      a.removeEventListener('ended', onEnd);
+      a.removeEventListener('voice-stopped', onStopped);
+      if (currentlyPlaying === a) {
+        try { a.pause(); } catch { /* noop */ }
+        currentlyPlaying = null;
       }
-      currentlyPlayingVideo = v;
-      v.play().then(() => setPlaying(true)).catch(() => { /* noop */ });
+    };
+  }, [url]);
+
+  const play = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (currentlyPlaying && currentlyPlaying !== a) {
+      try { currentlyPlaying.pause(); } catch { /* noop */ }
+      currentlyPlaying.currentTime = 0;
+      currentlyPlaying.dispatchEvent(new Event('voice-stopped'));
     }
+    currentlyPlaying = a;
+    a.play().catch(() => setPlaying(false));
+    setPlaying(true);
   };
 
-  const handleMuteToggle = (e) => {
-    e.stopPropagation();
-    const v = videoRef.current;
-    if (!v) return;
-    const next = !muted;
-    v.muted = next;
-    setMuted(next);
+  const pause = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.pause();
+    setPlaying(false);
+    if (currentlyPlaying === a) currentlyPlaying = null;
   };
 
-  const handleOpenFs = (e) => {
-    e.stopPropagation();
-    setFsOpen(true);
+  const onWaveClick = (e) => {
+    const a = audioRef.current;
+    if (!a) return;
+    const total = duration > 0 ? duration : (a.duration || 0);
+    if (!total) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    try { a.currentTime = ratio * total; } catch { /* noop */ }
+    setCurrent(ratio * total);
   };
 
-  const handleCloseFs = (e) => {
-    e.stopPropagation();
-    setFsOpen(false);
-  };
+  const total = duration > 0 ? duration : 0;
+  const progress = total > 0 ? Math.min(1, current / total) : 0;
+  const activeBars = Math.floor(progress * bars.length);
 
   return (
-    <>
-      <div className={`video-msg ${isOwn ? 'video-msg--own' : ''}`}>
-        <div className="video-msg-square">
-          <video
-            ref={videoRef}
-            src={url}
-            className="video-msg-video"
-            playsInline
-            preload="metadata"
-            muted={muted}
-            onClick={handlePlayToggle}
+    <div className={`voice-msg ${isOwn ? 'voice-msg--own' : ''} ${playing ? 'voice-msg--playing' : ''}`}>
+      <button
+        type="button"
+        className="voice-msg-play"
+        onClick={(e) => { e.stopPropagation(); playing ? pause() : play(); }}
+        aria-label={playing ? 'Пауза' : 'Играть'}
+      >
+        {playing ? (
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="5" width="4" height="14" rx="1" />
+            <rect x="14" y="5" width="4" height="14" rx="1" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+      </button>
+
+      <div className="voice-msg-wave" onClick={onWaveClick}>
+        {bars.map((v, i) => (
+          <span
+            key={i}
+            className={`voice-msg-bar ${i < activeBars ? 'voice-msg-bar--active' : ''}`}
+            style={{ height: `${22 + Math.round(v * 78)}%` }}
           />
-
-          {!playing && (
-            <button
-              type="button"
-              className="video-msg-play"
-              onClick={handlePlayToggle}
-              aria-label="Воспроизвести"
-            >
-              <Icon.Play />
-            </button>
-          )}
-
-          <div className="video-msg-controls">
-            <button
-              type="button"
-              className="video-msg-btn"
-              onClick={handleMuteToggle}
-              aria-label={muted ? 'Включить звук' : 'Выключить звук'}
-              title={muted ? 'Включить звук' : 'Выключить звук'}
-            >
-              {muted ? <Icon.Mute /> : <Icon.Sound />}
-            </button>
-            <button
-              type="button"
-              className="video-msg-btn"
-              onClick={handleOpenFs}
-              aria-label="На весь экран"
-              title="На весь экран"
-            >
-              <Icon.Fullscreen />
-            </button>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {fsOpen && (
-        <div className="video-msg-fs" onClick={handleCloseFs}>
-          <button
-            type="button"
-            className="video-msg-fs-close"
-            onClick={handleCloseFs}
-            aria-label="Закрыть"
-          >
-            <Icon.Close />
-          </button>
-          <video
-            src={url}
-            className="video-msg-fs-video"
-            autoPlay
-            playsInline
-            controls
-            muted={muted}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
-    </>
+      <span className="voice-msg-time">
+        {playing || current > 0 ? fmt(current) : fmt(total)}
+      </span>
+
+      <audio ref={audioRef} src={url} preload="metadata" />
+    </div>
   );
 };
 
-export default VideoMessage;
+export default VoiceMessage;
