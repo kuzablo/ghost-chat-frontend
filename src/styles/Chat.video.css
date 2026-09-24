@@ -665,11 +665,26 @@ body.dark .msg-video-reaction-count {
 
 /* Fullscreen */
 
-.fs-bottombar-right {
+/* [2.47.3] Fullscreen видео — column: реакции сверху, кнопки снизу.
+   Не перекрываются. */
+.fs-video-bottombar {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fs-video-bottombar .fs-reactions-strip {
+  max-width: 100%;
+  justify-content: flex-start;
+  padding-bottom: 0;
+}
+
+.fs-video-bottombar-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  margin-left: auto;
+  justify-content: flex-end;
 }
 
 .fs-reaction-toggle svg {

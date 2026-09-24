@@ -248,7 +248,7 @@ const VideoMessage = ({
           onClick={closeFs}
           aria-label="Закрыть"
         >
-          <Icon.Close />
+          ✕
         </button>
       </div>
 
@@ -277,7 +277,7 @@ const VideoMessage = ({
         )}
       </div>
 
-      <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
+      <div className="fs-bottombar fs-video-bottombar" onClick={(e) => e.stopPropagation()}>
         {reactionEntries.length > 0 && (
           <div className="fs-reactions-strip">
             {reactionEntries.map(([emoji, users]) => (
@@ -293,7 +293,7 @@ const VideoMessage = ({
             ))}
           </div>
         )}
-        <div className="fs-bottombar-right">
+        <div className="fs-video-bottombar-actions">
           <button
             type="button"
             className="fs-reaction-toggle"
