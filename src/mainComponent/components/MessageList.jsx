@@ -551,7 +551,7 @@ const MessageList = ({
                       <span className="msg-nick">{m.nickname}</span>
                       <span className="msg-time">{formatMessageDate(m.time)}</span>
                     </div>
-                    <VideoMessage url={m.videoUrl} isOwn={isOwn} />
+                    <VideoMessage url={m.videoUrl} isOwn={isOwn} createdAt={m.time} />
                   </div>
                 </div>
               </React.Fragment>

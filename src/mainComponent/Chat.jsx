@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { VERSION } from '../version'; 
+import { VERSION } from '../version';
 import PrivateChat from './components/PrivateChat';
 import PlayersPanel from './components/PlayersPanel';
 import AuthModal from './components/AuthModal';
@@ -19,6 +19,7 @@ import PrivateMessageToasts from './components/PrivateMessageToasts';
 import ForwardPickerModal from './components/ForwardPickerModal';
 import ReactionWheel from './components/ReactionWheel';
 import UpdateToast from './components/UpdateToast';
+import SendingIndicator from './components/SendingIndicator';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import { getAvatarColor, getInitial, formatMessageDate } from './utils';
@@ -60,6 +61,7 @@ import '../styles/Chat.toasts.css';
 import '../styles/Chat.update.css';
 import '../styles/Chat.input.css';
 import '../styles/Chat.video.css';
+import '../styles/Chat.sending.css';
 
 // [2.42.14] VERSION импортируется из ../version — единый источник.
 // fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
@@ -145,6 +147,8 @@ const Chat = () => {
   const [voiceRecActive, setVoiceRecActive] = useState(false);
   const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
   const [videoRecActive, setVideoRecActive] = useState(false);
+  const [voiceUploading, setVoiceUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
 
   const permGrantedRef = useRef(false);
@@ -534,7 +538,7 @@ const Chat = () => {
 
   useEffect(() => {
     if (centerDismissedForCountRef.current !== null
-        && centerDismissedForCountRef.current !== unreadUserObjects.length) {
+      && centerDismissedForCountRef.current !== unreadUserObjects.length) {
       centerDismissedForCountRef.current = null;
     }
   }, [unreadUserObjects.length]);
@@ -1061,30 +1065,33 @@ const Chat = () => {
 
   // ===== VOICE =====
 
-  const uploadAndSendVoice = useCallback(async (result) => {
-    if (!result) return;
-    const fd = new FormData();
-    const ext = extFromMime(result.mime);
-    fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
-    try {
-      const res = await fetch(`${API_URL}/api/upload-voice`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      sendMessage({
-        type: 'message',
-        data: {
-          text: '',
-          voiceUrl: data.voiceUrl,
-          voiceDuration: result.duration,
-          voiceWaveform: result.waveform,
-        },
-      });
-    } catch (err) {
-      console.error('Ошибка загрузки голосового:', err);
-      setErrorMessage('Не удалось отправить голосовое');
-      setTimeout(() => setErrorMessage(''), 4000);
-    }
-  }, [sendMessage, setErrorMessage]);
+const uploadAndSendVoice = useCallback(async (result) => {
+  if (!result) return;
+  setVoiceUploading(true);
+  const fd = new FormData();
+  const ext = extFromMime(result.mime);
+  fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
+  try {
+    const res = await fetch(`${API_URL}/api/upload-voice`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    sendMessage({
+      type: 'message',
+      data: {
+        text: '',
+        voiceUrl: data.voiceUrl,
+        voiceDuration: result.duration,
+        voiceWaveform: result.waveform,
+      },
+    });
+  } catch (err) {
+    console.error('Ошибка загрузки голосового:', err);
+    setErrorMessage('Не удалось отправить голосовое');
+    setTimeout(() => setErrorMessage(''), 4000);
+  } finally {
+    setVoiceUploading(false);
+  }
+}, [sendMessage, setErrorMessage]);
 
   const cancelVoice = useCallback(async () => {
     voiceRec.cancel();
@@ -1129,30 +1136,30 @@ const Chat = () => {
 
   // ===== VIDEO =====
 
-  const uploadAndSendVideo = useCallback(async (result) => {
-    if (!result) return;
-    const fd = new FormData();
-    const ext = extFromVideoMime(result.mime);
-    fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
-    try {
-      const res = await fetch(`${API_URL}/api/upload-video`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      sendMessage({
-        type: 'message',
-        data: {
-          text: '',
-          videoUrl: data.videoUrl,
-          videoDuration: result.duration,
-          videoMime: result.mime,
-        },
-      });
-    } catch (err) {
-      console.error('Ошибка загрузки видео:', err);
-      setErrorMessage('Не удалось отправить видео');
-      setTimeout(() => setErrorMessage(''), 4000);
-    }
-  }, [sendMessage, setErrorMessage]);
+const uploadAndSendVideo = useCallback(async (result) => {
+  if (!result) return;
+  const fd = new FormData();
+  const ext = extFromVideoMime(result.mime);
+  fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
+  try {
+    const res = await fetch(`${API_URL}/api/upload-video`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    sendMessage({
+      type: 'message',
+      data: {
+        text: '',
+        videoUrl: data.videoUrl,
+        videoDuration: result.duration,
+        videoMime: result.mime,
+      },
+    });
+  } catch (err) {
+    console.error('Ошибка загрузки видео:', err);
+    setErrorMessage('Не удалось отправить видео');
+    setTimeout(() => setErrorMessage(''), 4000);
+  }
+}, [sendMessage, setErrorMessage]);
 
   const handleCameraClick = useCallback(async () => {
     console.log('[CLICK] camera button pressed');
@@ -1315,6 +1322,15 @@ const Chat = () => {
   const inputActive = !!input.trim() || inputFocused;
 
   console.log('[RENDER] voiceRecActive=', voiceRecActive, 'videoRecActive=', videoRecActive);
+
+  const isBusySending = isUploading || voiceUploading || videoUploading;
+  const sendingLabel = voiceUploading
+    ? 'Отправляем голосовое'
+    : videoUploading
+      ? 'Отправляем видео'
+      : isUploading
+        ? 'Отправляем фото'
+        : 'Отправка';
 
   return (
     <>
@@ -1631,8 +1647,8 @@ const Chat = () => {
             </div>
           )}
 
-          {false ? (
-            <div className="input-row input-row--voice-placeholder" aria-hidden="true" />
+          {isBusySending ? (
+            <SendingIndicator label={sendingLabel} />
           ) : (
             <div
               className="input-row"

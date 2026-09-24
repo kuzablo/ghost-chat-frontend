@@ -11,10 +11,12 @@ import VideoMessage from './VideoMessage';
 import VoiceRecordingOverlay from './VoiceRecordingOverlay';
 import VideoRecordingOverlay from './VideoRecordingOverlay';
 import ConfirmModal from './ConfirmModal';
+import SendingIndicator from './SendingIndicator';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 import { useVideoRecorder, extFromVideoMime } from '../hooks/useVideoRecorder';
 
 /*
+  [2.43.0] SendingIndicator вместо строки ввода на время upload.
   [2.42.3] mic/cam обычный клик, разрешения сразу (аудио+видео).
   [2.42.0] InputActionButtons, video rec/upload, avatar в voice overlay.
 */
@@ -83,6 +85,8 @@ const PrivateChat = ({
   const [pickerAnchor, setPickerAnchor] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [voiceUploading, setVoiceUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
@@ -438,6 +442,7 @@ const PrivateChat = ({
 
   const uploadAndSendVoice = useCallback(async (result) => {
     if (!result) return;
+    setVoiceUploading(true);
     const fd = new FormData();
     const ext = extFromMime(result.mime);
     fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
@@ -459,6 +464,8 @@ const PrivateChat = ({
       console.error('Ошибка загрузки голосового:', err);
       setUploadError('Не удалось отправить голосовое');
       setTimeout(() => setUploadError(''), 4000);
+    } finally {
+      setVoiceUploading(false);
     }
   }, [sendMessage, userId]);
 
@@ -506,6 +513,7 @@ const PrivateChat = ({
 
   const uploadAndSendVideo = useCallback(async (result) => {
     if (!result) return;
+    setVideoUploading(true);
     const fd = new FormData();
     const ext = extFromVideoMime(result.mime);
     fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
@@ -527,6 +535,8 @@ const PrivateChat = ({
       console.error('Ошибка загрузки видео:', err);
       setUploadError('Не удалось отправить видео');
       setTimeout(() => setUploadError(''), 4000);
+    } finally {
+      setVideoUploading(false);
     }
   }, [sendMessage, userId]);
 
@@ -593,6 +603,13 @@ const PrivateChat = ({
     : null;
 
   const inputActive = !!input.trim() || inputFocused;
+
+  const isBusySending = isUploading || voiceUploading || videoUploading;
+  const sendingLabel = voiceUploading
+    ? 'Отправляем голосовое'
+    : videoUploading
+      ? 'Отправляем видео'
+      : 'Отправляем фото';
 
   return (
     <>
@@ -720,7 +737,7 @@ const PrivateChat = ({
                       onTouchEnd={handleMsgTouchEnd}
                     >
                       {forwardLabel}
-                      <VideoMessage url={m.videoUrl} isOwn={isOwn} />
+                      <VideoMessage url={m.videoUrl} isOwn={isOwn} createdAt={m.created_at} />
                     </div>
                   );
                 }
@@ -785,8 +802,8 @@ const PrivateChat = ({
 
         {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
-        {false ? (
-          <div className="private-input-row private-input-row--voice-placeholder" aria-hidden="true" />
+        {isBusySending ? (
+          <SendingIndicator label={sendingLabel} />
         ) : (
           <div className="private-input-row">
             <button

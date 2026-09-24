@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
+  [2.43.0] Автовоспроизведение свежих видео. Если createdAt < 8с назад —
+           играем автоматом без звука (браузеры не пускают autoplay
+           со звуком). Юзер может размутить кнопкой.
   [2.42.2] poster — превью первого кадра до play.
            preload="auto" — подгружаем метаданные и первый кадр.
   [2.42.0] Плеер видео-кружка. Квадрат как gif-стикер.
            Кнопки: play/pause, mute/unmute, fullscreen.
 */
+
+const FRESH_WINDOW_MS = 8000;
 
 let currentlyPlayingVideo = null;
 
@@ -55,11 +60,45 @@ const Icon = {
   ),
 };
 
-const VideoMessage = ({ url, isOwn = false }) => {
+const VideoMessage = ({ url, isOwn = false, createdAt = 0 }) => {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [fsOpen, setFsOpen] = useState(false);
+  const autoPlayedRef = useRef(false);
+
+  // [2.43.0] Автовоспроизведение, если видео свежее.
+  // Проверка идёт один раз при монтировании — в список ли это только
+  // добавилось, или при первой загрузке чата с сообщением < 8с.
+  useEffect(() => {
+    if (autoPlayedRef.current) return;
+    autoPlayedRef.current = true;
+
+    const ts = typeof createdAt === 'number' ? createdAt : Date.parse(createdAt);
+    if (!ts || Number.isNaN(ts)) return;
+    if (Date.now() - ts > FRESH_WINDOW_MS) return;
+
+    const v = videoRef.current;
+    if (!v) return;
+
+    // Браузеры разрешают autoplay только без звука.
+    v.muted = true;
+    setMuted(true);
+
+    if (currentlyPlayingVideo && currentlyPlayingVideo !== v) {
+      try { currentlyPlayingVideo.pause(); } catch { /* noop */ }
+    }
+
+    v.play()
+      .then(() => {
+        currentlyPlayingVideo = v;
+        setPlaying(true);
+      })
+      .catch(() => {
+        // autoplay заблокирован — юзер нажмёт play вручную.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const v = videoRef.current;
