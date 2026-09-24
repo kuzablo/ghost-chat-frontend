@@ -559,6 +559,7 @@ const Chat = () => {
       } else if (mascotPlace === 'panel') {
         startMascotFlight({
           fromRef: panelOrbitRef,
+          fromSize: hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO,
           toRef: centerMascotRef,
           toSize: MASCOT_SIZE_CENTER,
         });
@@ -571,7 +572,10 @@ const Chat = () => {
     if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
       setMascotPlace('header');
       const fromRef = mascotPlace === 'panel' ? panelOrbitRef : centerMascotRef;
-      startMascotFlight({ fromRef, toRef: headerMascotRef });
+      const fromSize = mascotPlace === 'panel'
+        ? (hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO)
+        : null;
+      startMascotFlight({ fromRef, fromSize, toRef: headerMascotRef });
     }
   }, [
     showPlayers,
