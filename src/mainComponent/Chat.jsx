@@ -19,7 +19,8 @@ import PrivateMessageToasts from './components/PrivateMessageToasts';
 import ForwardPickerModal from './components/ForwardPickerModal';
 import ReactionWheel from './components/ReactionWheel';
 import UpdateToast from './components/UpdateToast';
-import SendingIndicator from './components/SendingIndicator';
+import StoragePanel from './components/StoragePanel';
+import { useStorage } from './hooks/useStorage';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
 import { getAvatarColor, getInitial, formatMessageDate } from './utils';
@@ -158,6 +159,7 @@ const Chat = () => {
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
   const [profileTarget, setProfileTarget] = useState(null);
   const [stickerPanelOpen, setStickerPanelOpen] = useState(false);
+  const [storageOpen, setStorageOpen] = useState(false);
   const [forwardData, setForwardData] = useState(null);
   const [updateDeferred, setUpdateDeferred] = useState(false);
 
@@ -385,6 +387,7 @@ const Chat = () => {
   } = chat;
 
   const priv = usePrivateChat({ sendMessage, myId, players });
+  const storage = useStorage({ sendMessage, isAuth });
   const {
     privateChat,
     privateTypingUser,
@@ -576,6 +579,7 @@ const Chat = () => {
     if (duel.handleWs(msg)) return;
     if (handlePrivateWs(msg)) return;
     if (handleChatWs(msg)) return;
+    if (storage.handleWs(msg)) return;
 
     switch (msg.type) {
       case 'version':
@@ -594,7 +598,7 @@ const Chat = () => {
       default:
         console.warn(`[CHAT v${VERSION}] Unknown message type:`, msg.type);
     }
-  }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs]);
+  }, [sendMessage, applyAuthOk, forceLogout, duel, handlePrivateWs, handleChatWs, storage]);
 
   useEffect(() => { setIsConnected(wsConnected); }, [wsConnected]);
 
@@ -1436,6 +1440,7 @@ const uploadAndSendVideo = useCallback(async (result) => {
           onRemoveFriend={handleProfileRemoveFriend}
           onOpenPrivateChat={handleProfilePrivateChat}
           onRequestDuel={handleProfileDuel}
+          onOpenStorage={() => { setProfileTarget(null); setStorageOpen(true); }}
           token={token}
           apiUrl={API_URL}
         />
@@ -1825,6 +1830,15 @@ const uploadAndSendVideo = useCallback(async (result) => {
         visible={mascotPlace === 'center' && !mascotFlying}
         onOpenDialogs={handleOpenDialogs}
         mascotRef={centerMascotRef}
+      />
+
+            <StoragePanel
+        open={storageOpen}
+        onClose={() => setStorageOpen(false)}
+        items={storage.items}
+        isLoaded={storage.isLoaded}
+        error={storage.error}
+        onDelete={storage.deleteFromStorage}
       />
 
       <StickerPanel

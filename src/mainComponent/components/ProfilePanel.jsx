@@ -44,6 +44,7 @@ const ProfilePanel = ({
   onRequestDuel,
   token,
   apiUrl,
+  onOpenStorage,
 }) => {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -270,6 +271,15 @@ const ProfilePanel = ({
                 disabled={!dirty || uploading}
               >
                 {justSaved ? 'Сохранено ✓' : 'Сохранить'}
+                {onOpenStorage && (
+                  <button
+                    type="button"
+                    className="btn profile-storage-btn"
+                    onClick={() => { onClose(); onOpenStorage(); }}
+                  >
+                    🗄️ Моё хранилище
+                  </button>
+                )}
               </button>
             </>
           )}

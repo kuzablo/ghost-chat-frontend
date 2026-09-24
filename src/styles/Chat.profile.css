@@ -453,3 +453,25 @@ body.dark .profile-overlay { background: rgba(0, 0, 0, 0.7); }
 }
 
 .profile-rotation-reset:active { transform: scale(0.9); }
+
+.profile-storage-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #F5A9C0 0%, #7FCCF0 100%);
+  border: 3px solid var(--card-border);
+  color: #111;
+  font-weight: 800;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.18);
+  transition: transform 0.12s, box-shadow 0.15s;
+}
+body.dark .profile-storage-btn {
+  background: linear-gradient(135deg, #172236 0%, #2C3E5A 100%);
+  color: #EAF2FA;
+  border-color: #3BB5E8;
+}
+.profile-storage-btn:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+}
