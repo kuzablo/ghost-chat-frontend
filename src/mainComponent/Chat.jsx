@@ -1898,6 +1898,12 @@ const Chat = () => {
       )}
 
       <StorageToast trigger={storage.lastSavedAt} />
+      <PrivateMessageToasts
+        users={unreadUserObjects}
+        visible={mascotPlace === 'center' && !mascotFlying}
+        onOpenDialogs={handleOpenDialogs}
+        mascotRef={centerMascotRef}
+      />
       <StoragePanel
         open={storageOpen}
         onClose={() => setStorageOpen(false)}

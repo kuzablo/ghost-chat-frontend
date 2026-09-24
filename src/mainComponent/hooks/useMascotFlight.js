@@ -106,8 +106,6 @@ export const useMascotFlight = ({
       to = getTargetRect(targetEl, toSize);
     }
 
-    console.log('[flight] from', from, 'to', to, 'size', toSize, 'fromEl', fromRef?.current?.className, 'toEl', (toRefOverride?.current || toRef?.current)?.className);
-
     if (!isUsableRect(from)) {
       console.warn('[useMascotFlight] нет источника — не летим');
       return;
