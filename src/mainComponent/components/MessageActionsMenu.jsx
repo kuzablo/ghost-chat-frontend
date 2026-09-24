@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 
 /*
+  [2.46.0] Новый пункт «В избранное» / «Убрать из избранного» для стикеров.
+           Включается, если передан stickerUrl и onToggleFavorite.
   [2.35.59] edit-кнопка скрывается, если onEdit не передан.
   [2.35.45] Меню действий над сообщением — только иконки, без карточки.
-            Long-press на любом сообщении. Позиционируется рядом.
-            Пункты: Переслать / (для своих) Редактировать / Удалить.
 */
 const MENU_GAP = 10;
 const MENU_SIZE = 44;
@@ -16,9 +16,12 @@ const MessageActionsMenu = ({
   isOwn,
   isAdmin,
   isSticker,
+  stickerUrl = null,
+  isFavorite = false,
   onForward,
   onEdit,
   onDelete,
+  onToggleFavorite,
   onClose,
 }) => {
   const ref = useRef(null);
@@ -43,6 +46,15 @@ const MessageActionsMenu = ({
 
   const items = [];
   items.push({ id: 'forward', icon: '↪', label: 'Переслать', onClick: onForward });
+
+  if (stickerUrl && onToggleFavorite) {
+    items.push({
+      id: 'favorite',
+      icon: isFavorite ? '⭐' : '☆',
+      label: isFavorite ? 'Убрать из избранного' : 'В избранное',
+      onClick: onToggleFavorite,
+    });
+  }
 
   if (isOwn && !isSticker && onEdit) {
     items.push({ id: 'edit', icon: '✏️', label: 'Редактировать', onClick: onEdit });

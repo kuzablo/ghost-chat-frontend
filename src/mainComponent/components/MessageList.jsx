@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate, formatDateDivider, isNewDay } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import MessageActionsMenu from './MessageActionsMenu';
@@ -29,6 +29,8 @@ const MessageList = ({
   onForward,
   avatarByUser = {},
   bannedUsers = new Set(),
+  favoriteStickers = [],
+  onToggleFavorite,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -61,6 +63,12 @@ const MessageList = ({
   const [heartBurst, setHeartBurst] = useState(null);
 
   const editTextareaRef = useRef(null);
+
+  // [2.46.0] Множество url избранных стикеров — для быстрой проверки
+  const favoriteSet = useMemo(
+    () => new Set(Array.isArray(favoriteStickers) ? favoriteStickers : []),
+    [favoriteStickers]
+  );
 
   useEffect(() => {
     return () => { if (tapTimerRef.current) clearTimeout(tapTimerRef.current); };
@@ -732,9 +740,20 @@ const MessageList = ({
         isOwn={actionsMenu?.msg?.userId === myId}
         isAdmin={isAdmin}
         isSticker={!!actionsMenu?.msg?.stickerUrl || !!actionsMenu?.msg?.videoUrl}
+        stickerUrl={actionsMenu?.msg?.stickerUrl || null}
+        isFavorite={
+          actionsMenu?.msg?.stickerUrl
+            ? favoriteSet.has(actionsMenu.msg.stickerUrl)
+            : false
+        }
         onForward={() => { if (actionsMenu?.msg && onForward) onForward(buildForwardData(actionsMenu.msg)); }}
         onEdit={() => { if (actionsMenu?.msg) startEdit(actionsMenu.msg); }}
         onDelete={() => { if (actionsMenu?.msg) setConfirmData({ messageId: actionsMenu.msg.id }); }}
+        onToggleFavorite={
+          onToggleFavorite && actionsMenu?.msg?.stickerUrl
+            ? () => onToggleFavorite(actionsMenu.msg.stickerUrl)
+            : undefined
+        }
         onClose={closeActionsMenu}
       />
 

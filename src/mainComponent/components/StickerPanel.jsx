@@ -2,14 +2,12 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import SmartImage from './SmartImage';
 
 /*
-  [2.41.0] Избранные стикеры.
-           - Long-press 500мс на не-избранном → добавить.
-           - Long-press 1000мс на избранном → убрать.
-           - Короткий тап → отправить.
-           - Сортировка: избранные (в порядке favoriteStickers, новые
-             первыми) → остальные.
-           - Маркер ⭐ в углу избранной плитки.
-           - Тост внутри панели с классом .duel-notice.
+  [2.46.0] Двухшаговая панель: экран «Избранные» (по умолчанию) и «Все стикеры».
+           - При открытии — всегда «Избранные».
+           - Если избранных нет — уведомление и кнопка «Все стикеры».
+           - Если есть — сетка избранных + кнопка «Все стикеры».
+           - На экране всех — кнопка «←» к избранным.
+  [2.41.0] Долгое нажатие: 500мс → в избранное, 1000мс на избранном → убрать.
   [2.40.1] Свайп по сетке для пагинации.
   [2.40.0] Пагинация 12 на страницу.
   [2.35.16] Панель стикеров.
@@ -38,6 +36,7 @@ const StickerPanel = ({
   favoriteStickers = [],
   onToggleFavorite,
 }) => {
+  const [view, setView] = useState('favorites'); // 'favorites' | 'all'
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -50,8 +49,17 @@ const StickerPanel = ({
     [favoriteStickers]
   );
 
-  // [2.41.0] Сортировка: сначала избранные (в порядке массива — новые первыми),
-  // потом остальные в исходном порядке бэка.
+  // [2.46.0] При каждом открытии — стартуем с «Избранные».
+  useEffect(() => {
+    if (open) {
+      setView('favorites');
+      setPage(0);
+      setError('');
+    }
+  }, [open]);
+
+  // [2.41.0] Сортировка: сначала избранные (в порядке массива — новые
+  // первыми), потом остальные в исходном порядке бэка.
   const sortedStickers = useMemo(() => {
     if (!Array.isArray(stickers)) return [];
     const favs = [];
@@ -60,11 +68,8 @@ const StickerPanel = ({
     (favoriteStickers || []).forEach((u, i) => favOrder.set(u, i));
 
     stickers.forEach(s => {
-      if (favoriteSet.has(s.url)) {
-        favs.push(s);
-      } else {
-        rest.push(s);
-      }
+      if (favoriteSet.has(s.url)) favs.push(s);
+      else rest.push(s);
     });
 
     favs.sort((a, b) => {
@@ -74,6 +79,21 @@ const StickerPanel = ({
     });
 
     return [...favs, ...rest];
+  }, [stickers, favoriteStickers, favoriteSet]);
+
+  // Список только избранных для view 'favorites'
+  const favoriteStickersList = useMemo(() => {
+    if (!Array.isArray(stickers)) return [];
+    const favOrder = new Map();
+    (favoriteStickers || []).forEach((u, i) => favOrder.set(u, i));
+
+    return stickers
+      .filter(s => favoriteSet.has(s.url))
+      .sort((a, b) => {
+        const ai = favOrder.has(a.url) ? favOrder.get(a.url) : Infinity;
+        const bi = favOrder.has(b.url) ? favOrder.get(b.url) : Infinity;
+        return ai - bi;
+      });
   }, [stickers, favoriteStickers, favoriteSet]);
 
   const totalPages = Math.max(1, Math.ceil(sortedStickers.length / PAGE_SIZE));
@@ -94,27 +114,22 @@ const StickerPanel = ({
     return sortedStickers.slice(start, start + PAGE_SIZE);
   }, [sortedStickers, page]);
 
-  // [2.41.0] Тост — 2.4с, дальше сам гаснет.
+  // [2.41.0] Тост — 2.4с.
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(''), 2400);
     return () => clearTimeout(t);
   }, [toast]);
 
-  // [2.40.1] Свайп по сетке.
+  // [2.40.1] Свайп по сетке. Только на view 'all'.
   useEffect(() => {
     if (!open) return;
+    if (view !== 'all') return;
     const el = gridRef.current;
     if (!el) return;
     if (totalPages <= 1) return;
 
-    const state = {
-      active: false,
-      startX: 0,
-      startY: 0,
-      direction: null,
-      lastDx: 0,
-    };
+    const state = { active: false, startX: 0, startY: 0, direction: null, lastDx: 0 };
 
     const reset = () => {
       state.active = false;
@@ -123,9 +138,7 @@ const StickerPanel = ({
       if (el) {
         el.style.transition = 'transform 0.24s cubic-bezier(0.22, 1, 0.36, 1)';
         el.style.transform = 'translate3d(0,0,0)';
-        setTimeout(() => {
-          if (el) el.style.transition = '';
-        }, 260);
+        setTimeout(() => { if (el) el.style.transition = ''; }, 260);
       }
     };
 
@@ -148,9 +161,7 @@ const StickerPanel = ({
       const dy = t.clientY - state.startY;
 
       if (!state.direction) {
-        if (Math.abs(dx) < SWIPE_DIRECTION_LOCK && Math.abs(dy) < SWIPE_DIRECTION_LOCK) {
-          return;
-        }
+        if (Math.abs(dx) < SWIPE_DIRECTION_LOCK && Math.abs(dy) < SWIPE_DIRECTION_LOCK) return;
         state.direction = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
       }
       if (state.direction !== 'horizontal') return;
@@ -168,10 +179,7 @@ const StickerPanel = ({
 
     const onTouchEnd = () => {
       if (!state.active) return;
-      if (state.direction !== 'horizontal') {
-        reset();
-        return;
-      }
+      if (state.direction !== 'horizontal') { reset(); return; }
       const off = state.lastDx;
       if (off <= -SWIPE_THRESHOLD && page < totalPages - 1) {
         setPage((p) => Math.min(totalPages - 1, p + 1));
@@ -192,7 +200,7 @@ const StickerPanel = ({
       el.removeEventListener('touchend', onTouchEnd);
       el.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [open, page, totalPages]);
+  }, [open, view, page, totalPages]);
 
   if (!open) return null;
 
@@ -254,13 +262,29 @@ const StickerPanel = ({
   };
 
   const showPager = totalPages > 1;
+  const isFavoritesView = view === 'favorites';
+  const isAllView = view === 'all';
 
   return (
     <>
       <div className="sticker-panel-overlay" onClick={onClose} />
       <div className="sticker-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sticker-panel-header">
-          <span className="sticker-panel-title">Стикеры</span>
+          {isAllView && (
+            <button
+              type="button"
+              className="sticker-panel-back"
+              onClick={() => setView('favorites')}
+              aria-label="К избранным"
+              title="К избранным"
+            >
+              ←
+            </button>
+          )}
+
+          <span className="sticker-panel-title">
+            {isFavoritesView ? '⭐ Избранные' : 'Стикеры'}
+          </span>
 
           {isAdmin && (
             <button
@@ -296,55 +320,96 @@ const StickerPanel = ({
 
         {error && <div className="sticker-panel-error">{error}</div>}
 
-        {stickers.length === 0 ? (
-          <div className="sticker-panel-empty">
-            {isAdmin
-              ? 'Ты пока не загрузил ни одной гифки. Жми ＋'
-              : 'Тишина. Скоро здесь что-то появится.'}
-          </div>
-        ) : (
+        {isFavoritesView ? (
           <>
-            <div className="sticker-panel-grid-wrap">
-              <div className="sticker-panel-grid" ref={gridRef}>
-                {visibleStickers.map((s) => {
-                  const isFav = favoriteSet.has(s.url);
-                  return (
+            {favoriteStickersList.length === 0 ? (
+              <div className="sticker-fav-empty">
+                <div className="sticker-fav-empty-mascot" aria-hidden="true" />
+                <div className="sticker-fav-empty-title">Пока никого</div>
+                <div className="sticker-fav-empty-text">
+                  Долгое нажатие на стикер в ленте или в панели — добавит
+                  его в избранные. Здесь появятся те, что тебе нравятся.
+                </div>
+              </div>
+            ) : (
+              <div className="sticker-panel-grid-wrap">
+                <div className="sticker-panel-grid sticker-panel-grid--fav">
+                  {favoriteStickersList.map((s) => (
                     <StickerTile
                       key={s.id}
                       sticker={s}
-                      isFav={isFav}
+                      isFav={true}
                       onPick={handlePick}
                       onToggleFavorite={handleToggleFavorite}
                     />
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {showPager && (
-              <div className="sticker-panel-pager">
-                <button
-                  type="button"
-                  className="sticker-panel-pager-btn"
-                  onClick={handlePrev}
-                  disabled={page === 0}
-                  aria-label="Предыдущая страница"
-                >
-                  ‹
-                </button>
-                <span className="sticker-panel-pager-counter">
-                  {page + 1} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="sticker-panel-pager-btn"
-                  onClick={handleNext}
-                  disabled={page === totalPages - 1}
-                  aria-label="Следующая страница"
-                >
-                  ›
-                </button>
+            <button
+              type="button"
+              className="sticker-fav-all-btn"
+              onClick={() => setView('all')}
+            >
+              <span className="sticker-fav-all-btn-icon" aria-hidden="true">🎨</span>
+              <span className="sticker-fav-all-btn-text">Все стикеры</span>
+              <span className="sticker-fav-all-btn-arrow" aria-hidden="true">→</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {stickers.length === 0 ? (
+              <div className="sticker-panel-empty">
+                {isAdmin
+                  ? 'Ты пока не загрузил ни одной гифки. Жми ＋'
+                  : 'Тишина. Скоро здесь что-то появится.'}
               </div>
+            ) : (
+              <>
+                <div className="sticker-panel-grid-wrap">
+                  <div className="sticker-panel-grid" ref={gridRef}>
+                    {visibleStickers.map((s) => {
+                      const isFav = favoriteSet.has(s.url);
+                      return (
+                        <StickerTile
+                          key={s.id}
+                          sticker={s}
+                          isFav={isFav}
+                          onPick={handlePick}
+                          onToggleFavorite={handleToggleFavorite}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {showPager && (
+                  <div className="sticker-panel-pager">
+                    <button
+                      type="button"
+                      className="sticker-panel-pager-btn"
+                      onClick={handlePrev}
+                      disabled={page === 0}
+                      aria-label="Предыдущая страница"
+                    >
+                      ‹
+                    </button>
+                    <span className="sticker-panel-pager-counter">
+                      {page + 1} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="sticker-panel-pager-btn"
+                      onClick={handleNext}
+                      disabled={page === totalPages - 1}
+                      aria-label="Следующая страница"
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -360,8 +425,6 @@ const StickerPanel = ({
 };
 
 // [2.41.0] Плитка стикера с long-press логикой.
-// Отдельный компонент — чтобы long-press-таймеры жили на каждом
-// стикере и сбрасывались при движении/отпускании.
 const StickerTile = ({ sticker, isFav, onPick, onToggleFavorite }) => {
   const timerRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0 });
@@ -382,7 +445,6 @@ const StickerTile = ({ sticker, isFav, onPick, onToggleFavorite }) => {
   };
 
   const handleDown = (e) => {
-    // Координаты — из pointer/touch/mouse.
     const t = e.touches ? e.touches[0] : e;
     startPosRef.current = { x: t.clientX, y: t.clientY };
     firedRef.current = false;

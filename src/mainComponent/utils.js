@@ -74,6 +74,8 @@ export const playSendSound = () => {
   osc.stop(now + 0.15);
 };
 
+// [2.46.0] Формат «время число месяц». Год — только если он не текущий.
+// Сегодня / вчера / позавчера — с префиксом. Остальное — «14:30 24 сентября».
 export const formatMessageDate = (timestamp) => {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -85,7 +87,6 @@ export const formatMessageDate = (timestamp) => {
   dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
 
   const timeStr = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  const monthYear = date.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
 
   if (date >= today) {
     return `сегодня в ${timeStr}`;
@@ -93,12 +94,16 @@ export const formatMessageDate = (timestamp) => {
     return `вчера в ${timeStr}`;
   } else if (date >= dayBeforeYesterday) {
     return `позавчера в ${timeStr}`;
-  } else {
-    return `${timeStr} ${monthYear}`;
   }
+
+  const isSameYear = date.getFullYear() === now.getFullYear();
+  const dateStr = isSameYear
+    ? date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    : date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return `${timeStr} ${dateStr}`;
 };
 
-// ===== Дата-разделитель для списка сообщений =====
 export const formatDateDivider = (timestamp) => {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -117,7 +122,6 @@ export const formatDateDivider = (timestamp) => {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
-// Проверка — нужно ли показать разделитель между двумя сообщениями
 export const isNewDay = (prevTimestamp, currentTimestamp) => {
   if (!currentTimestamp) return false;
   if (!prevTimestamp) return true;

@@ -100,6 +100,21 @@ body.dark .private-date-chip--active {
   font-style: italic;
 }
 
+/* ============================================================= */
+/* [2.46.0] Обёртка вокруг ленты + стрелка скролла               */
+/* Стрелка привязана к .private-messages-wrap, не к overlay.      */
+/* Layout: между .private-typing и .private-input-row.            */
+/* ============================================================= */
+
+.private-messages-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
 /* ===== Список сообщений ===== */
 .private-messages {
   flex: 1;
@@ -108,7 +123,6 @@ body.dark .private-date-chip--active {
   border: 2px solid var(--card-border);
   border-radius: var(--radius-md);
   padding: 10px;
-  margin-bottom: 8px;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   display: flex;
@@ -648,11 +662,15 @@ body.dark .private-loading-mascot {
   background: var(--messages-bg);
 }
 
-/* Кнопка «вниз» — над полем ввода */
+/* ============================================================= */
+/* [2.46.0] Кнопка «вниз» — привязана к .private-messages-wrap,   */
+/* правый-нижний угол ленты, не съезжает на границу.              */
+/* ============================================================= */
+
 .private-scroll-btn {
   position: absolute;
-  right: 22px;
-  bottom: 74px;
+  right: 14px;
+  bottom: 14px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -682,8 +700,8 @@ body.dark .private-loading-mascot {
 
 @media (max-width: 600px) {
   .private-scroll-btn {
-    right: 14px;
-    bottom: 70px;
+    right: 10px;
+    bottom: 10px;
     width: 38px;
     height: 38px;
     font-size: 18px;

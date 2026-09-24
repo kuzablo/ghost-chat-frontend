@@ -18,7 +18,12 @@ import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 import { useVideoRecorder, extFromVideoMime } from '../hooks/useVideoRecorder';
 
 /*
-  [2.44.0] SmartImage для фото в личке — маскот-плейсхолдер.
+  [2.46.0] Авто-выбор фильтра по дате при первом открытии: если последнее
+           сообщение сегодня → «Сегодня», если за последние 7 дней → «7 дней»,
+           за 30 дней → «30 дней», иначе «Всё». Стрелка скролла теперь
+           привязана к .private-messages-wrap — всегда над лентой, не съезжает.
+  [2.45.0] Avatar с маскот-плейсхолдером.
+  [2.44.0] SmartImage для фото.
   [2.43.0] SendingIndicator вместо строки ввода на время upload.
   [2.42.3] mic/cam обычный клик, разрешения сразу (аудио+видео).
   [2.42.0] InputActionButtons, video rec/upload, avatar в voice overlay.
@@ -106,6 +111,7 @@ const PrivateChat = ({
   const [videoRecActive, setVideoRecActive] = useState(false);
 
   const permGrantedRef = useRef(false);
+  const autoFilterAppliedRef = useRef(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -130,6 +136,11 @@ const PrivateChat = ({
 
   const swipeRef = useRef({ active: false, startX: 0, startY: 0, direction: null, lastDx: 0 });
 
+  const favoriteSet = useMemo(
+    () => new Set(Array.isArray(favoriteStickers) ? favoriteStickers : []),
+    [favoriteStickers]
+  );
+
   const hitIds = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return new Set();
@@ -152,6 +163,31 @@ const PrivateChat = ({
     if (q) list = list.filter(m => (m.text || '').toLowerCase().includes(q));
     return list;
   }, [initialMessages, dateFilter, searchQuery]);
+
+  // [2.46.0] Авто-выбор фильтра по дате: один раз, при первой загрузке.
+  // Если пользователь потом выберет сам — не перебиваем.
+  useEffect(() => {
+    if (autoFilterAppliedRef.current) return;
+    if (!historyLoaded) return;
+    if (!initialMessages.length) return;
+    autoFilterAppliedRef.current = true;
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
+    const monthStart = todayStart - 30 * 24 * 60 * 60 * 1000;
+
+    const latest = initialMessages.reduce((max, m) => {
+      const t = m.created_at ? new Date(m.created_at).getTime() : 0;
+      return t > max ? t : max;
+    }, 0);
+
+    if (!latest) return;
+    if (latest >= todayStart) setDateFilter('today');
+    else if (latest >= weekStart) setDateFilter('7d');
+    else if (latest >= monthStart) setDateFilter('30d');
+    else setDateFilter('all');
+  }, [historyLoaded, initialMessages]);
 
   useEffect(() => { setLocalTypingUser(typingUser); }, [typingUser]);
 
@@ -671,138 +707,142 @@ const PrivateChat = ({
           {localTypingUser ? `${localTypingUser} печатает...` : ''}
         </div>
 
-        <div className="private-messages" ref={messagesContainerRef}>
-          {showBgLoading || !historyLoaded ? (
-            <div className="private-loading" aria-hidden="true">
-              <div className="private-loading-mascot" />
-            </div>
-          ) : (
-            <>
-              {filteredMessages.length === 0 && (
-                <div className="private-empty">
-                  {hasSearch ? 'Ничего не найдено' : 'В этом периоде сообщений нет'}
-                </div>
-              )}
-
-              {filteredMessages.map((m, i) => {
-                const isOwn = m.senderId === myId;
-                const forwardLabel = renderForwardLabel(m);
-                const isHit = hitIds.has(m.id);
-
-                if (m.stickerUrl) {
-                  return (
-                    <div
-                      key={m.id || i}
-                      data-msg-id={m.id}
-                      className={`private-msg private-msg--sticker ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${isHit ? 'private-msg--hit' : ''}`}
-                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
-                      onTouchMove={handleMsgTouchMove}
-                      onTouchEnd={handleMsgTouchEnd}
-                    >
-                      {forwardLabel}
-                      <img src={m.stickerUrl} alt="" className="private-msg-sticker" draggable={false} loading="lazy" />
-                    </div>
-                  );
-                }
-
-                const isVoiceOnly = !m.text?.trim() && !m.imageUrl && !!m.voiceUrl;
-
-                if (isVoiceOnly) {
-                  return (
-                    <div
-                      key={m.id || i}
-                      data-msg-id={m.id}
-                      className={`private-msg private-msg--voice ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
-                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
-                      onTouchMove={handleMsgTouchMove}
-                      onTouchEnd={handleMsgTouchEnd}
-                    >
-                      {forwardLabel}
-                      <VoiceMessage
-                        url={m.voiceUrl}
-                        duration={m.voiceDuration || 0}
-                        waveform={m.voiceWaveform || []}
-                        isOwn={isOwn}
-                      />
-                    </div>
-                  );
-                }
-
-                const isVideoOnly = !m.text?.trim() && !m.imageUrl && !m.voiceUrl && !!m.videoUrl;
-
-                if (isVideoOnly) {
-                  return (
-                    <div
-                      key={m.id || i}
-                      data-msg-id={m.id}
-                      className={`private-msg private-msg--video ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
-                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
-                      onTouchMove={handleMsgTouchMove}
-                      onTouchEnd={handleMsgTouchEnd}
-                    >
-                      {forwardLabel}
-                      <VideoMessage url={m.videoUrl} isOwn={isOwn} createdAt={m.created_at} />
-                    </div>
-                  );
-                }
-
-                const reactions = m.reactions || {};
-                const reactionEntries = Object.entries(reactions);
-                const hasReactions = reactionEntries.length > 0;
-                const igUrl = extractInstagramUrl(m.text);
-
-                return (
-                  <div
-                    key={m.id || i}
-                    data-msg-id={m.id}
-                    className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''} ${isHit ? 'private-msg--hit' : ''}`}
-                    onClick={(e) => handleMessageTap(m.id, e)}
-                    onTouchStart={(e) => handleMsgTouchStart(e, m)}
-                    onTouchMove={handleMsgTouchMove}
-                    onTouchEnd={handleMsgTouchEnd}
-                  >
-                    <div className="private-msg-text-wrap">
-                      {forwardLabel}
-                      {m.imageUrl && (
-                        <SmartImage
-                          src={m.imageUrl}
-                          alt="photo"
-                          wrapperClassName="private-msg-image-smart"
-                          imgClassName="private-msg-image"
-                          draggable={false}
-                          onClick={(e) => { e.stopPropagation(); setFullscreenImage(m.imageUrl); }}
-                        />
-                      )}
-                      {m.text && <span className="private-msg-text">{m.text}</span>}
-                      {igUrl && <InstagramCard url={igUrl} />}
-
-                      {hasReactions && (
-                        <div className="private-msg-reactions">
-                          {reactionEntries.map(([emoji, users]) => (
-                            <span key={`${emoji}-${users.length}`} className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}>
-                              {emoji}
-                              {users.length > 1 && (<span className="private-reaction-count">{users.length}</span>)}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="private-msg-footer">
-                      <span className="private-msg-time">{formatTime(m.created_at)}</span>
-                      <span className="private-msg-status">{m.is_read ? 'прочитано' : 'не прочитано'}</span>
-                    </div>
+        {/* [2.46.0] Обёртка вокруг messages + стрелка — стрелка привязана
+            к .private-messages-wrap, а не к overlay. Не съезжает. */}
+        <div className="private-messages-wrap">
+          <div className="private-messages" ref={messagesContainerRef}>
+            {showBgLoading || !historyLoaded ? (
+              <div className="private-loading" aria-hidden="true">
+                <div className="private-loading-mascot" />
+              </div>
+            ) : (
+              <>
+                {filteredMessages.length === 0 && (
+                  <div className="private-empty">
+                    {hasSearch ? 'Ничего не найдено' : 'В этом периоде сообщений нет'}
                   </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </>
+                )}
+
+                {filteredMessages.map((m, i) => {
+                  const isOwn = m.senderId === myId;
+                  const forwardLabel = renderForwardLabel(m);
+                  const isHit = hitIds.has(m.id);
+
+                  if (m.stickerUrl) {
+                    return (
+                      <div
+                        key={m.id || i}
+                        data-msg-id={m.id}
+                        className={`private-msg private-msg--sticker ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${isHit ? 'private-msg--hit' : ''}`}
+                        onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                        onTouchMove={handleMsgTouchMove}
+                        onTouchEnd={handleMsgTouchEnd}
+                      >
+                        {forwardLabel}
+                        <img src={m.stickerUrl} alt="" className="private-msg-sticker" draggable={false} loading="lazy" />
+                      </div>
+                    );
+                  }
+
+                  const isVoiceOnly = !m.text?.trim() && !m.imageUrl && !!m.voiceUrl;
+
+                  if (isVoiceOnly) {
+                    return (
+                      <div
+                        key={m.id || i}
+                        data-msg-id={m.id}
+                        className={`private-msg private-msg--voice ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
+                        onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                        onTouchMove={handleMsgTouchMove}
+                        onTouchEnd={handleMsgTouchEnd}
+                      >
+                        {forwardLabel}
+                        <VoiceMessage
+                          url={m.voiceUrl}
+                          duration={m.voiceDuration || 0}
+                          waveform={m.voiceWaveform || []}
+                          isOwn={isOwn}
+                        />
+                      </div>
+                    );
+                  }
+
+                  const isVideoOnly = !m.text?.trim() && !m.imageUrl && !m.voiceUrl && !!m.videoUrl;
+
+                  if (isVideoOnly) {
+                    return (
+                      <div
+                        key={m.id || i}
+                        data-msg-id={m.id}
+                        className={`private-msg private-msg--video ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
+                        onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                        onTouchMove={handleMsgTouchMove}
+                        onTouchEnd={handleMsgTouchEnd}
+                      >
+                        {forwardLabel}
+                        <VideoMessage url={m.videoUrl} isOwn={isOwn} createdAt={m.created_at} />
+                      </div>
+                    );
+                  }
+
+                  const reactions = m.reactions || {};
+                  const reactionEntries = Object.entries(reactions);
+                  const hasReactions = reactionEntries.length > 0;
+                  const igUrl = extractInstagramUrl(m.text);
+
+                  return (
+                    <div
+                      key={m.id || i}
+                      data-msg-id={m.id}
+                      className={`private-msg ${isOwn ? 'private-msg--own' : 'private-msg--other'} ${poppingId === m.id ? 'private-msg--pop' : ''} ${hasReactions ? 'private-msg--has-reactions' : ''} ${pickerFor === m.id ? 'private-msg--picker-open' : ''} ${isHit ? 'private-msg--hit' : ''}`}
+                      onClick={(e) => handleMessageTap(m.id, e)}
+                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                      onTouchMove={handleMsgTouchMove}
+                      onTouchEnd={handleMsgTouchEnd}
+                    >
+                      <div className="private-msg-text-wrap">
+                        {forwardLabel}
+                        {m.imageUrl && (
+                          <SmartImage
+                            src={m.imageUrl}
+                            alt="photo"
+                            wrapperClassName="private-msg-image-smart"
+                            imgClassName="private-msg-image"
+                            draggable={false}
+                            onClick={(e) => { e.stopPropagation(); setFullscreenImage(m.imageUrl); }}
+                          />
+                        )}
+                        {m.text && <span className="private-msg-text">{m.text}</span>}
+                        {igUrl && <InstagramCard url={igUrl} />}
+
+                        {hasReactions && (
+                          <div className="private-msg-reactions">
+                            {reactionEntries.map(([emoji, users]) => (
+                              <span key={`${emoji}-${users.length}`} className={`private-reaction-badge ${users.includes(myId) ? 'own' : ''}`}>
+                                {emoji}
+                                {users.length > 1 && (<span className="private-reaction-count">{users.length}</span>)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="private-msg-footer">
+                        <span className="private-msg-time">{formatTime(m.created_at)}</span>
+                        <span className="private-msg-status">{m.is_read ? 'прочитано' : 'не прочитано'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
+
+          {showScrollDown && (
+            <button type="button" className="private-scroll-btn" onClick={scrollToBottom} aria-label="Вниз">↓</button>
           )}
         </div>
-
-        {showScrollDown && (
-          <button type="button" className="private-scroll-btn" onClick={scrollToBottom} aria-label="Вниз">↓</button>
-        )}
 
         {uploadError && (<div className="private-upload-error">{uploadError}</div>)}
 
@@ -901,6 +941,8 @@ const PrivateChat = ({
         isOwn={actionsMenu?.msg?.senderId === myId}
         isAdmin={false}
         isSticker={!!actionsMenu?.msg?.stickerUrl}
+        stickerUrl={actionsMenu?.msg?.stickerUrl || null}
+        isFavorite={actionsMenu?.msg?.stickerUrl ? favoriteSet.has(actionsMenu.msg.stickerUrl) : false}
         onForward={() => {
           if (actionsMenu?.msg && onForward) {
             onForward(buildForwardData(actionsMenu.msg));
@@ -912,6 +954,11 @@ const PrivateChat = ({
             setConfirmDelete({ messageId: actionsMenu.msg.id });
           }
         }}
+        onToggleFavorite={
+          onToggleFavorite && actionsMenu?.msg?.stickerUrl
+            ? () => onToggleFavorite(actionsMenu.msg.stickerUrl)
+            : undefined
+        }
         onClose={closeActionsMenu}
       />
 

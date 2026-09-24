@@ -1158,6 +1158,8 @@ const uploadAndSendVideo = useCallback(async (result) => {
     console.error('Ошибка загрузки видео:', err);
     setErrorMessage('Не удалось отправить видео');
     setTimeout(() => setErrorMessage(''), 4000);
+  } finally {
+    setVideoUploading(false);
   }
 }, [sendMessage, setErrorMessage]);
 
@@ -1598,6 +1600,8 @@ const uploadAndSendVideo = useCallback(async (result) => {
               onForward={handleForwardOpen}
               avatarByUser={avatarCache}
               bannedUsers={bannedUsers}
+              favoriteStickers={favoriteStickers}
+              onToggleFavorite={toggleFavoriteSticker}
             />
 
             {notices.length > 0 && (
