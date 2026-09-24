@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import StorageTile from './StorageTile';
+import StorageGrid from './StorageGrid';
 import ConfirmModal from './ConfirmModal';
 import '../../styles/Chat.storage.css';
 
@@ -26,7 +26,7 @@ const plural = (n) => {
     return 'записей';
 };
 
-const StoragePanel = ({ open, onClose, items, isLoaded, error, onDelete }) => {
+const StoragePanel = ({ open, onClose, items, isLoaded, error, onDelete, onReorder }) => {
     const [filter, setFilter] = useState('all');
     const [query, setQuery] = useState('');
     const [confirmDelete, setConfirmDelete] = useState(null);
@@ -143,16 +143,20 @@ const StoragePanel = ({ open, onClose, items, isLoaded, error, onDelete }) => {
                                 Попробуй другой или сбрось поиск.
                             </div>
                         </div>
-                    ) : (
+                    ) : filter !== 'all' || query.trim() ? (
                         <div className="storage-grid">
                             {filtered.map(item => (
-                                <StorageTile
-                                    key={item.id}
-                                    item={item}
-                                    onDelete={handleDeleteAsk}
-                                />
+                                <div key={item.id} className="storage-grid-item">
+                                    <StorageTile item={item} onDelete={handleDeleteAsk} />
+                                </div>
                             ))}
                         </div>
+                    ) : (
+                        <StorageGrid
+                            items={filtered}
+                            onDelete={handleDeleteAsk}
+                            onReorder={onReorder}
+                        />
                     )}
                 </div>
             </aside>

@@ -1868,6 +1868,7 @@ const Chat = () => {
         isLoaded={storage.isLoaded}
         error={storage.error}
         onDelete={storage.deleteFromStorage}
+        onReorder={storage.reorder}
       />
 
       <StickerPanel

@@ -640,3 +640,56 @@ body.dark .storage-toast-icon {
   z-index: 2;
 }
 .storage-tile-fs-close:active { transform: scale(0.9); }
+
+/* ============================================================= */
+/* [2.47.5] Dragndrop хранилища                                    */
+/* ============================================================= */
+
+.storage-grid-item {
+  min-width: 0;
+  min-height: 0;
+  transition: transform 0.18s ease;
+}
+
+.storage-grid-item--dragging {
+  opacity: 0.25;
+  transition: opacity 0.15s ease;
+}
+
+.storage-grid--dragging {
+  touch-action: none;
+  cursor: grabbing;
+}
+
+.storage-grid--dragging .storage-tile {
+  pointer-events: none;
+}
+
+.storage-grid-ghost {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: var(--radius-md);
+  transform: scale(1.05) rotate(-1.5deg);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 3px var(--btn-bg);
+  opacity: 0.96;
+  will-change: left, top;
+  transition: transform 0.12s ease-out;
+}
+
+.storage-grid-ghost .storage-tile {
+  box-shadow: none;
+  height: 100%;
+}
+
+/* Плавное появление соседей при перестановке */
+.storage-grid--dragging .storage-grid-item:not(.storage-grid-item--dragging) {
+  animation: storageShift 0.18s ease-out;
+}
+
+@keyframes storageShift {
+  from { transform: scale(0.98); }
+  to   { transform: scale(1); }
+}
