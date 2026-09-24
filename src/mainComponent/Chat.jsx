@@ -1110,6 +1110,7 @@ const Chat = () => {
   };
 
   const handleVoiceClick = useCallback(async () => {
+    console.log('[CLICK] voice button pressed');
     if (isUploading) return;
     if (voiceRecActive) return;
 
@@ -1153,6 +1154,7 @@ const Chat = () => {
   }, [sendMessage, setErrorMessage]);
 
   const handleCameraClick = useCallback(async () => {
+    console.log('[CLICK] camera button pressed');
     if (isUploading || !isAuth) return;
     if (videoRecActive) return;
 
@@ -1310,6 +1312,8 @@ const Chat = () => {
 
   const myAvatarUrl = myId ? (avatarCache[myId] || null) : null;
   const inputActive = !!input.trim() || inputFocused;
+
+  console.log('[RENDER] voiceRecActive=', voiceRecActive, 'videoRecActive=', videoRecActive);
 
   return (
     <>
