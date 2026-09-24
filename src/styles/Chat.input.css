@@ -1,5 +1,5 @@
 /* ============================================================= */
-/* [2.42.5] InputActionButtons — чистовик, без дублей              */
+/* [2.42.11] InputActionButtons — стабильное вращение на мобиле   */
 /* ============================================================= */
 
 .iab {
@@ -8,6 +8,7 @@
   width: 108px;
   height: 72px;
   pointer-events: none;
+  overflow: visible;
 }
 
 .iab-btn {
@@ -86,7 +87,7 @@
   transform: translate(-50%, -50%) scale(0.9) !important;
 }
 
-/* ==== Вращающийся «ОТПРАВИТЬ» — как в старом Chat.css ==== */
+/* ==== Вращающийся «ОТПРАВИТЬ» ==== */
 
 .iab-rotating-text {
   position: absolute;
@@ -94,6 +95,9 @@
   left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
   animation: iabRot 25s linear infinite;
 }
 
@@ -109,9 +113,13 @@
   line-height: 1;
   letter-spacing: 0.2px;
   white-space: nowrap;
+  pointer-events: none;
 }
 
-@keyframes iabRot { to { transform: rotate(360deg); } }
+@keyframes iabRot {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
 
 .iab-spinner {
   display: none;
@@ -155,8 +163,8 @@ body.dark .iab-btn--cam {
   }
   .iab-btn--send { width: 60px; height: 60px; }
   .iab-btn--send svg { width: 24px; height: 24px; }
+  .iab-rotating-text span { font-size: 7px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .iab-rotating-text { animation: none; }
-}
+/* prefers-reduced-motion выключено для rotation — иначе на iOS/Android
+   с включённой «уменьшить движение» анимация глушится. */
