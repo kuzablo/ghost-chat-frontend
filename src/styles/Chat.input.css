@@ -1,5 +1,6 @@
 /* ============================================================= */
 /* [2.42.0] InputActionButtons — mic+cam ↔ send с плавным переходом */
+/* [2.42.1] Возврат крутящегося «ОТПРАВИТЬ» на send-кнопке        */
 /* ============================================================= */
 
 .iab {
@@ -65,14 +66,44 @@
   transform: translate(-50%, -50%) scale(0.4);
   opacity: 0;
   pointer-events: none;
+  position: absolute;
+  overflow: hidden;
 }
-.iab-btn--send svg { width: 26px; height: 26px; display: block; }
+.iab-btn--send svg { width: 26px; height: 26px; display: block; position: relative; z-index: 1; }
 
 .iab--active .iab-btn--send {
   transform: translate(-50%, -50%) scale(1);
   opacity: 1;
   pointer-events: auto;
 }
+
+/* [2.42.1] Вращающийся текст «ОТПРАВИТЬ» вокруг иконки отправки */
+.iab-rotating-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  animation: iabSpin 25s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.iab-rotating-text > span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: 0 0;
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--btn-text);
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.iab-btn--sending .iab-rotating-text { display: none; }
 
 .iab-spinner {
   display: none;
@@ -85,6 +116,7 @@
   border-top-color: var(--btn-text);
   border-radius: 50%;
   animation: iabSpin 0.7s linear infinite;
+  z-index: 1;
 }
 .iab-btn--sending svg { display: none; }
 .iab-btn--sending .iab-spinner { display: block; }
@@ -110,9 +142,14 @@ body.dark .iab-btn--cam {
   .iab-btn--cam { transform: translate(calc(-50% + 25px), -50%) scale(1); }
   .iab-btn--send { width: 60px; height: 60px; }
   .iab-btn--send svg { width: 24px; height: 24px; }
+  .iab-rotating-text > span {
+    font-size: 7px;
+    transform-origin: 0 0;
+  }
 }
 
 /* ==== Reduced motion ==== */
 @media (prefers-reduced-motion: reduce) {
   .iab-btn { transition: opacity 0.12s ease; }
+  .iab-rotating-text { animation: none; }
 }

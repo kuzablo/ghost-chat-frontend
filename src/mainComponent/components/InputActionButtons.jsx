@@ -1,4 +1,5 @@
 /*
+  [2.42.1] Вращающийся «ОТПРАВИТЬ» на send-кнопке.
   [2.42.0] Кнопка действия справа от поля ввода.
            Два состояния с плавным переходом:
            - active=false → [🎤 mic] [📷 cam]
@@ -33,6 +34,8 @@ const SendIcon = () => (
     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
   </svg>
 );
+
+const SEND_CHARS = ['О', 'Т', 'П', 'Р', 'А', 'В', 'И', 'Т', 'Ь'];
 
 const InputActionButtons = ({
   active,
@@ -85,6 +88,19 @@ const InputActionButtons = ({
         title="Отправить"
         tabIndex={active ? 0 : -1}
       >
+        <span className="iab-rotating-text" aria-hidden="true">
+          {SEND_CHARS.map((char, idx) => {
+            const angle = (360 / SEND_CHARS.length) * idx;
+            return (
+              <span
+                key={idx}
+                style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}
+              >
+                {char}
+              </span>
+            );
+          })}
+        </span>
         <SendIcon />
         <span className="iab-spinner" aria-hidden="true" />
       </button>

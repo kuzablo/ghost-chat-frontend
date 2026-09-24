@@ -64,6 +64,7 @@ import '../styles/Chat.update.css';
 import '../styles/Chat.input.css';
 import '../styles/Chat.video.css';
 
+// fix(input): inputActive без showMobileInput, вращающийся ОТПРАВИТЬ (v2.42.1)
 // feat(video): кружки, InputActionButtons mic+cam↔send (v2.42.0)
 // feat(stickers): избранные стикеры (v2.41.0)
 // fix(mascot): обводки, цикл 8с, мгновенный возврат при модалке (v2.39.5)
@@ -72,7 +73,7 @@ import '../styles/Chat.video.css';
 // feat(update): авто-обновление фронта через version.json (v2.37.0)
 // feat(voice): оверлей записи с маскотом (v2.35.58)
 // feat(voice): запись, отправка, плеер (v2.35.57)
-const VERSION = '2.42.0';
+const VERSION = '2.42.1';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1314,7 +1315,7 @@ const Chat = () => {
   const hideHeaderMascot = mascotFlying || mascotPlace !== 'header';
 
   const myAvatarUrl = myId ? (avatarCache[myId] || null) : null;
-  const inputActive = !!input.trim() || inputFocused || showMobileInput;
+  const inputActive = !!input.trim() || inputFocused;
 
   return (
     <>
