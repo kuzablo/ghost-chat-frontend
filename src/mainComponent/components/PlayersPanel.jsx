@@ -46,7 +46,7 @@ const PlayersPanel = forwardRef(({
   onRequestDuel,
   onOpenPrivateChat,
   onFriendRequest,
-  onBlockUser,
+  onBlockConfirm,
   onAcceptRequest,
   onDeclineRequest,
   onOpenInfo,
@@ -148,11 +148,11 @@ const PlayersPanel = forwardRef(({
     items.push({ icon: '⚔️', label: 'Дуэль', onClick: () => onRequestDuel(p.userId) });
     items.push({ icon: '🤝', label: 'В друзья', onClick: () => onFriendRequest(p.userId) });
 
-    if (!blockedIds.has(p.userId) && onBlockUser) {
+    if (!blockedIds.has(p.userId) && onBlockConfirm) {
       items.push({
         icon: '🚫',
         label: 'Заблокировать',
-        onClick: () => onBlockUser(p.userId, p.nickname),
+        onClick: () => onBlockConfirm(p.userId, p.nickname),
         danger: true,
       });
     }
@@ -169,11 +169,11 @@ const PlayersPanel = forwardRef(({
       { icon: '✉️', label: 'Написать', onClick: () => onOpenPrivateChat(f.userId, f.nickname) },
       { icon: '⚔️', label: 'Дуэль', onClick: () => onRequestDuel(f.userId) },
     ];
-    if (!blockedIds.has(f.userId) && onBlockUser) {
+    if (!blockedIds.has(f.userId) && onBlockConfirm) {
       items.push({
         icon: '🚫',
         label: 'Заблокировать',
-        onClick: () => onBlockUser(f.userId, f.nickname),
+        onClick: () => onBlockConfirm(f.userId, f.nickname),
         danger: true,
       });
     }

@@ -175,6 +175,7 @@ const Chat = () => {
   const permGrantedRef = useRef(false);
 
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+    const [blockConfirm, setBlockConfirm] = useState(null);
   const [showDialogs, setShowDialogs] = useState(false);
   const [cameFromDialogs, setCameFromDialogs] = useState(false);
   const [profileTarget, setProfileTarget] = useState(null);
@@ -1339,6 +1340,21 @@ const Chat = () => {
     setBanConfirm({ userId, nickname });
   }, []);
 
+    const handleBlockConfirm = useCallback((userId, nickname) => {
+    setBlockConfirm({ userId, nickname });
+  }, []);
+
+  const handleBlockCancel = useCallback(() => {
+    setBlockConfirm(null);
+  }, []);
+
+  const handleBlockDo = useCallback(() => {
+    if (blockConfirm) {
+      blockUser(blockConfirm.userId);
+      setBlockConfirm(null);
+    }
+  }, [blockConfirm, blockUser]);
+
   const handleRitualAccept = useCallback(() => {
     if (friendshipRitual && friendshipRitual.requestId) {
       handleAcceptRequest(friendshipRitual.requestId);
@@ -1493,7 +1509,7 @@ const Chat = () => {
           onRequestDuel={handleRequestDuel}
           onOpenPrivateChat={openPrivateChat}
           onFriendRequest={handleFriendRequest}
-          onBlockUser={blockUser}
+          onBlockConfirm={handleBlockConfirm}
           onAcceptRequest={handleAcceptRequest}
           onDeclineRequest={handleDeclineRequest}
           onOpenInfo={handleOpenInfo}
@@ -1606,6 +1622,17 @@ const Chat = () => {
         danger
         onConfirm={handleBanDo}
         onCancel={handleBanCancel}
+      />
+
+      <ConfirmModal
+        open={!!blockConfirm}
+        title={`Заблокировать ${blockConfirm?.nickname || 'пользователя'}?`}
+        description="Он исчезнет из онлайна и из твоих диалогов. Разблокировать можно в разделе «Заблокированные» панели «О приложении»."
+        confirmText="Да, заблокировать"
+        danger
+        zIndex={2100}
+        onConfirm={handleBlockDo}
+        onCancel={handleBlockCancel}
       />
 
       <ConfirmModal
