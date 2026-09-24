@@ -555,3 +555,88 @@ body.dark .storage-toast-icon {
   transform: translate(-50%, -50%) scale(1.08);
   background: rgba(0, 0, 0, 0.7);
 }
+
+.storage-tile-video-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  z-index: 4;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+.storage-tile-video:hover .storage-tile-video-controls {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (hover: none) {
+  .storage-tile-video-controls { opacity: 1; transform: translateY(0); }
+}
+
+.storage-tile-video-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #FFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s;
+}
+.storage-tile-video-btn:active {
+  transform: scale(0.9);
+  background: rgba(0, 0, 0, 0.75);
+}
+
+/* Fullscreen */
+.storage-tile-fs {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: storageFsIn 0.18s ease-out;
+  touch-action: none;
+}
+@keyframes storageFsIn { from { opacity: 0 } to { opacity: 1 } }
+
+.storage-tile-fs-video {
+  max-width: 96vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  background: #000;
+  border-radius: 0;
+}
+
+.storage-tile-fs-close {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #FFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 700;
+  touch-action: manipulation;
+  z-index: 2;
+}
+.storage-tile-fs-close:active { transform: scale(0.9); }

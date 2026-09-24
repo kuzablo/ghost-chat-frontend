@@ -157,6 +157,8 @@ const StorageTile = ({ item, onDelete }) => {
 const StorageTileVideo = ({ payload }) => {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [fsOpen, setFsOpen] = useState(false);
 
   const toggle = (e) => {
     e.stopPropagation();
@@ -166,27 +168,105 @@ const StorageTileVideo = ({ payload }) => {
     else { v.play().then(() => setPlaying(true)).catch(() => {}); }
   };
 
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    const next = !muted;
+    v.muted = next;
+    setMuted(next);
+  };
+
+  const openFs = (e) => {
+    e.stopPropagation();
+    setFsOpen(true);
+  };
+
   return (
-    <div className="storage-tile-video" onClick={toggle}>
-      <video
-        ref={videoRef}
-        src={payload.videoUrl}
-        className="storage-tile-video-el"
-        preload="metadata"
-        muted
-        playsInline
-        onLoadedMetadata={(e) => { try { e.currentTarget.currentTime = 0.001; } catch {} }}
-        onEnded={() => setPlaying(false)}
-      />
-      {!playing && (
-        <span className="storage-tile-video-play" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </span>
+    <>
+      <div className="storage-tile-video" onClick={toggle}>
+        <video
+          ref={videoRef}
+          src={payload.videoUrl}
+          className="storage-tile-video-el"
+          preload="metadata"
+          muted={muted}
+          playsInline
+          onLoadedMetadata={(e) => { try { e.currentTarget.currentTime = 0.001; } catch {} }}
+          onEnded={() => setPlaying(false)}
+        />
+
+        {!playing && (
+          <span className="storage-tile-video-play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        )}
+
+        <div className="storage-tile-video-controls">
+          <button
+            type="button"
+            className="storage-tile-video-btn"
+            onClick={toggleMute}
+            aria-label={muted ? 'Включить звук' : 'Выключить звук'}
+            title={muted ? 'Включить звук' : 'Выключить звук'}
+          >
+            {muted ? (
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 5L6 9H3v6h3l5 4V5z" />
+                <line x1="22" y1="9" x2="16" y2="15" />
+                <line x1="16" y1="9" x2="22" y2="15" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 5L6 9H3v6h3l5 4V5z" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            className="storage-tile-video-btn"
+            onClick={openFs}
+            aria-label="На весь экран"
+            title="На весь экран"
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+          </button>
+        </div>
+
+        <span className="storage-tile-video-badge">{fmt(payload.videoDuration || 0)}</span>
+      </div>
+
+      {fsOpen && (
+        <div className="storage-tile-fs" onClick={(e) => { e.stopPropagation(); setFsOpen(false); }}>
+          <button
+            type="button"
+            className="storage-tile-fs-close"
+            onClick={(e) => { e.stopPropagation(); setFsOpen(false); }}
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+          <video
+            src={payload.videoUrl}
+            className="storage-tile-fs-video"
+            autoPlay
+            playsInline
+            controls
+            muted={muted}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
-      <span className="storage-tile-video-badge">{fmt(payload.videoDuration || 0)}</span>
-    </div>
+    </>
   );
 };
 
