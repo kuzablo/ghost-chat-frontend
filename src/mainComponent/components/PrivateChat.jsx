@@ -489,12 +489,18 @@ const PrivateChat = ({
   const handleVoiceClick = useCallback(async () => {
     if (isUploading) return;
     if (voiceRecActive) return;
-    if (videoRecActive) return;
+
+    if (videoRecActive) {
+      videoRec.cancel();
+      await videoRec.stop();
+      setVideoRecActive(false);
+    }
+
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await voiceRec.start();
     if (started) { setVoiceRecActive(true); setVoiceRecFrozen(false); }
-  }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec]);
+  }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec, videoRec]);
 
   // ===== VIDEO =====
 
@@ -527,12 +533,19 @@ const PrivateChat = ({
   const handleCameraClick = useCallback(async () => {
     if (isUploading) return;
     if (videoRecActive) return;
-    if (voiceRecActive) return;
+
+    if (voiceRecActive) {
+      voiceRec.cancel();
+      await voiceRec.stop();
+      setVoiceRecActive(false);
+      setVoiceRecFrozen(false);
+    }
+
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await videoRec.start();
     if (started) setVideoRecActive(true);
-  }, [isUploading, videoRecActive, voiceRecActive, ensureMediaPermissions, videoRec]);
+  }, [isUploading, videoRecActive, voiceRecActive, ensureMediaPermissions, videoRec, voiceRec]);
 
   const finalizeVideo = useCallback(async () => {
     if (!videoRecActive) return;

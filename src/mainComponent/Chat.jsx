@@ -62,7 +62,7 @@ import '../styles/Chat.video.css';
 
 // fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
 // feat(video): кружки (v2.42.0)
-const VERSION = '2.42.9';
+const VERSION = '2.42.10';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1112,12 +1112,19 @@ const Chat = () => {
   const handleVoiceClick = useCallback(async () => {
     if (isUploading) return;
     if (voiceRecActive) return;
-    if (videoRecActive) return;
+
+    // Если видео-запись активна — принудительно закрываем её.
+    if (videoRecActive) {
+      videoRec.cancel();
+      await videoRec.stop();
+      setVideoRecActive(false);
+    }
+
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await voiceRec.start();
     if (started) { setVoiceRecActive(true); setVoiceRecFrozen(false); }
-  }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec]);
+  }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec, videoRec]);
 
   // ===== VIDEO =====
 
@@ -1149,12 +1156,20 @@ const Chat = () => {
   const handleCameraClick = useCallback(async () => {
     if (isUploading || !isAuth) return;
     if (videoRecActive) return;
-    if (voiceRecActive) return;
+
+    // Если voice-запись активна — принудительно закрываем её.
+    if (voiceRecActive) {
+      voiceRec.cancel();
+      await voiceRec.stop();
+      setVoiceRecActive(false);
+      setVoiceRecFrozen(false);
+    }
+
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await videoRec.start();
     if (started) setVideoRecActive(true);
-  }, [isUploading, isAuth, videoRecActive, voiceRecActive, ensureMediaPermissions, videoRec]);
+  }, [isUploading, isAuth, videoRecActive, voiceRecActive, ensureMediaPermissions, videoRec, voiceRec]);
 
   const finalizeVideo = useCallback(async () => {
     if (!videoRecActive) return;
