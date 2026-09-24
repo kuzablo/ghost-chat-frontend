@@ -559,6 +559,10 @@ body.dark .video-msg-square {
   padding-left: 6px;
 }
 
+.msg--video-only {
+  padding-bottom: 16px;
+}
+
 .msg-voice-wrap,
 .msg-video-wrap {
   position: relative;
@@ -609,8 +613,9 @@ body.dark .video-msg-square {
 
 .msg-video-reactions {
   position: absolute;
-  top: -14px;
+  top: 100%;
   right: 6px;
+  transform: translateY(-50%);
   display: flex;
   gap: 4px;
   z-index: 10;
