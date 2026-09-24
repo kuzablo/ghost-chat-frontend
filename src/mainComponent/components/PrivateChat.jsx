@@ -821,7 +821,15 @@ const PrivateChat = ({
                         onTouchEnd={handleMsgTouchEnd}
                       >
                         {forwardLabel}
-                        <VideoMessage url={m.videoUrl} isOwn={isOwn} createdAt={m.created_at} />
+                        <VideoMessage
+                          url={m.videoUrl}
+                          isOwn={isOwn}
+                          createdAt={m.created_at}
+                          messageId={m.id}
+                          reactions={m.reactions || {}}
+                          nickname={myId}
+                          onReact={sendReaction}
+                        />
                       </div>
                     );
                   }

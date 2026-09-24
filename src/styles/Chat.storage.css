@@ -559,7 +559,7 @@ body.dark .storage-toast-icon {
 .storage-tile-video-controls {
   position: absolute;
   top: 6px;
-  right: 6px;
+  right: 42px;
   display: flex;
   gap: 4px;
   z-index: 4;
