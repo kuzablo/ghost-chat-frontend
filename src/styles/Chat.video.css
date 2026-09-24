@@ -685,11 +685,18 @@ body.dark .msg-video-reaction-count {
   padding-bottom: 0;
 }
 
+/* [2.47.4] Две кнопки по краям: mute слева, 😀 справа.
+   Пикер от 😀 не накрывает mute. */
 .fs-video-bottombar-actions {
   display: flex;
   gap: 10px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.fs-video-bottombar-actions .fs-reaction-toggle--react {
+  margin-left: auto;
 }
 
 .fs-reaction-toggle svg {

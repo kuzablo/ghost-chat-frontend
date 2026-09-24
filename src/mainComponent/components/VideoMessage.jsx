@@ -12,6 +12,7 @@ import ReactionWheel from './ReactionWheel';
 
 const FRESH_WINDOW_MS = 8000;
 const SWIPE_CLOSE_PX = 90;
+const WHEEL_NEED_PX = 136;
 
 let currentlyPlayingVideo = null;
 
@@ -222,7 +223,11 @@ const VideoMessage = ({
     e.stopPropagation();
     if (fsWheel) { setFsWheel(null); return; }
     const rect = e.currentTarget.getBoundingClientRect();
-    setFsWheel({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const x = Math.max(WHEEL_NEED_PX, Math.min(window.innerWidth - WHEEL_NEED_PX, cx));
+    const y = Math.max(WHEEL_NEED_PX, Math.min(window.innerHeight - WHEEL_NEED_PX, cy));
+    setFsWheel({ x, y });
   };
 
   const handlePick = (emoji) => {
@@ -305,7 +310,7 @@ const VideoMessage = ({
           {canReact && (
             <button
               type="button"
-              className={`fs-reaction-toggle ${fsWheel ? 'active' : ''}`}
+              className={`fs-reaction-toggle fs-reaction-toggle--react ${fsWheel ? 'active' : ''}`}
               onClick={handleToggleWheel}
               aria-label="Реакции"
             >
