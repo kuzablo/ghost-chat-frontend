@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ReactionWheel from './ReactionWheel';
 
 /*
-  [2.47.0] Fullscreen в стиле fs-картинок. Реакции в чате.
+  [2.47.1] Fullscreen видео через React Portal в document.body.
+           Раньше оверлей рендерился внутри дерева чата, где у .msg-content
+           есть transform: scale() — position: fixed схлопывался к предку
+           и оверлей не раскрывался. Portal выносит в корень документа.
   [2.45.0] Маскот-плейсхолдер до loadeddata. Автоплей свежих (< 8с).
   [2.42.0] Кружки. Кнопки: play, mute, fullscreen.
 */
@@ -84,6 +88,14 @@ const VideoMessage = ({
     if (v && fsOpen) { try { v.pause(); } catch { /* noop */ } setPlaying(false); }
   }, [fsOpen]);
 
+  // Esc закрывает fullscreen
+  useEffect(() => {
+    if (!fsOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') { setFsOpen(false); setFsWheel(null); } };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [fsOpen]);
+
   const handlePlayToggle = (e) => {
     e.stopPropagation();
     const v = videoRef.current;
@@ -129,86 +141,128 @@ const VideoMessage = ({
     setFsWheel(null);
   };
 
+  const fullscreenNode = fsOpen ? (
+    <div className="fullscreen-overlay" onClick={closeFs}>
+      <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
+        <div className="fs-author" />
+        <button className="fs-close" onClick={closeFs} aria-label="Закрыть">
+          <Icon.Close />
+        </button>
+      </div>
+
+      <div className="fs-stage" onClick={closeFs}>
+        <video
+          ref={fsVideoRef}
+          src={url}
+          className="fs-image"
+          autoPlay
+          playsInline
+          controls
+          muted={muted}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+
+      {(hasReactions || canReact) && (
+        <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
+          {hasReactions && (
+            <div className="fs-reactions-strip">
+              {reactionEntries.map(([emoji, users]) => (
+                <span
+                  key={emoji}
+                  className={`fs-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
+                >
+                  <span className="fs-reaction-badge-emoji">{emoji}</span>
+                  <span className="fs-reaction-badge-count">{users.length}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          {canReact && (
+            <button
+              type="button"
+              className={`fs-reaction-toggle ${fsWheel ? 'active' : ''}`}
+              onClick={handleToggleWheel}
+              aria-label="Реакции"
+            >
+              😀
+            </button>
+          )}
+        </div>
+      )}
+
+      {fsWheel && canReact && (
+        <ReactionWheel
+          open
+          anchorX={fsWheel.x}
+          anchorY={fsWheel.y}
+          reactions={reactions || {}}
+          nickname={nickname}
+          onPick={handlePick}
+          onClose={() => setFsWheel(null)}
+          ignoreSelector=".fs-reaction-toggle"
+        />
+      )}
+    </div>
+  ) : null;
+
   return (
     <>
       <div className={`video-msg ${isOwn ? 'video-msg--own' : ''}`}>
         <div className="video-msg-square">
-          <video ref={videoRef} src={url} className="video-msg-video" playsInline preload="auto" muted={muted} onClick={handlePlayToggle} />
-          {!videoReady && (<div className="video-msg-ph" aria-hidden="true"><div className="video-msg-ph-mascot" /></div>)}
-          {!playing && videoReady && (
-            <button type="button" className="video-msg-play" onClick={handlePlayToggle} aria-label="Воспроизвести"><Icon.Play /></button>
+          <video
+            ref={videoRef}
+            src={url}
+            className="video-msg-video"
+            playsInline
+            preload="auto"
+            muted={muted}
+            onClick={handlePlayToggle}
+          />
+
+          {!videoReady && (
+            <div className="video-msg-ph" aria-hidden="true">
+              <div className="video-msg-ph-mascot" />
+            </div>
           )}
+
+          {!playing && videoReady && (
+            <button
+              type="button"
+              className="video-msg-play"
+              onClick={handlePlayToggle}
+              aria-label="Воспроизвести"
+            >
+              <Icon.Play />
+            </button>
+          )}
+
           <div className="video-msg-controls">
-            <button type="button" className="video-msg-btn" onClick={handleMuteToggle} aria-label={muted ? 'Включить звук' : 'Выключить звук'}>
+            <button
+              type="button"
+              className="video-msg-btn"
+              onClick={handleMuteToggle}
+              aria-label={muted ? 'Включить звук' : 'Выключить звук'}
+              title={muted ? 'Включить звук' : 'Выключить звук'}
+            >
               {muted ? <Icon.Mute /> : <Icon.Sound />}
             </button>
-            <button type="button" className="video-msg-btn" onClick={openFs} aria-label="На весь экран"><Icon.Fullscreen /></button>
+            <button
+              type="button"
+              className="video-msg-btn"
+              onClick={openFs}
+              aria-label="На весь экран"
+              title="На весь экран"
+            >
+              <Icon.Fullscreen />
+            </button>
           </div>
         </div>
       </div>
 
-      {fsOpen && (
-        <div className="fullscreen-overlay" onClick={closeFs}>
-          <div className="fs-topbar" onClick={(e) => e.stopPropagation()}>
-            <div className="fs-author" />
-            <button className="fs-close" onClick={closeFs} aria-label="Закрыть"><Icon.Close /></button>
-          </div>
-
-          <div className="fs-stage" onClick={closeFs}>
-            <video
-              ref={fsVideoRef}
-              src={url}
-              className="fs-image"
-              autoPlay
-              playsInline
-              controls
-              muted={muted}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-
-          {(hasReactions || canReact) && (
-            <div className="fs-bottombar" onClick={(e) => e.stopPropagation()}>
-              {hasReactions && (
-                <div className="fs-reactions-strip">
-                  {reactionEntries.map(([emoji, users]) => (
-                    <span
-                      key={emoji}
-                      className={`fs-reaction-badge ${users.includes(nickname) ? 'own' : ''}`}
-                    >
-                      <span className="fs-reaction-badge-emoji">{emoji}</span>
-                      <span className="fs-reaction-badge-count">{users.length}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {canReact && (
-                <button
-                  type="button"
-                  className={`fs-reaction-toggle ${fsWheel ? 'active' : ''}`}
-                  onClick={handleToggleWheel}
-                  aria-label="Реакции"
-                >
-                  😀
-                </button>
-              )}
-            </div>
-          )}
-
-          {fsWheel && canReact && (
-            <ReactionWheel
-              open
-              anchorX={fsWheel.x}
-              anchorY={fsWheel.y}
-              reactions={reactions || {}}
-              nickname={nickname}
-              onPick={handlePick}
-              onClose={() => setFsWheel(null)}
-              ignoreSelector=".fs-reaction-toggle"
-            />
-          )}
-        </div>
-      )}
+      {typeof document !== 'undefined' && fullscreenNode
+        ? createPortal(fullscreenNode, document.body)
+        : fullscreenNode}
     </>
   );
 };
