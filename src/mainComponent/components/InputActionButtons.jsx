@@ -1,0 +1,95 @@
+/*
+  [2.42.0] Кнопка действия справа от поля ввода.
+           Два состояния с плавным переходом:
+           - active=false → [🎤 mic] [📷 cam]
+           - active=true  → [↑ send]
+           active = (в поле есть текст) ИЛИ (поле в фокусе).
+           Запись голоса — long-press 280мс на mic, как было.
+           Запись видео — обычный тап на cam.
+*/
+
+const MicIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+       aria-hidden="true">
+    <rect x="9" y="3" width="6" height="12" rx="3" />
+    <path d="M5 11a7 7 0 0 0 14 0" />
+    <path d="M12 18v3" />
+    <path d="M9 21h6" />
+  </svg>
+);
+
+const CamIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+       aria-hidden="true">
+    <rect x="3" y="6" width="13" height="12" rx="3" />
+    <path d="M16 10l5-3v10l-5-3z" />
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+  </svg>
+);
+
+const InputActionButtons = ({
+  active,
+  disabled = false,
+  sending = false,
+  onSend,
+  onVoicePointerDown,
+  onVoicePointerUp,
+  onCameraClick,
+}) => {
+  const cls = `iab${active ? ' iab--active' : ''}`;
+
+  return (
+    <div className={cls} role="group" aria-label="Действия сообщения">
+      {/* MICROPHONE */}
+      <button
+        type="button"
+        className="iab-btn iab-btn--mic"
+        onPointerDown={onVoicePointerDown}
+        onPointerUp={onVoicePointerUp}
+        onPointerCancel={onVoicePointerUp}
+        disabled={disabled || active}
+        aria-label="Записать голосовое"
+        title="Удерживай для записи голосового"
+        tabIndex={active ? -1 : 0}
+      >
+        <MicIcon />
+      </button>
+
+      {/* CAMERA */}
+      <button
+        type="button"
+        className="iab-btn iab-btn--cam"
+        onClick={active ? undefined : onCameraClick}
+        disabled={disabled || active}
+        aria-label="Записать видео"
+        title="Записать видео-сообщение"
+        tabIndex={active ? -1 : 0}
+      >
+        <CamIcon />
+      </button>
+
+      {/* SEND */}
+      <button
+        type="button"
+        className={`iab-btn iab-btn--send${sending ? ' iab-btn--sending' : ''}`}
+        onClick={active && !disabled ? onSend : undefined}
+        disabled={disabled || !active}
+        aria-label="Отправить"
+        title="Отправить"
+        tabIndex={active ? 0 : -1}
+      >
+        <SendIcon />
+        <span className="iab-spinner" aria-hidden="true" />
+      </button>
+    </div>
+  );
+};
+
+export default InputActionButtons;

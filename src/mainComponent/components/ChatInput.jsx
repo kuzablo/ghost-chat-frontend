@@ -1,6 +1,8 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 
 /*
+  [2.42.0] onFocusChange — опциональный колбэк (bool), чтобы родитель
+           мог показывать send-кнопку при фокусе и mic+cam при blur.
   [2.26.1] draftKey — опциональный. null → черновик не используется.
   [2.26.0] IME composition fix, черновик в localStorage, лимит длины.
   [2.25.1] placeholder отдельным span-слоем — каретка в начале.
@@ -19,6 +21,7 @@ const ChatInput = forwardRef(({
   className = '',
   maxLength = MAX_LENGTH,
   draftKey = DEFAULT_DRAFT_KEY,
+  onFocusChange,
 }, ref) => {
   const elRef = useRef(null);
   const domValueRef = useRef('');
@@ -30,7 +33,6 @@ const ChatInput = forwardRef(({
     getEl: () => elRef.current,
   }), []);
 
-  /* Черновик: восстановить при монтировании */
   useEffect(() => {
     if (!draftKey) return;
     const el = elRef.current;
@@ -136,6 +138,9 @@ const ChatInput = forwardRef(({
 
   const handleDrop = (e) => e.preventDefault();
 
+  const handleFocus = () => { onFocusChange?.(true); };
+  const handleBlur = () => { onFocusChange?.(false); };
+
   const isDisabled = !!disabled;
   const showPlaceholder = !value && !!placeholder;
 
@@ -160,6 +165,8 @@ const ChatInput = forwardRef(({
         onCompositionEnd={handleCompositionEnd}
         onPaste={handlePaste}
         onDrop={handleDrop}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         suppressContentEditableWarning
       />
     </div>
