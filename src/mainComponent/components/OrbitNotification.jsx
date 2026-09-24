@@ -30,13 +30,14 @@ const OrbitNotification = ({
   className = '',
   mascotRef = null,
   mascotOnly = false,
+  paused = false,
 }) => {
   const orbitRef = useRef(null);
   const rafRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0, fired: false });
 
   useEffect(() => {
-    if (mascotOnly) return;
+    if (mascotOnly || paused) return;
     const stage = orbitRef.current;
     if (!stage) return;
 
@@ -77,7 +78,7 @@ const OrbitNotification = ({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [mascotOnly]);
+  }, [mascotOnly, paused]);
 
   const shown = mascotOnly ? [] : users.slice(0, MAX_AVATARS);
   const more = mascotOnly ? 0 : Math.max(0, users.length - MAX_AVATARS);

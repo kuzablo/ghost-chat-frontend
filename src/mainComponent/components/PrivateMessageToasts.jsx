@@ -1,27 +1,31 @@
 import OrbitNotification from './OrbitNotification';
 
 /*
-  [2.39.4] Компонент всегда в DOM. Видимость — через проп visible,
-           переключается классом .pm-orbit--preparing (opacity 0,
-           pointer-events none). Ref на маскота валиден всегда —
-           маскот из шапки знает куда лететь.
-           mascotOnly=true когда непрочитанных нет — рендерим только
-           маскота без орбиты, координаты для будущего полёта.
+  [2.48.7] instantHide — при открытии модалок маскот пропадает мгновенно,
+           без 240мс transition. paused — не крутим RAF в скрытом состоянии.
+  [2.39.4] Компонент всегда в DOM. Видимость — через класс
+           .pm-orbit--preparing. Ref валиден всегда.
 */
 const PrivateMessageToasts = ({
   users = [],
   visible = false,
+  instantHide = false,
   onOpenDialogs,
   mascotRef = null,
 }) => {
   const hasUsers = users.length > 0;
 
+  const cls = visible
+    ? ''
+    : `pm-orbit--preparing${instantHide ? ' pm-orbit--instant' : ''}`;
+
   return (
     <OrbitNotification
       users={users}
       mascotOnly={!hasUsers}
+      paused={!visible}
       onClick={visible && hasUsers ? onOpenDialogs : undefined}
-      className={visible ? '' : 'pm-orbit--preparing'}
+      className={cls}
       mascotRef={mascotRef}
     />
   );

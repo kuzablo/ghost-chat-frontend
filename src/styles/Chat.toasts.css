@@ -316,3 +316,8 @@ body.dark .pm-orbit-more {
 .pm-orbit--preparing .pm-orbit-more {
   display: none;
 }
+
+/* [2.48.7] Мгновенное скрытие маскота в модалках — без transition. */
+.pm-orbit--instant {
+  transition: none !important;
+}

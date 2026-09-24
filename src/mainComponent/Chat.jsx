@@ -512,22 +512,32 @@ const Chat = () => {
 
     const hasUnread = unreadUserObjects.length > 0;
     const modalOpen = showDialogs || privateChat || !!profileTarget || storageOpen;
-    const wantPanel = showPlayers && !modalOpen;
-    const centerAlreadyShown =
-      centerDismissedForCountRef.current === unreadUserObjects.length;
-    const wantCenter =
-      !showPlayers && !modalOpen && hasUnread && !centerAlreadyShown;
 
+    // [2.48.7] В modalOpen маскот полностью скрыт — нигде.
     if (modalOpen) {
-      if (mascotPlace !== 'header') setMascotPlace('header');
+      if (mascotPlace !== 'hidden') setMascotPlace('hidden');
       return;
     }
+
+    // Вышли из modal — маскот появляется в шапке (без полёта).
+    if (mascotPlace === 'hidden') {
+      setMascotPlace('header');
+      return;
+    }
+
+    const wantPanel = showPlayers;
+    const centerAlreadyShown =
+      centerDismissedForCountRef.current === unreadUserObjects.length;
+    const wantCenter = !showPlayers && hasUnread && !centerAlreadyShown;
 
     if (wantPanel && mascotPlace !== 'panel') {
       setMascotPlace('panel');
       const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
       if (mascotPlace === 'header') {
         startMascotFlight({ toRef: panelOrbitRef, toSize: size });
+      } else if (mascotPlace === 'center') {
+        // [2.48.7] Явный fromRef центра — не полагаемся на lastLandedRect.
+        startMascotFlight({ fromRef: centerMascotRef, toRef: panelOrbitRef, toSize: size });
       } else {
         startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: size });
       }
@@ -536,11 +546,17 @@ const Chat = () => {
 
     if (wantCenter && mascotPlace !== 'center') {
       setMascotPlace('center');
-      if (mascotPlace === 'header') {
-        startMascotFlight({ toRef: centerMascotRef, toSize: MASCOT_SIZE_CENTER });
-      } else {
-        startMascotFlight({ fromLanded: true, toRef: centerMascotRef, toSize: MASCOT_SIZE_CENTER });
-      }
+      const wasHeader = mascotPlace === 'header';
+      // Даём React кадр на монтирование PrivateMessageToasts.
+      requestAnimationFrame(() => {
+        const el = document.querySelector('.pm-orbit-mascot-wrap');
+        const toRefSafe = { current: el };
+        if (wasHeader) {
+          startMascotFlight({ toRef: toRefSafe, toSize: MASCOT_SIZE_CENTER });
+        } else {
+          startMascotFlight({ fromLanded: true, toRef: toRefSafe, toSize: MASCOT_SIZE_CENTER });
+        }
+      });
       return;
     }
 
@@ -1901,6 +1917,7 @@ const Chat = () => {
       <PrivateMessageToasts
         users={unreadUserObjects}
         visible={mascotPlace === 'center' && !mascotFlying}
+        instantHide={showDialogs || privateChat || !!profileTarget || storageOpen}
         onOpenDialogs={handleOpenDialogs}
         mascotRef={centerMascotRef}
       />
