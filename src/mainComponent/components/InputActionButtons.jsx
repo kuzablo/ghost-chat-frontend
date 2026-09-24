@@ -1,12 +1,7 @@
 /*
+  [2.42.3] Убран long-press. mic → voice, cam → video, обе — обычный клик.
   [2.42.1] Вращающийся «ОТПРАВИТЬ» на send-кнопке.
-  [2.42.0] Кнопка действия справа от поля ввода.
-           Два состояния с плавным переходом:
-           - active=false → [🎤 mic] [📷 cam]
-           - active=true  → [↑ send]
-           active = (в поле есть текст) ИЛИ (поле в фокусе).
-           Запись голоса — long-press 280мс на mic, как было.
-           Запись видео — обычный тап на cam.
+  [2.42.0] mic+cam ↔ send с плавным переходом.
 */
 
 const MicIcon = () => (
@@ -42,8 +37,7 @@ const InputActionButtons = ({
   disabled = false,
   sending = false,
   onSend,
-  onVoicePointerDown,
-  onVoicePointerUp,
+  onVoiceClick,
   onCameraClick,
 }) => {
   const cls = `iab${active ? ' iab--active' : ''}`;
@@ -54,12 +48,10 @@ const InputActionButtons = ({
       <button
         type="button"
         className="iab-btn iab-btn--mic"
-        onPointerDown={onVoicePointerDown}
-        onPointerUp={onVoicePointerUp}
-        onPointerCancel={onVoicePointerUp}
+        onClick={active ? undefined : onVoiceClick}
         disabled={disabled || active}
         aria-label="Записать голосовое"
-        title="Удерживай для записи голосового"
+        title="Записать голосовое"
         tabIndex={active ? -1 : 0}
       >
         <MicIcon />
@@ -94,7 +86,7 @@ const InputActionButtons = ({
             return (
               <span
                 key={idx}
-                style={{ transform: `rotate(${angle}deg) translate(0, -28px)` }}
+                style={{ transform: `rotate(${angle}deg) translate(0, -26px)` }}
               >
                 {char}
               </span>

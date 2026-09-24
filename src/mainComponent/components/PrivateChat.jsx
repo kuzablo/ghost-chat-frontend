@@ -15,16 +15,8 @@ import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 import { useVideoRecorder, extFromVideoMime } from '../hooks/useVideoRecorder';
 
 /*
-  [2.42.0] Кнопка ввода — InputActionButtons (mic+cam ↔ send).
-           Запись видео-кружка (VideoRecordingOverlay).
-           VoiceRecordingOverlay — аватар юзера вместо маскота.
-  [2.41.0] favoriteStickers / onToggleFavorite пробрасываются в StickerPanel.
-  [2.36.7] Убран автоскрывающий таймер pickerFor.
-  [2.36.5] Убран ник над gif-стикером.
-  [2.35.60] private_message_deleted — удаление + пересчёт preview.
-  [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update.
-  [2.35.41] historyLoaded в privateChat.
-  [2.28.7] восстанавливаем unreadByUser из dialogs_list.
+  [2.42.3] mic/cam обычный клик, разрешения сразу (аудио+видео).
+  [2.42.0] InputActionButtons, video rec/upload, avatar в voice overlay.
 */
 
 const MAX_UPLOAD_MB = 25;
@@ -104,10 +96,9 @@ const PrivateChat = ({
 
   const [voiceRecActive, setVoiceRecActive] = useState(false);
   const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
-  const voiceLongPressTimerRef = useRef(null);
-  const voiceStartXRef = useRef(0);
-
   const [videoRecActive, setVideoRecActive] = useState(false);
+
+  const permGrantedRef = useRef(false);
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -422,6 +413,27 @@ const PrivateChat = ({
     );
   };
 
+  // ===== PERMISSIONS =====
+
+  const ensureMediaPermissions = useCallback(async () => {
+    if (permGrantedRef.current) return true;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setUploadError('Камера и микрофон недоступны в этом браузере');
+      setTimeout(() => setUploadError(''), 4000);
+      return false;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      stream.getTracks().forEach(t => { try { t.stop(); } catch { /* noop */ } });
+      permGrantedRef.current = true;
+      return true;
+    } catch {
+      setUploadError('Разреши доступ к камере и микрофону');
+      setTimeout(() => setUploadError(''), 5000);
+      return false;
+    }
+  }, []);
+
   // ===== VOICE =====
 
   const uploadAndSendVoice = useCallback(async (result) => {
@@ -430,10 +442,7 @@ const PrivateChat = ({
     const ext = extFromMime(result.mime);
     fd.append('file', result.blob, `voice_${Date.now()}.${ext}`);
     try {
-      const res = await fetch(`${API_URL}/api/upload-voice`, {
-        method: 'POST',
-        body: fd,
-      });
+      const res = await fetch(`${API_URL}/api/upload-voice`, { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       sendMessage({
@@ -453,29 +462,20 @@ const PrivateChat = ({
     }
   }, [sendMessage, userId]);
 
-  const stopVoicePressTimer = useCallback(() => {
-    if (voiceLongPressTimerRef.current) {
-      clearTimeout(voiceLongPressTimerRef.current);
-      voiceLongPressTimerRef.current = null;
-    }
-  }, []);
-
   const cancelVoice = useCallback(async () => {
-    stopVoicePressTimer();
     voiceRec.cancel();
     await voiceRec.stop();
     setVoiceRecActive(false);
     setVoiceRecFrozen(false);
-  }, [voiceRec, stopVoicePressTimer]);
+  }, [voiceRec]);
 
   const finalizeVoice = useCallback(async () => {
-    stopVoicePressTimer();
     if (!voiceRecActive) return;
     const result = await voiceRec.stop();
     setVoiceRecActive(false);
     setVoiceRecFrozen(false);
     if (result) await uploadAndSendVoice(result);
-  }, [voiceRecActive, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
+  }, [voiceRecActive, voiceRec, uploadAndSendVoice]);
 
   const sendVoiceNow = useCallback(async () => { await finalizeVoice(); }, [finalizeVoice]);
   const cancelVoiceNow = useCallback(async () => { await cancelVoice(); }, [cancelVoice]);
@@ -486,24 +486,14 @@ const PrivateChat = ({
     setVoiceRecFrozen(true);
   };
 
-  const handleVoicePointerDown = useCallback((e) => {
-    if (input.trim()) return;
+  const handleVoiceClick = useCallback(async () => {
     if (isUploading) return;
-    voiceStartXRef.current = e.clientX;
-    stopVoicePressTimer();
-    voiceLongPressTimerRef.current = setTimeout(async () => {
-      voiceLongPressTimerRef.current = null;
-      const ok = await voiceRec.start();
-      if (ok) {
-        setVoiceRecActive(true);
-        setVoiceRecFrozen(false);
-      }
-    }, 280);
-  }, [input, isUploading, voiceRec, stopVoicePressTimer]);
-
-  const handleVoicePointerUp = useCallback(() => {
-    stopVoicePressTimer();
-  }, [stopVoicePressTimer]);
+    if (voiceRecActive) return;
+    const ok = await ensureMediaPermissions();
+    if (!ok) return;
+    const started = await voiceRec.start();
+    if (started) { setVoiceRecActive(true); setVoiceRecFrozen(false); }
+  }, [isUploading, voiceRecActive, ensureMediaPermissions, voiceRec]);
 
   // ===== VIDEO =====
 
@@ -534,10 +524,13 @@ const PrivateChat = ({
   }, [sendMessage, userId]);
 
   const handleCameraClick = useCallback(async () => {
-    if (isUploading || !sendMessage) return;
-    const ok = await videoRec.start();
-    if (ok) setVideoRecActive(true);
-  }, [isUploading, sendMessage, videoRec]);
+    if (isUploading) return;
+    if (videoRecActive) return;
+    const ok = await ensureMediaPermissions();
+    if (!ok) return;
+    const started = await videoRec.start();
+    if (started) setVideoRecActive(true);
+  }, [isUploading, videoRecActive, ensureMediaPermissions, videoRec]);
 
   const finalizeVideo = useCallback(async () => {
     if (!videoRecActive) return;
@@ -558,15 +551,10 @@ const PrivateChat = ({
     sendVideoNow();
   };
 
-  // ===== /VOICE /VIDEO =====
-
   const handleConfirmDelete = useCallback(() => {
     if (!confirmDelete) return;
     if (sendMessage) {
-      sendMessage({
-        type: 'private_delete_message',
-        data: { messageId: confirmDelete.messageId },
-      });
+      sendMessage({ type: 'private_delete_message', data: { messageId: confirmDelete.messageId } });
     }
     setConfirmDelete(null);
   }, [confirmDelete, sendMessage]);
@@ -809,8 +797,7 @@ const PrivateChat = ({
               active={inputActive}
               disabled={isUploading}
               onSend={handleSend}
-              onVoicePointerDown={handleVoicePointerDown}
-              onVoicePointerUp={handleVoicePointerUp}
+              onVoiceClick={handleVoiceClick}
               onCameraClick={handleCameraClick}
             />
           </div>

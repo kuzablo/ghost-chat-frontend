@@ -1,8 +1,5 @@
 /* ============================================================= */
-/* [2.42.2] InputActionButtons                                    */
-/*  - :active без сдвига — кнопки остаются на своих местах        */
-/*  - буквы вращающегося «ОТПРАВИТЬ» видны                        */
-/*  - mic слева / cam справа / send в центре                      */
+/* [2.42.3] InputActionButtons                                    */
 /* ============================================================= */
 
 .iab {
@@ -37,7 +34,7 @@
 
 .iab-btn:disabled { cursor: not-allowed; }
 
-/* ==== MIC + CAM: 52px, разнесены ±28px ==== */
+/* ==== MIC + CAM: 52px, ±28px ==== */
 .iab-btn--mic,
 .iab-btn--cam {
   width: 52px;
@@ -49,11 +46,9 @@
 .iab-btn--mic svg,
 .iab-btn--cam svg { width: 24px; height: 24px; display: block; }
 
-/* expanded: на своих местах */
 .iab-btn--mic { transform: translate(calc(-50% - 28px), -50%) scale(1); opacity: 1; }
 .iab-btn--cam { transform: translate(calc(-50% + 28px), -50%) scale(1); opacity: 1; }
 
-/* актив: сжатие, но НЕ сдвиг — палец остаётся на своей кнопке */
 .iab-btn--mic:active:not(:disabled) {
   transform: translate(calc(-50% - 28px), -50%) scale(0.88) !important;
 }
@@ -61,7 +56,6 @@
   transform: translate(calc(-50% + 28px), -50%) scale(0.88) !important;
 }
 
-/* collapsed: обе сжаты в центр, невидимы */
 .iab--active .iab-btn--mic { transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; }
 .iab--active .iab-btn--cam { transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; }
 
@@ -75,8 +69,11 @@
   transform: translate(-50%, -50%) scale(0.4);
   opacity: 0;
   pointer-events: none;
-  overflow: hidden;
+  /* overflow НЕ hidden — буквы не должны обрезаться */
+  overflow: visible;
+  isolation: isolate;
 }
+
 .iab-btn--send svg {
   width: 26px;
   height: 26px;
@@ -103,8 +100,14 @@
   height: 100%;
   pointer-events: none;
   z-index: 1;
-  animation: iabSpin 20s linear infinite;
   transform-origin: 50% 50%;
+  animation: iabRot 18s linear infinite;
+  will-change: transform;
+}
+
+@keyframes iabRot {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .iab-rotating-text > span {
@@ -112,14 +115,16 @@
   top: 50%;
   left: 50%;
   transform-origin: 0 0;
+  display: block;
   font-size: 9px;
   font-weight: 900;
   color: #FFFFFF;
   text-transform: uppercase;
-  line-height: 1;
   letter-spacing: 0.2px;
+  line-height: 1;
   white-space: nowrap;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 .iab-btn--sending .iab-rotating-text { display: none; }
@@ -127,20 +132,21 @@
 .iab-spinner {
   display: none;
   position: absolute;
-  inset: 0;
-  margin: auto;
+  top: 50%;
+  left: 50%;
   width: 26px;
   height: 26px;
+  margin: -13px 0 0 -13px;
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-top-color: #FFFFFF;
   border-radius: 50%;
   animation: iabSpin 0.7s linear infinite;
   z-index: 2;
 }
+@keyframes iabSpin { to { transform: rotate(360deg); } }
+
 .iab-btn--sending svg { display: none; }
 .iab-btn--sending .iab-spinner { display: block; }
-
-@keyframes iabSpin { to { transform: rotate(360deg); } }
 
 /* ==== Тёмная тема ==== */
 body.dark .iab-btn--mic,
@@ -170,7 +176,6 @@ body.dark .iab-btn--cam {
   .iab-rotating-text > span { font-size: 8px; }
 }
 
-/* ==== Reduced motion ==== */
 @media (prefers-reduced-motion: reduce) {
   .iab-btn { transition: opacity 0.12s ease; }
   .iab-rotating-text { animation: none; }

@@ -20,11 +20,7 @@ import ReactionWheel from './components/ReactionWheel';
 import UpdateToast from './components/UpdateToast';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
-import {
-  getAvatarColor,
-  getInitial,
-  formatMessageDate,
-} from './utils';
+import { getAvatarColor, getInitial, formatMessageDate } from './utils';
 import { useAudio } from './hooks/useAudio';
 import { useChatUI } from './hooks/useChatUI';
 import { useAutoScroll } from './hooks/useAutoScroll';
@@ -64,17 +60,9 @@ import '../styles/Chat.update.css';
 import '../styles/Chat.input.css';
 import '../styles/Chat.video.css';
 
-// style(video): резкие рамки как gif, poster
-// fix(input): inputActive без showMobileInput, вращающийся ОТПРАВИТЬ (v2.42.1)
-// feat(video): кружки, InputActionButtons mic+cam↔send (v2.42.0)
-// feat(stickers): избранные стикеры (v2.41.0)
-// fix(mascot): обводки, цикл 8с, мгновенный возврат при модалке (v2.39.5)
-// feat(mascot): три места, полёт шапка ↔ панель ↔ центр (v2.39.4)
-// refactor(gestures): вынес useFullscreenGestures из Chat.jsx (v2.37.6)
-// feat(update): авто-обновление фронта через version.json (v2.37.0)
-// feat(voice): оверлей записи с маскотом (v2.35.58)
-// feat(voice): запись, отправка, плеер (v2.35.57)
-const VERSION = '2.42.2';
+// fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
+// feat(video): кружки (v2.42.0)
+const VERSION = '2.42.3';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -157,8 +145,8 @@ const Chat = () => {
   const [voiceRecFrozen, setVoiceRecFrozen] = useState(false);
   const [videoRecActive, setVideoRecActive] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
-  const voiceLongPressTimerRef = useRef(null);
-  const voiceStartXRef = useRef(0);
+
+  const permGrantedRef = useRef(false);
 
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [showDialogs, setShowDialogs] = useState(false);
@@ -252,8 +240,6 @@ const Chat = () => {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         console.warn('[push] subscribe failed:', res.status, data);
-      } else {
-        console.log('[push] subscribed');
       }
     } catch (err) {
       console.warn('[push] subscribe error:', err);
@@ -997,39 +983,22 @@ const Chat = () => {
 
   const handleForwardPick = useCallback((target) => {
     if (!forwardData) return;
+    const payload = {
+      text: forwardData.text || '',
+      imageUrl: forwardData.imageUrl || null,
+      stickerUrl: forwardData.stickerUrl || null,
+      voiceUrl: forwardData.voiceUrl || null,
+      voiceDuration: forwardData.voiceDuration || null,
+      voiceWaveform: forwardData.voiceWaveform || null,
+      videoUrl: forwardData.videoUrl || null,
+      videoDuration: forwardData.videoDuration || null,
+      videoMime: forwardData.videoMime || null,
+      forwardedFrom: forwardData.forwardedFrom,
+    };
     if (target.type === 'general') {
-      sendMessage({
-        type: 'message',
-        data: {
-          text: forwardData.text || '',
-          imageUrl: forwardData.imageUrl || null,
-          stickerUrl: forwardData.stickerUrl || null,
-          voiceUrl: forwardData.voiceUrl || null,
-          voiceDuration: forwardData.voiceDuration || null,
-          voiceWaveform: forwardData.voiceWaveform || null,
-          videoUrl: forwardData.videoUrl || null,
-          videoDuration: forwardData.videoDuration || null,
-          videoMime: forwardData.videoMime || null,
-          forwardedFrom: forwardData.forwardedFrom,
-        },
-      });
+      sendMessage({ type: 'message', data: payload });
     } else if (target.type === 'private' && target.userId) {
-      sendMessage({
-        type: 'private_message',
-        data: {
-          recipientId: target.userId,
-          text: forwardData.text || '',
-          imageUrl: forwardData.imageUrl || null,
-          stickerUrl: forwardData.stickerUrl || null,
-          voiceUrl: forwardData.voiceUrl || null,
-          voiceDuration: forwardData.voiceDuration || null,
-          voiceWaveform: forwardData.voiceWaveform || null,
-          videoUrl: forwardData.videoUrl || null,
-          videoDuration: forwardData.videoDuration || null,
-          videoMime: forwardData.videoMime || null,
-          forwardedFrom: forwardData.forwardedFrom,
-        },
-      });
+      sendMessage({ type: 'private_message', data: { ...payload, recipientId: target.userId } });
     }
     setForwardData(null);
   }, [forwardData, sendMessage]);
@@ -1064,6 +1033,31 @@ const Chat = () => {
     inputTouchStartXRef.current = null;
   };
 
+  // ===== MEDIA PERMISSIONS =====
+
+  const ensureMediaPermissions = useCallback(async () => {
+    if (permGrantedRef.current) return true;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErrorMessage('Камера и микрофон недоступны в этом браузере');
+      setTimeout(() => setErrorMessage(''), 4000);
+      return false;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      stream.getTracks().forEach(t => { try { t.stop(); } catch { /* noop */ } });
+      permGrantedRef.current = true;
+      return true;
+    } catch (err) {
+      console.warn('[perm] denied:', err?.name);
+      setErrorMessage('Разреши доступ к камере и микрофону в настройках');
+      setTimeout(() => setErrorMessage(''), 5000);
+      return false;
+    }
+  }, [setErrorMessage]);
+
   // ===== VOICE =====
 
   const uploadAndSendVoice = useCallback(async (result) => {
@@ -1091,29 +1085,20 @@ const Chat = () => {
     }
   }, [sendMessage, setErrorMessage]);
 
-  const stopVoicePressTimer = useCallback(() => {
-    if (voiceLongPressTimerRef.current) {
-      clearTimeout(voiceLongPressTimerRef.current);
-      voiceLongPressTimerRef.current = null;
-    }
-  }, []);
-
   const cancelVoice = useCallback(async () => {
-    stopVoicePressTimer();
     voiceRec.cancel();
     await voiceRec.stop();
     setVoiceRecActive(false);
     setVoiceRecFrozen(false);
-  }, [voiceRec, stopVoicePressTimer]);
+  }, [voiceRec]);
 
   const finalizeVoice = useCallback(async () => {
-    stopVoicePressTimer();
     if (!voiceRecActive) return;
     const result = await voiceRec.stop();
     setVoiceRecActive(false);
     setVoiceRecFrozen(false);
     if (result) await uploadAndSendVoice(result);
-  }, [voiceRecActive, voiceRec, uploadAndSendVoice, stopVoicePressTimer]);
+  }, [voiceRecActive, voiceRec, uploadAndSendVoice]);
 
   const sendVoiceNow = useCallback(async () => { await finalizeVoice(); }, [finalizeVoice]);
   const cancelVoiceNow = useCallback(async () => { await cancelVoice(); }, [cancelVoice]);
@@ -1124,24 +1109,17 @@ const Chat = () => {
     setVoiceRecFrozen(true);
   };
 
-  const handleVoicePointerDown = useCallback((e) => {
-    if (input.trim()) return;
+  const handleVoiceClick = useCallback(async () => {
     if (isUploading) return;
-    voiceStartXRef.current = e.clientX;
-    stopVoicePressTimer();
-    voiceLongPressTimerRef.current = setTimeout(async () => {
-      voiceLongPressTimerRef.current = null;
-      const ok = await voiceRec.start();
-      if (ok) {
-        setVoiceRecActive(true);
-        setVoiceRecFrozen(false);
-      }
-    }, 280);
-  }, [input, isUploading, voiceRec, stopVoicePressTimer]);
-
-  const handleVoicePointerUp = useCallback(() => {
-    stopVoicePressTimer();
-  }, [stopVoicePressTimer]);
+    if (voiceRecActive) return;
+    const ok = await ensureMediaPermissions();
+    if (!ok) return;
+    const started = await voiceRec.start();
+    if (started) {
+      setVoiceRecActive(true);
+      setVoiceRecFrozen(false);
+    }
+  }, [isUploading, voiceRecActive, ensureMediaPermissions, voiceRec]);
 
   // ===== VIDEO =====
 
@@ -1172,9 +1150,12 @@ const Chat = () => {
 
   const handleCameraClick = useCallback(async () => {
     if (isUploading || !isAuth) return;
-    const ok = await videoRec.start();
-    if (ok) setVideoRecActive(true);
-  }, [isUploading, isAuth, videoRec]);
+    if (videoRecActive) return;
+    const ok = await ensureMediaPermissions();
+    if (!ok) return;
+    const started = await videoRec.start();
+    if (started) setVideoRecActive(true);
+  }, [isUploading, isAuth, videoRecActive, ensureMediaPermissions, videoRec]);
 
   const finalizeVideo = useCallback(async () => {
     if (!videoRecActive) return;
@@ -1693,8 +1674,7 @@ const Chat = () => {
                 disabled={!isAuth || isUploading}
                 sending={sending}
                 onSend={handleSendMessage}
-                onVoicePointerDown={handleVoicePointerDown}
-                onVoicePointerUp={handleVoicePointerUp}
+                onVoiceClick={handleVoiceClick}
                 onCameraClick={handleCameraClick}
               />
             </div>
