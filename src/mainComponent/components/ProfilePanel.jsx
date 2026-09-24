@@ -265,22 +265,24 @@ const ProfilePanel = ({
               </div>
 
               {error && <div className="profile-error">{error}</div>}
+
               <button
                 className="btn profile-save-btn"
                 onClick={handleSave}
                 disabled={!dirty || uploading}
               >
                 {justSaved ? 'Сохранено ✓' : 'Сохранить'}
-                {onOpenStorage && (
-                  <button
-                    type="button"
-                    className="btn profile-storage-btn"
-                    onClick={() => { onClose(); onOpenStorage(); }}
-                  >
-                    🗄️ Моё хранилище
-                  </button>
-                )}
               </button>
+
+              {onOpenStorage && (
+                <button
+                  type="button"
+                  className="btn profile-storage-btn"
+                  onClick={() => { onClose(); onOpenStorage(); }}
+                >
+                  🗄️ Моё хранилище
+                </button>
+              )}
             </>
           )}
         </div>
