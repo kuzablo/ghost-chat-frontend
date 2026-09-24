@@ -2,12 +2,12 @@
 
 /* [2.35.24] Скрываем плавающие кнопки на тач-устройствах */
 @media (hover: none) and (pointer: coarse) {
-  .theme-toggle, .players-toggle, .dialogs-toggle { display: none !important; }
+  .theme-toggle, .players-toggle, .dialogs-toggle, .refresh-toggle { display: none !important; }
 }
 
 @media (max-width: 600px) {
   .qr-wrap { display: none; }
-  .theme-toggle, .players-toggle, .dialogs-toggle { display: none !important; }
+  .theme-toggle, .players-toggle, .dialogs-toggle, .refresh-toggle { display: none !important; }
 
   .mobile-capsule {
     display: block;
