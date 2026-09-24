@@ -489,11 +489,12 @@ const PrivateChat = ({
   const handleVoiceClick = useCallback(async () => {
     if (isUploading) return;
     if (voiceRecActive) return;
+    if (videoRecActive) return;
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await voiceRec.start();
     if (started) { setVoiceRecActive(true); setVoiceRecFrozen(false); }
-  }, [isUploading, voiceRecActive, ensureMediaPermissions, voiceRec]);
+  }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec]);
 
   // ===== VIDEO =====
 
@@ -526,11 +527,12 @@ const PrivateChat = ({
   const handleCameraClick = useCallback(async () => {
     if (isUploading) return;
     if (videoRecActive) return;
+    if (voiceRecActive) return;
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await videoRec.start();
     if (started) setVideoRecActive(true);
-  }, [isUploading, videoRecActive, ensureMediaPermissions, videoRec]);
+  }, [isUploading, videoRecActive, voiceRecActive, ensureMediaPermissions, videoRec]);
 
   const finalizeVideo = useCallback(async () => {
     if (!videoRecActive) return;
@@ -669,6 +671,29 @@ const PrivateChat = ({
                   );
                 }
 
+                const isVoiceOnly = !m.text?.trim() && !m.imageUrl && !!m.voiceUrl;
+
+                if (isVoiceOnly) {
+                  return (
+                    <div
+                      key={m.id || i}
+                      data-msg-id={m.id}
+                      className={`private-msg private-msg--voice ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
+                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                      onTouchMove={handleMsgTouchMove}
+                      onTouchEnd={handleMsgTouchEnd}
+                    >
+                      {forwardLabel}
+                      <VoiceMessage
+                        url={m.voiceUrl}
+                        duration={m.voiceDuration || 0}
+                        waveform={m.voiceWaveform || []}
+                        isOwn={isOwn}
+                      />
+                    </div>
+                  );
+                }
+
                 const isVideoOnly = !m.text?.trim() && !m.imageUrl && !m.voiceUrl && !!m.videoUrl;
 
                 if (isVideoOnly) {
@@ -712,14 +737,6 @@ const PrivateChat = ({
                           loading="lazy"
                           draggable={false}
                           onClick={(e) => { e.stopPropagation(); setFullscreenImage(m.imageUrl); }}
-                        />
-                      )}
-                      {m.voiceUrl && (
-                        <VoiceMessage
-                          url={m.voiceUrl}
-                          duration={m.voiceDuration || 0}
-                          waveform={m.voiceWaveform || []}
-                          isOwn={isOwn}
                         />
                       )}
                       {m.text && <span className="private-msg-text">{m.text}</span>}

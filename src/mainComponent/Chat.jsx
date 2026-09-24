@@ -1112,6 +1112,7 @@ const Chat = () => {
   const handleVoiceClick = useCallback(async () => {
     if (isUploading) return;
     if (voiceRecActive) return;
+    if (videoRecActive) return;
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await voiceRec.start();
@@ -1119,7 +1120,7 @@ const Chat = () => {
       setVoiceRecActive(true);
       setVoiceRecFrozen(false);
     }
-  }, [isUploading, voiceRecActive, ensureMediaPermissions, voiceRec]);
+  }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec]);
 
   // ===== VIDEO =====
 
@@ -1151,11 +1152,12 @@ const Chat = () => {
   const handleCameraClick = useCallback(async () => {
     if (isUploading || !isAuth) return;
     if (videoRecActive) return;
+    if (voiceRecActive) return;
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await videoRec.start();
     if (started) setVideoRecActive(true);
-  }, [isUploading, isAuth, videoRecActive, ensureMediaPermissions, videoRec]);
+  }, [isUploading, isAuth, videoRecActive, voiceRecActive, ensureMediaPermissions, videoRec]);
 
   const finalizeVideo = useCallback(async () => {
     if (!videoRecActive) return;

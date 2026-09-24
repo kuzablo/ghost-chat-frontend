@@ -366,6 +366,7 @@ const MessageList = ({
     if (swipeActiveRef.current) return;
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
     if (e.target.closest('.video-msg')) return;
+    if (e.target.closest('.voice-msg')) return;
     handleMessageTap(m.id, e);
   };
 
@@ -503,25 +504,21 @@ const MessageList = ({
             return (
               <React.Fragment key={m.id}>
                 {dateDivider}
-                <div
-                  className={`msg ${isOwn ? 'msg--own' : 'msg--other'}`}
-                  data-msg-id={m.id}
-                >
-                  {renderMsgAvatar(m.userId, m.nickname)}
+                <div className={`msg msg--voice-only ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
                   <div className="msg-swipe-glow msg-swipe-glow--reply" />
                   <div className="msg-swipe-glow msg-swipe-glow--delete" />
                   <div
-                    className="msg-content"
+                    className="msg-voice-wrap"
                     onTouchStart={(e) => handleMsgTouchStart(e, m)}
                     onTouchMove={(e) => handleMsgTouchMove(e, m)}
                     onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                   >
-                    {editRingId === m.id && <div className="msg-edit-ring" />}
-                    <div className="msg-header">
+                    {editRingId === m.id && <div className="hold-ring" />}
+                    {forwardLabel}
+                    <div className="msg-voice-header">
                       <span className="msg-nick">{m.nickname}</span>
                       <span className="msg-time">{formatMessageDate(m.time)}</span>
                     </div>
-                    {forwardLabel}
                     {replyBlock}
                     <VoiceMessage
                       url={m.voiceUrl}
@@ -550,6 +547,10 @@ const MessageList = ({
                   >
                     {editRingId === m.id && <div className="hold-ring" />}
                     {forwardLabel}
+                    <div className="msg-voice-header">
+                      <span className="msg-nick">{m.nickname}</span>
+                      <span className="msg-time">{formatMessageDate(m.time)}</span>
+                    </div>
                     <VideoMessage url={m.videoUrl} isOwn={isOwn} />
                   </div>
                 </div>
@@ -645,15 +646,6 @@ const MessageList = ({
 
                   {forwardLabel}
                   {replyBlock}
-
-                  {m.voiceUrl && (
-                    <VoiceMessage
-                      url={m.voiceUrl}
-                      duration={m.voiceDuration || 0}
-                      waveform={m.voiceWaveform || []}
-                      isOwn={isOwn}
-                    />
-                  )}
 
                   {isEditingThis ? (
                     <div className="msg-edit-area">

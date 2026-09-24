@@ -531,3 +531,74 @@ body.dark .video-msg-square {
   width: 180px;
   height: 180px;
 }
+
+/* ============================================================= */
+/* [2.42.7] Voice-only и Video-only — ник + время + контент       */
+/* ============================================================= */
+
+.msg--voice-only,
+.msg--video-only {
+  display: flex;
+  margin: 6px 0;
+  padding: 0;
+  background: none;
+  border: none;
+  max-width: 100%;
+  position: relative;
+}
+
+.msg--voice-only.msg--own,
+.msg--video-only.msg--own {
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+
+.msg--voice-only.msg--other,
+.msg--video-only.msg--other {
+  justify-content: flex-start;
+  padding-left: 6px;
+}
+
+.msg-voice-wrap,
+.msg-video-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.msg--voice-only.msg--own .msg-voice-wrap,
+.msg--video-only.msg--own .msg-video-wrap {
+  align-items: flex-end;
+}
+
+.msg-voice-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 4px;
+  line-height: 1.15;
+}
+
+.msg-voice-header .msg-nick {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--nick-color);
+}
+
+.msg-voice-header .msg-time {
+  font-size: 10px;
+  color: var(--time-color);
+}
+
+/* Личка: voice-only */
+.private-msg--voice {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+  max-width: none;
+}
