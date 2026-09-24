@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 import ConfirmModal from './ConfirmModal';
+import Avatar from './Avatar';
 
 /*
   [2.35.4] MAX_AVATAR_MB: 2 → 25, синхронизация с бэком и InfoPanel
@@ -128,10 +129,6 @@ const ProfilePanel = ({
     setRemoveConfirm(false);
   };
 
-  const avatarStyle = avatarUrl
-    ? { backgroundImage: `url(${avatarUrl})` }
-    : { background: getAvatarColor(data.nickname) };
-
   const bioStyle = {
     fontFamily: getFontCss(font),
     color: textColor,
@@ -146,9 +143,12 @@ const ProfilePanel = ({
         <button className="profile-close" onClick={onClose} aria-label="Закрыть">✕</button>
 
         <div className="profile-header">
-          <div className="profile-avatar" style={avatarStyle}>
-            {!avatarUrl && getInitial(data.nickname)}
-          </div>
+          <Avatar
+            src={avatarUrl}
+            nickname={data.nickname}
+            className="profile-avatar"
+            alt=""
+          />
           <div className="profile-name-row">
             <div className="profile-nick">{data.nickname}</div>
             {isAdmin && <div className="profile-role">админ</div>}

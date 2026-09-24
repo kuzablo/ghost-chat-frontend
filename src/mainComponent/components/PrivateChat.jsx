@@ -13,6 +13,7 @@ import VideoRecordingOverlay from './VideoRecordingOverlay';
 import ConfirmModal from './ConfirmModal';
 import SendingIndicator from './SendingIndicator';
 import SmartImage from './SmartImage';
+import Avatar from './Avatar';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 import { useVideoRecorder, extFromVideoMime } from '../hooks/useVideoRecorder';
 
@@ -597,9 +598,6 @@ const PrivateChat = ({
     : undefined;
 
   const hasSearch = !!searchQuery.trim();
-  const headerAvatarStyle = avatarUrl
-    ? { backgroundImage: `url(${avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : { background: getAvatarColor(nickname) };
 
   const activeMessage = pickerFor
     ? filteredMessages.find(x => x.id === pickerFor)
@@ -628,9 +626,12 @@ const PrivateChat = ({
       >
         <div className="private-chat-header">
           <div className="private-chat-header-left">
-            <div className="private-chat-avatar" style={headerAvatarStyle}>
-              {!avatarUrl && getInitial(nickname)}
-            </div>
+            <Avatar
+              src={avatarUrl}
+              nickname={nickname}
+              className="private-chat-avatar"
+              alt=""
+            />
             <h4>{nickname}</h4>
           </div>
         </div>

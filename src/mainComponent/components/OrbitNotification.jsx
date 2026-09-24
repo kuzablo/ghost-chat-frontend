@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
+import Avatar from './Avatar';
 
 /*
   [2.39.4] mascotRef — ref на обёртку маскота. Через него маскот из шапки
@@ -144,15 +145,12 @@ const OrbitNotification = ({
               className="pm-orbit-slot"
               style={{ animationDelay: `${0.06 + i * 0.12}s` }}
             >
-              <span
+              <Avatar
+                src={u.avatarUrl}
+                nickname={u.nickname || '?'}
                 className="pm-orbit-avatar"
-                style={u.avatarUrl
-                  ? { backgroundImage: `url(${u.avatarUrl})` }
-                  : { background: getAvatarColor(u.nickname || '?') }
-                }
-              >
-                {!u.avatarUrl && getInitial(u.nickname || '?')}
-              </span>
+                alt=""
+              />
             </span>
           ))}
         </span>

@@ -1,5 +1,10 @@
 /* ============================================================= */
 /* [2.44.0] SmartImage — плейсхолдер с маскотом для фото          */
+/* [2.45.0] + Avatar плейсхолдер, стикеры, видео                  */
+/* ============================================================= */
+
+/* ============================================================= */
+/* SmartImage                                                    */
 /* ============================================================= */
 
 .smart-image {
@@ -11,8 +16,6 @@
 .smart-image-img {
   display: block;
 }
-
-/* ===== Плейсхолдер ===== */
 
 .smart-image-ph {
   position: absolute;
@@ -52,8 +55,6 @@ body.dark .smart-image-ph-mascot {
   50%      { transform: scale(1.06); opacity: 1;    }
 }
 
-/* ===== Ошибка ===== */
-
 .smart-image-ph--error {
   flex-direction: column;
   gap: 6px;
@@ -62,27 +63,16 @@ body.dark .smart-image-ph-mascot {
   opacity: 1;
 }
 
-.smart-image-ph-icon {
-  font-size: 24px;
-  line-height: 1;
-}
+.smart-image-ph-icon { font-size: 24px; line-height: 1; }
+.smart-image-ph-text { font-size: 12px; font-weight: 700; letter-spacing: 0.2px; }
 
-.smart-image-ph-text {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
+/* --- Конкретные места: min-размеры --- */
 
-/* ===== Специфичные места: минимальные размеры контейнера,   ===== */
-/* ===== чтобы placeholder был виден до загрузки фото          ===== */
-
-/* Обычное сообщение с фото — меньше min, потому что текст рядом */
 .smart-image.msg-image-smart {
   min-width: 120px;
   min-height: 120px;
 }
 
-/* Image-only — больше min, потому что это главный контент сообщения */
 .smart-image.msg-image-only-smart {
   min-width: 160px;
   min-height: 160px;
@@ -90,14 +80,133 @@ body.dark .smart-image-ph-mascot {
   max-height: var(--image-max-h, 45vh);
 }
 
-/* Фото в личке */
 .smart-image.private-msg-image-smart {
   min-width: 120px;
   min-height: 120px;
   max-width: 240px;
 }
 
-/* ===== Мобильная версия ===== */
+/* [2.45.0] Стикер в ленте — фиксированный квадрат */
+.smart-image.msg-sticker-smart {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smart-image.msg-sticker-smart .smart-image-ph {
+  border-radius: var(--radius-md);
+}
+
+/* [2.45.0] Стикер в панели — занимает всю плитку */
+.smart-image.sticker-panel-tile-smart {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smart-image.sticker-panel-tile-smart .smart-image-ph {
+  border-radius: var(--radius-sm);
+}
+
+.smart-image.sticker-panel-tile-smart .smart-image-ph-mascot {
+  width: 40px;
+  height: 40px;
+}
+
+/* ============================================================= */
+/* [2.45.0] Avatar — маскот-плейсхолдер для кружков               */
+/* ============================================================= */
+
+.avatar-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: opacity 0.26s ease;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.avatar-mascot-fill {
+  position: absolute;
+  inset: 0;
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  z-index: 1;
+  animation: avatarMascotPulse 1.6s ease-in-out infinite;
+}
+
+body.dark .avatar-mascot-fill {
+  background-color: #1D2A42;
+}
+
+@keyframes avatarMascotPulse {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1;    }
+}
+
+.avatar-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFF;
+  font-weight: 800;
+  z-index: 1;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================= */
+/* [2.45.0] Видео-плейсхолдер до loadeddata                       */
+/* ============================================================= */
+
+.video-msg-ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b0b0b;
+  z-index: 2;
+  pointer-events: none;
+  animation: videoPhIn 0.18s ease-out;
+}
+
+@keyframes videoPhIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.video-msg-ph-mascot {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  animation: avatarMascotPulse 1.6s ease-in-out infinite;
+}
+
+body.dark .video-msg-ph-mascot {
+  border-color: #3BB5E8;
+  background-color: #1D2A42;
+}
+
+/* ============================================================= */
+/* Мобильная версия                                              */
+/* ============================================================= */
 
 @media (max-width: 600px) {
   .smart-image-ph-mascot {
@@ -119,12 +228,22 @@ body.dark .smart-image-ph-mascot {
     min-width: 100px;
     min-height: 100px;
   }
+
+  .smart-image.msg-sticker-smart {
+    width: 180px;
+    height: 180px;
+  }
+
+  .video-msg-ph-mascot {
+    width: 54px;
+    height: 54px;
+  }
 }
 
-/* ===== prefers-reduced-motion ===== */
-
 @media (prefers-reduced-motion: reduce) {
-  .smart-image-ph-mascot {
+  .smart-image-ph-mascot,
+  .avatar-mascot-fill,
+  .video-msg-ph-mascot {
     animation-duration: 0.001s !important;
     animation-iteration-count: 1 !important;
   }

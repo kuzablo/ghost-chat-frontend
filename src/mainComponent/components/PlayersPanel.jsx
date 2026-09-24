@@ -2,6 +2,7 @@ import { forwardRef, useState, useRef, useEffect, memo } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
 import StickerMenu from './StickerMenu';
 import OrbitNotification from './OrbitNotification';
+import Avatar from './Avatar';
 
 /*
   [2.39.0] Узел орбиты (players-header--orbit) рендерится всегда.
@@ -215,18 +216,14 @@ const PlayersPanel = forwardRef(({
 
   const isPressing = (id) => pressingId === id;
 
-  const renderAvatar = (nickname, avatarUrl) => (
-    <div
-      className="player-avatar"
-      style={{
-        background: avatarUrl
-          ? `url(${avatarUrl}) center/cover no-repeat`
-          : getAvatarColor(nickname),
-      }}
-    >
-      {!avatarUrl && getInitial(nickname)}
-    </div>
-  );
+const renderAvatar = (nickname, avatarUrl) => (
+  <Avatar
+    src={avatarUrl}
+    nickname={nickname}
+    className="player-avatar"
+    alt=""
+  />
+);
 
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;

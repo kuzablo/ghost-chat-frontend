@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 /*
-  [2.43.0] Автовоспроизведение свежих видео. Если createdAt < 8с назад —
-           играем автоматом без звука (браузеры не пускают autoplay
-           со звуком). Юзер может размутить кнопкой.
-  [2.42.2] poster — превью первого кадра до play.
-           preload="auto" — подгружаем метаданные и первый кадр.
-  [2.42.0] Плеер видео-кружка. Квадрат как gif-стикер.
-           Кнопки: play/pause, mute/unmute, fullscreen.
+  [2.45.0] Маскот-плейсхолдер до loadeddata. Плюс — принудительный
+           показ первого кадра через currentTime = 0.001, чтобы
+           вместо чёрного квадрата был реальный кадр.
+  [2.43.0] Автовоспроизведение свежих видео (< 8с), muted.
+  [2.42.2] preload="auto".
+  [2.42.0] Плеер видео-кружка.
 */
 
 const FRESH_WINDOW_MS = 8000;
@@ -65,11 +64,32 @@ const VideoMessage = ({ url, isOwn = false, createdAt = 0 }) => {
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [fsOpen, setFsOpen] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const autoPlayedRef = useRef(false);
 
-  // [2.43.0] Автовоспроизведение, если видео свежее.
-  // Проверка идёт один раз при монтировании — в список ли это только
-  // добавилось, или при первой загрузке чата с сообщением < 8с.
+  // [2.45.0] Ловим loadeddata — значит браузер уже готов показать кадр.
+  // Дополнительно «перематываем» на 0.001с: на iOS/Chrome это заставляет
+  // отрисовать первый кадр вместо чёрного прямоугольника.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const onLoadedData = () => {
+      setVideoReady(true);
+      try {
+        if (v.currentTime < 0.01) v.currentTime = 0.001;
+      } catch { /* noop */ }
+    };
+
+    if (v.readyState >= 2) {
+      onLoadedData();
+    } else {
+      v.addEventListener('loadeddata', onLoadedData, { once: true });
+    }
+    return () => v.removeEventListener('loadeddata', onLoadedData);
+  }, []);
+
+  // Автовоспроизведение свежих видео
   useEffect(() => {
     if (autoPlayedRef.current) return;
     autoPlayedRef.current = true;
@@ -81,7 +101,6 @@ const VideoMessage = ({ url, isOwn = false, createdAt = 0 }) => {
     const v = videoRef.current;
     if (!v) return;
 
-    // Браузеры разрешают autoplay только без звука.
     v.muted = true;
     setMuted(true);
 
@@ -94,9 +113,7 @@ const VideoMessage = ({ url, isOwn = false, createdAt = 0 }) => {
         currentlyPlayingVideo = v;
         setPlaying(true);
       })
-      .catch(() => {
-        // autoplay заблокирован — юзер нажмёт play вручную.
-      });
+      .catch(() => { /* autoplay заблокирован */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -168,7 +185,13 @@ const VideoMessage = ({ url, isOwn = false, createdAt = 0 }) => {
             onClick={handlePlayToggle}
           />
 
-          {!playing && (
+          {!videoReady && (
+            <div className="video-msg-ph" aria-hidden="true">
+              <div className="video-msg-ph-mascot" />
+            </div>
+          )}
+
+          {!playing && videoReady && (
             <button
               type="button"
               className="video-msg-play"

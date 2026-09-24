@@ -1,6 +1,7 @@
 import { forwardRef, useRef, useEffect, useState, memo } from 'react';
 import { getAvatarColor, getInitial, formatMessageDate } from '../utils';
 import DialogsBgPicker, { PRESETS_MAP } from './DialogsBgPicker';
+import Avatar from './Avatar';
 
 /*
   [2.36.3] globalDialogsBg — эффективный фон = личный || глобальный
@@ -261,19 +262,12 @@ const DialogsPanel = forwardRef(({
         onTouchEnd={endPress}
         onTouchCancel={endPress}
       >
-        <div
+        <Avatar
+          src={d.avatarUrl}
+          nickname={d.nickname}
           className={`dialog-avatar ${hasUnread ? 'dialog-avatar--unread' : ''}`}
-          style={d.avatarUrl
-            ? {
-                backgroundImage: `url(${d.avatarUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }
-            : { background: getAvatarColor(d.nickname) }
-          }
-        >
-          {!d.avatarUrl && getInitial(d.nickname)}
-        </div>
+          alt=""
+        />
         {online && <span className="dialog-online-dot" aria-label="в сети" />}
         {hasUnread && <span className="dialog-unread-pulse" aria-hidden="true" />}
         {isPressing && (
@@ -307,11 +301,11 @@ const DialogsPanel = forwardRef(({
   const panelStyle = hasBg && !showBgLoading
     ? bgIsUrl
       ? {
-          backgroundImage: bgCss,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }
+        backgroundImage: bgCss,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
       : { background: bgCss }
     : undefined;
 
@@ -383,8 +377,8 @@ const DialogsPanel = forwardRef(({
             aria-label="Фон окна"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" strokeWidth="2"
-                 strokeLinecap="round" strokeLinejoin="round">
+              stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
               <path d="M21 15l-5-5L5 21" />

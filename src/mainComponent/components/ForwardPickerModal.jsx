@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getAvatarColor, getInitial } from '../utils';
+import Avatar from './Avatar';
 
 /*
   [2.35.45] Модалка выбора получателя для пересылки.
@@ -63,15 +64,12 @@ const ForwardPickerModal = ({
               className="forward-picker-item"
               onClick={() => onPick({ type: 'private', userId: f.userId, nickname: f.nickname })}
             >
-              <div
+              <Avatar
+                src={f.avatarUrl}
+                nickname={f.nickname}
                 className="forward-picker-avatar"
-                style={f.avatarUrl
-                  ? { backgroundImage: `url(${f.avatarUrl})` }
-                  : { background: getAvatarColor(f.nickname) }
-                }
-              >
-                {!f.avatarUrl && getInitial(f.nickname)}
-              </div>
+                alt=""
+              />
               <span className="forward-picker-nick">{f.nickname}</span>
             </button>
           ))}

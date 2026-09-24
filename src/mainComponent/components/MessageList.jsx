@@ -6,6 +6,7 @@ import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
 import VideoMessage from './VideoMessage';
 import SmartImage from './SmartImage';
+import Avatar from './Avatar';
 
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
@@ -107,7 +108,6 @@ const MessageList = ({
   };
 
   const hasReactions = (message) => message?.reactions && Object.keys(message.reactions).length > 0;
-  const didIReact = (message, emoji) => !!message?.reactions?.[emoji]?.includes(nickname);
   const canDelete = (m) => isAdmin || m.userId === myId;
 
   const handleImageTap = (e, m) => {
@@ -375,16 +375,14 @@ const MessageList = ({
     const url = avatarByUser[userId];
     const isBanned = bannedUsers.has(userId);
     return (
-      <div
+      <Avatar
+        src={url}
+        nickname={nick}
         className={`msg-avatar${isBanned ? ' msg-avatar--banned' : ''}`}
-        style={url
-          ? { backgroundImage: `url(${url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { background: getAvatarColor(nick) }
-        }
+        alt=""
       >
-        {!url && getInitial(nick)}
         {isBanned && <span className="msg-avatar-banned-badge" aria-hidden="true">🚫</span>}
-      </div>
+      </Avatar>
     );
   };
 
@@ -473,7 +471,13 @@ const MessageList = ({
                     {editRingId === m.id && <div className="hold-ring" />}
                     {forwardLabel}
                     <div className="msg-sticker-nick">{m.nickname}</div>
-                    <img src={m.stickerUrl} alt="" className="msg-sticker-img" draggable={false} loading="lazy" />
+                    <SmartImage
+                      src={m.stickerUrl}
+                      alt=""
+                      wrapperClassName="msg-sticker-smart"
+                      imgClassName="msg-sticker-img"
+                      fit="contain"
+                    />
                   </div>
                 </div>
               </React.Fragment>

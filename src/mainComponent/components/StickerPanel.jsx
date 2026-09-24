@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import SmartImage from './SmartImage';
 
 /*
   [2.41.0] Избранные стикеры.
@@ -438,7 +439,12 @@ const StickerTile = ({ sticker, isFav, onPick, onToggleFavorite }) => {
       onContextMenu={(e) => e.preventDefault()}
       title={isFav ? 'Отправить · удержание 1с — убрать' : 'Отправить · удержание — в избранное'}
     >
-      <img src={sticker.url} alt="" loading="lazy" draggable={false} />
+      <SmartImage
+        src={sticker.url}
+        alt=""
+        wrapperClassName="sticker-panel-tile-smart"
+        fit="contain"
+      />
       {isFav && (
         <span className="sticker-panel-tile-fav-marker" aria-hidden="true">
           ⭐
