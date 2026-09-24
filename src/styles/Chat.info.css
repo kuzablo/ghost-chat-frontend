@@ -3457,3 +3457,8 @@ body.dark .info-fav-demo-star {
   background: #1D2A42;
   border-color: #F59E0B;
 }
+
+/* [2.49.1] Прячем вложенный <img> в маскотах пасхалки и сна —
+   маскота рисует background на круглом контейнере. */
+.info-easter-mascot img { display: none; }
+.info-sleep-mascot img { display: none; }

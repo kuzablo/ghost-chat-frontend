@@ -15,4 +15,5 @@
 // [2.48.17] StickerMenu — открытие по pointerdown, не click.
 // [2.49.0] InfoPanel: 6 глав, актуализация под видео/хранилище/стикеры,
 //          углублённая пасхалка. Стиль не тронут.
-export const VERSION = '2.49.0';
+// [2.49.1] InfoPanel: скрыт img в маскотах пасхалки и сна.
+export const VERSION = '2.49.1';
