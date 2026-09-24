@@ -1142,6 +1142,7 @@ const uploadAndSendVoice = useCallback(async (result) => {
 
 const uploadAndSendVideo = useCallback(async (result) => {
   if (!result) return;
+  setVideoUploading(true);
   const fd = new FormData();
   const ext = extFromVideoMime(result.mime);
   fd.append('file', result.blob, `video_${Date.now()}.${ext}`);
@@ -1825,14 +1826,7 @@ const uploadAndSendVideo = useCallback(async (result) => {
         />
       )}
 
-      <PrivateMessageToasts
-        users={unreadUserObjects}
-        visible={mascotPlace === 'center' && !mascotFlying}
-        onOpenDialogs={handleOpenDialogs}
-        mascotRef={centerMascotRef}
-      />
-
-            <StoragePanel
+      <StoragePanel
         open={storageOpen}
         onClose={() => setStorageOpen(false)}
         items={storage.items}
