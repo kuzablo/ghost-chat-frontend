@@ -1,0 +1,131 @@
+/* ============================================================= */
+/* [2.44.0] SmartImage — плейсхолдер с маскотом для фото          */
+/* ============================================================= */
+
+.smart-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.smart-image-img {
+  display: block;
+}
+
+/* ===== Плейсхолдер ===== */
+
+.smart-image-ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--messages-bg);
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.24s ease;
+}
+
+.smart-image-ph--hidden {
+  opacity: 0;
+}
+
+.smart-image-ph-mascot {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--card-border);
+  background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  animation: smartImageMascot 1.6s ease-in-out infinite;
+}
+
+body.dark .smart-image-ph-mascot {
+  border-color: #3BB5E8;
+  background-color: #1D2A42;
+}
+
+@keyframes smartImageMascot {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1;    }
+}
+
+/* ===== Ошибка ===== */
+
+.smart-image-ph--error {
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  background: var(--card-bg);
+  opacity: 1;
+}
+
+.smart-image-ph-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.smart-image-ph-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* ===== Специфичные места: минимальные размеры контейнера,   ===== */
+/* ===== чтобы placeholder был виден до загрузки фото          ===== */
+
+/* Обычное сообщение с фото — меньше min, потому что текст рядом */
+.smart-image.msg-image-smart {
+  min-width: 120px;
+  min-height: 120px;
+}
+
+/* Image-only — больше min, потому что это главный контент сообщения */
+.smart-image.msg-image-only-smart {
+  min-width: 160px;
+  min-height: 160px;
+  max-width: var(--image-max-w, 340px);
+  max-height: var(--image-max-h, 45vh);
+}
+
+/* Фото в личке */
+.smart-image.private-msg-image-smart {
+  min-width: 120px;
+  min-height: 120px;
+  max-width: 240px;
+}
+
+/* ===== Мобильная версия ===== */
+
+@media (max-width: 600px) {
+  .smart-image-ph-mascot {
+    width: 48px;
+    height: 48px;
+  }
+
+  .smart-image.msg-image-smart {
+    min-width: 100px;
+    min-height: 100px;
+  }
+
+  .smart-image.msg-image-only-smart {
+    min-width: 140px;
+    min-height: 140px;
+  }
+
+  .smart-image.private-msg-image-smart {
+    min-width: 100px;
+    min-height: 100px;
+  }
+}
+
+/* ===== prefers-reduced-motion ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .smart-image-ph-mascot {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+  }
+}

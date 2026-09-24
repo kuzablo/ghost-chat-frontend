@@ -5,6 +5,7 @@ import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
 import VideoMessage from './VideoMessage';
+import SmartImage from './SmartImage';
 
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
@@ -575,12 +576,12 @@ const MessageList = ({
                     >
                       {editRingId === m.id && <div className="msg-edit-ring" />}
                       {replyBlock && <div className="msg-image-only-reply-wrap">{replyBlock}</div>}
-                      <img
+                      <SmartImage
                         src={m.imageUrl}
                         alt="photo"
-                        className="msg-image-only-img"
+                        wrapperClassName="msg-image-only-smart"
+                        imgClassName="msg-image-only-img"
                         draggable={false}
-                        onError={(e) => { console.error('❌ Ошибка загрузки фото:', m.imageUrl); e.target.style.display = 'none'; }}
                         onClick={(e) => handleImageTap(e, m)}
                       />
                       {heartBurstNode}
@@ -674,12 +675,12 @@ const MessageList = ({
 
                   {m.imageUrl && (
                     <div className="msg-image-wrapper">
-                      <img
+                      <SmartImage
                         src={m.imageUrl}
                         alt="photo"
-                        className="msg-image"
+                        wrapperClassName="msg-image-smart"
+                        imgClassName="msg-image"
                         draggable={false}
-                        onError={(e) => { console.error('❌ Ошибка загрузки фото:', m.imageUrl); e.target.style.display = 'none'; }}
                         onClick={(e) => handleImageTap(e, m)}
                       />
                       {heartBurstNode}

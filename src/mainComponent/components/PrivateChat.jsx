@@ -12,10 +12,12 @@ import VoiceRecordingOverlay from './VoiceRecordingOverlay';
 import VideoRecordingOverlay from './VideoRecordingOverlay';
 import ConfirmModal from './ConfirmModal';
 import SendingIndicator from './SendingIndicator';
+import SmartImage from './SmartImage';
 import { useVoiceRecorder, extFromMime } from '../hooks/useVoiceRecorder';
 import { useVideoRecorder, extFromVideoMime } from '../hooks/useVideoRecorder';
 
 /*
+  [2.44.0] SmartImage для фото в личке — маскот-плейсхолдер.
   [2.43.0] SendingIndicator вместо строки ввода на время upload.
   [2.42.3] mic/cam обычный клик, разрешения сразу (аудио+видео).
   [2.42.0] InputActionButtons, video rec/upload, avatar в voice overlay.
@@ -369,6 +371,7 @@ const PrivateChat = ({
     if (e.target.closest('.reaction-wheel')) return;
     if (e.target.closest('.reaction-wheel-anchor')) return;
     if (e.target.closest('.private-msg-image')) return;
+    if (e.target.closest('.smart-image')) return;
     if (e.target.closest('.private-attach-btn')) return;
     if (e.target.closest('.ig-card')) return;
     if (e.target.closest('.private-msg-sticker')) return;
@@ -760,11 +763,11 @@ const PrivateChat = ({
                     <div className="private-msg-text-wrap">
                       {forwardLabel}
                       {m.imageUrl && (
-                        <img
+                        <SmartImage
                           src={m.imageUrl}
                           alt="photo"
-                          className="private-msg-image"
-                          loading="lazy"
+                          wrapperClassName="private-msg-image-smart"
+                          imgClassName="private-msg-image"
                           draggable={false}
                           onClick={(e) => { e.stopPropagation(); setFullscreenImage(m.imageUrl); }}
                         />
