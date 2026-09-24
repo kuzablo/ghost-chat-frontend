@@ -1,17 +1,19 @@
-/* [2.47.0] Хранилище — базовые стили. Красота будет на шаге 4. */
+/* ============================================================= */
+/* [2.47.0] Хранилище — панель, сетка, карточки, тулбар           */
+/* ============================================================= */
 
 .storage-overlay {
   position: fixed; inset: 0;
-  background: rgba(17,17,17,0.55);
+  background: rgba(17, 17, 17, 0.55);
   z-index: 1700;
   animation: storageFadeIn 0.2s ease-out;
 }
-body.dark .storage-overlay { background: rgba(0,0,0,0.7); }
+body.dark .storage-overlay { background: rgba(0, 0, 0, 0.7); }
 @keyframes storageFadeIn { from { opacity: 0 } to { opacity: 1 } }
 
 .storage-panel {
   position: fixed; top: 0; right: 0; bottom: 0;
-  width: 480px; max-width: 94vw;
+  width: 520px; max-width: 96vw;
   background: var(--card-bg);
   border-left: 3px solid var(--card-border);
   z-index: 1701;
@@ -23,94 +25,428 @@ body.dark .storage-overlay { background: rgba(0,0,0,0.7); }
   to { transform: translateX(0) }
 }
 
+/* ===== Шапка ===== */
+
 .storage-header {
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px; padding: 14px 16px;
   border-bottom: 2px solid var(--card-border);
+  background: var(--card-bg);
+  position: relative;
+  z-index: 2;
 }
 .storage-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .storage-brand-mascot {
   width: 44px; height: 44px; border-radius: 50%;
   border: 2px solid var(--card-border);
   background: #FFF url('/mascot.png') center / cover no-repeat;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
   animation: storageMascotBreathe 3.2s ease-in-out infinite;
 }
 body.dark .storage-brand-mascot { border-color: #3BB5E8; background-color: #1D2A42; }
 @keyframes storageMascotBreathe {
-  0%, 100% { transform: scale(1) }
-  50% { transform: scale(1.05) }
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50%      { transform: scale(1.05); filter: brightness(1.06); }
 }
-.storage-title { margin: 0; font-size: 17px; font-weight: 800; color: var(--text); }
-.storage-sub { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px; }
+.storage-title {
+  margin: 0; font-size: 17px; font-weight: 800; color: var(--text);
+  letter-spacing: 0.3px;
+}
+.storage-sub {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  margin-top: 2px; letter-spacing: 0.2px;
+}
 .storage-close {
+  flex-shrink: 0;
   width: 44px; height: 44px; border-radius: 50%;
   background: var(--input-bg); border: 2px solid var(--card-border);
   color: var(--text); font-size: 18px; font-weight: 700;
   cursor: pointer; padding: 0;
+  transition: transform 0.12s, background 0.15s;
 }
+.storage-close:hover { background: var(--messages-bg); }
 .storage-close:active { transform: scale(0.9); }
+
+/* ===== Ошибка ===== */
 
 .storage-error {
   margin: 8px 16px 0;
   padding: 8px 12px;
-  background: rgba(225,29,72,0.1);
+  background: rgba(225, 29, 72, 0.1);
   color: var(--danger);
   border-radius: var(--radius-sm);
   font-size: 12px; font-weight: 600;
   text-align: center;
+  flex-shrink: 0;
 }
 
-.storage-body { flex: 1; overflow-y: auto; padding: 16px; }
+/* ===== Тулбар: чипы + поиск ===== */
+
+.storage-toolbar {
+  flex-shrink: 0;
+  padding: 10px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px dashed var(--card-border);
+  background: var(--card-bg);
+  position: relative;
+  z-index: 2;
+}
+
+.storage-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+
+.storage-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 14px;
+  background: var(--input-bg);
+  border: 2px solid var(--card-border);
+  color: var(--text);
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.storage-chip:disabled { opacity: 0.35; cursor: not-allowed; }
+.storage-chip:not(:disabled):active { transform: scale(0.94); }
+.storage-chip--active {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+}
+.storage-chip-icon { font-size: 13px; line-height: 1; }
+.storage-chip-label { line-height: 1; }
+.storage-chip-count {
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 10px; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.storage-chip--active .storage-chip-count {
+  background: rgba(255, 255, 255, 0.28);
+}
+body.dark .storage-chip-count { background: rgba(255, 255, 255, 0.12); }
+body.dark .storage-chip--active .storage-chip-count {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.storage-search {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 13px; font-family: inherit;
+  outline: none;
+  -webkit-appearance: none; appearance: none;
+  touch-action: manipulation;
+}
+.storage-search::placeholder { color: var(--text-muted); opacity: 0.7; }
+.storage-search:focus {
+  border-color: var(--btn-bg);
+  box-shadow: 0 0 0 3px rgba(59, 181, 232, 0.18);
+}
+
+/* ===== Тело ===== */
+
+.storage-body {
+  flex: 1; overflow-y: auto;
+  padding: 14px 16px 24px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.storage-body::-webkit-scrollbar { width: 8px; }
+.storage-body::-webkit-scrollbar-thumb {
+  background: var(--btn-bg); border-radius: 8px;
+}
+
+/* ===== Пустые состояния ===== */
 
 .storage-loading, .storage-empty {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 14px; min-height: 60vh; text-align: center;
+  gap: 14px; min-height: 50vh; text-align: center;
+  padding: 20px;
 }
 .storage-loading-mascot, .storage-empty-mascot {
-  width: 84px; height: 84px; border-radius: 50%;
+  width: 92px; height: 92px; border-radius: 50%;
   border: 3px solid var(--card-border);
   background: #FFF url('/mascot.png') center / cover no-repeat;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-  animation: storageMascotBreathe 1.8s ease-in-out infinite;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  animation: storageMascotBreathe 2s ease-in-out infinite;
 }
+.storage-empty-mascot { animation-duration: 1.6s; }
 body.dark .storage-loading-mascot,
-body.dark .storage-empty-mascot { border-color: #3BB5E8; background-color: #1D2A42; }
-.storage-empty-title { font-size: 16px; font-weight: 800; color: var(--text); }
+body.dark .storage-empty-mascot {
+  border-color: #3BB5E8; background-color: #1D2A42;
+}
+.storage-loading-text { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.storage-empty-title {
+  font-size: 17px; font-weight: 800; color: var(--text);
+  letter-spacing: 0.3px;
+}
 .storage-empty-text {
   font-size: 13px; line-height: 1.55;
-  color: var(--text-muted); max-width: 260px;
+  color: var(--text-muted);
+  max-width: 300px;
+}
+.storage-empty-text b {
+  color: var(--nick-color);
+  font-weight: 800;
+}
+body.dark .storage-empty-text b { color: #3BB5E8; }
+
+.storage-empty--filtered { min-height: 30vh; }
+
+/* ===== Сетка карточек ===== */
+
+.storage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
 }
 
-.storage-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-.storage-item {
+/* ===== Карточка ===== */
+
+.storage-tile {
   position: relative;
-  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
   background: var(--messages-bg);
   border: 2px solid var(--card-border);
   border-radius: var(--radius-md);
-  display: flex; flex-direction: column; gap: 6px;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
+  min-height: 0;
+  animation: storageTileIn 0.32s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
 }
-.storage-item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.storage-item-type { font-size: 11px; font-weight: 800; color: var(--nick-color); letter-spacing: 0.3px; }
-.storage-item-from { font-size: 11px; color: var(--text-muted); }
-.storage-item-preview {
-  font-size: 13px; color: var(--text); line-height: 1.4;
-  overflow: hidden; word-break: break-word;
+@keyframes storageTileIn {
+  0%   { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
 }
-.storage-item-preview img {
-  max-width: 100%; max-height: 180px; border-radius: var(--radius-sm);
-  display: block;
+
+.storage-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
 }
-.storage-item-del {
-  position: absolute; top: 8px; right: 8px;
-  width: 28px; height: 28px; border-radius: 50%;
-  background: transparent; border: 1.5px solid var(--card-border);
-  font-size: 13px; cursor: pointer; padding: 0;
+body.dark .storage-tile:hover {
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Медиа внутри карточки ===== */
+
+.storage-tile-media {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Текстовые — фиксированная высота, читаемая */
+.storage-tile--text .storage-tile-media {
+  min-height: 100px;
+  padding: 12px 12px 14px;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.storage-tile-text {
+  font-size: 13px; line-height: 1.45;
+  color: var(--text);
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  text-align: left;
+  width: 100%;
+}
+
+/* Изображения и стикеры */
+.storage-tile-imgwrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--messages-bg);
+}
+.storage-tile-imgwrap--sticker {
+  background:
+    linear-gradient(45deg, rgba(0,0,0,0.04) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.04) 75%),
+    linear-gradient(45deg, rgba(0,0,0,0.04) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.04) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+body.dark .storage-tile-imgwrap--sticker {
+  background:
+    linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%),
+    linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+.storage-tile-img { width: 100%; height: 100%; display: block; }
+
+/* Голос */
+.storage-tile-voice {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.storage-tile-play {
+  flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 2px solid var(--btn-border);
+  cursor: pointer;
   display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  transition: transform 0.12s;
 }
-.storage-item-del:active { transform: scale(0.9); background: rgba(225,29,72,0.1); }
+.storage-tile-play:active { transform: scale(0.9); }
+.storage-tile-voice-wave {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center;
+  gap: 2px;
+  height: 26px;
+}
+.storage-tile-voice-bar {
+  flex: 1; min-width: 2px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.4;
+  transition: background 0.15s, opacity 0.15s;
+}
+.storage-tile-voice-bar.on {
+  background: var(--btn-bg);
+  opacity: 1;
+}
+.storage-tile-voice-time {
+  flex-shrink: 0;
+  font-size: 11px; font-weight: 700;
+  color: var(--text-muted);
+  min-width: 32px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Видео */
+.storage-tile-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  overflow: hidden;
+}
+.storage-tile-video-el {
+  width: 100%; height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+.storage-tile-video-badge {
+  position: absolute;
+  bottom: 6px; right: 6px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #FFF;
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
+/* Кнопка удаления */
+.storage-tile-del {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid #111;
+  color: #111;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  z-index: 3;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s, transform 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.storage-tile:hover .storage-tile-del {
+  opacity: 1;
+  transform: scale(1);
+}
+.storage-tile-del:active {
+  transform: scale(0.9);
+  background: #FFF;
+}
+/* На тач-устройствах — всегда видно */
+@media (hover: none) {
+  .storage-tile-del { opacity: 1; transform: scale(1); }
+}
+body.dark .storage-tile-del {
+  background: rgba(29, 42, 66, 0.92);
+  border-color: #3BB5E8;
+  color: #EAF2FA;
+}
+body.dark .storage-tile-del:active { background: #1D2A42; }
+
+/* ===== Мета-полоска ===== */
+
+.storage-tile-meta {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 7px;
+  background: var(--card-bg);
+  border-top: 2px solid var(--card-border);
+  font-size: 11px;
+  min-width: 0;
+}
+.storage-tile-type {
+  font-size: 13px; line-height: 1;
+  flex-shrink: 0;
+}
+.storage-tile-from {
+  display: flex; align-items: center; gap: 5px;
+  min-width: 0;
+}
+.storage-tile-from-avatar {
+  flex-shrink: 0;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--card-border);
+  display: flex; align-items: center; justify-content: center;
+  color: #FFF;
+  font-size: 8px; font-weight: 800;
+  line-height: 1;
+  overflow: hidden;
+}
+.storage-tile-from-nick {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ===== Мобильная версия ===== */
 
 @media (max-width: 600px) {
   .storage-panel {
@@ -119,4 +455,83 @@ body.dark .storage-empty-mascot { border-color: #3BB5E8; background-color: #1D2A
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  .storage-header { padding: 10px 12px; }
+  .storage-brand-mascot { width: 40px; height: 40px; }
+  .storage-title { font-size: 16px; }
+  .storage-toolbar { padding: 8px 12px 10px; }
+  .storage-body { padding: 12px 12px 20px; }
+  .storage-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .storage-chip {
+    padding: 4px 9px 4px 7px;
+    font-size: 11px;
+  }
+  .storage-chip-icon { font-size: 12px; }
+  .storage-empty-mascot,
+  .storage-loading-mascot { width: 76px; height: 76px; }
+  .storage-empty-title { font-size: 15px; }
+  .storage-empty-text { font-size: 12.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storage-brand-mascot,
+  .storage-empty-mascot,
+  .storage-loading-mascot,
+  .storage-tile {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ===== Тост «Сохранено в хранилище» ===== */
+
+.storage-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  transform: translateX(-50%);
+  z-index: 3300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 12px;
+  background: var(--card-bg);
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  animation: storageToastIn 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
+  pointer-events: none;
+  max-width: calc(100vw - 24px);
+}
+
+@keyframes storageToastIn {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.94); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.storage-toast-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F5A9C0 0%, #7FCCF0 100%);
+  border: 2px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+body.dark .storage-toast-icon {
+  background: linear-gradient(135deg, #1D2A42 0%, #2C3E5A 100%);
+  border-color: #3BB5E8;
+}
+
+.storage-toast-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.2px;
 }

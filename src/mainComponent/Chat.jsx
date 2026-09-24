@@ -20,6 +20,7 @@ import ForwardPickerModal from './components/ForwardPickerModal';
 import ReactionWheel from './components/ReactionWheel';
 import UpdateToast from './components/UpdateToast';
 import StoragePanel from './components/StoragePanel';
+import StorageToast from './components/StorageToast';
 import { useStorage } from './hooks/useStorage';
 import { QRCodeSVG } from 'qrcode.react';
 import { useWebSocket } from './useWebSocket';
@@ -1839,6 +1840,7 @@ const Chat = () => {
         />
       )}
 
+      <StorageToast trigger={storage.lastSavedAt} />
       <StoragePanel
         open={storageOpen}
         onClose={() => setStorageOpen(false)}

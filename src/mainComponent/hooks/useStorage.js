@@ -9,6 +9,7 @@ export const useStorage = ({ sendMessage, isAuth }) => {
   const [items, setItems] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState('');
+  const [lastSavedAt, setLastSavedAt] = useState(0);
 
   const sendRef = useRef(sendMessage);
   const isAuthRef = useRef(isAuth);
@@ -30,6 +31,7 @@ export const useStorage = ({ sendMessage, isAuth }) => {
 
       case 'storage_saved': {
         setItems(prev => [...prev, msg.data]);
+        setLastSavedAt(Date.now());
         return true;
       }
 
@@ -81,6 +83,7 @@ export const useStorage = ({ sendMessage, isAuth }) => {
     items,
     isLoaded,
     error,
+    lastSavedAt,
     handleWs,
     saveToStorage,
     deleteFromStorage,
