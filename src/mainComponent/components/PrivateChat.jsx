@@ -7,6 +7,7 @@ import StickerPanel from './StickerPanel';
 import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
+import VideoMessage from './VideoMessage';
 import VoiceRecordingOverlay from './VoiceRecordingOverlay';
 import VideoRecordingOverlay from './VideoRecordingOverlay';
 import ConfirmModal from './ConfirmModal';
@@ -676,6 +677,24 @@ const PrivateChat = ({
                     >
                       {forwardLabel}
                       <img src={m.stickerUrl} alt="" className="private-msg-sticker" draggable={false} loading="lazy" />
+                    </div>
+                  );
+                }
+
+                const isVideoOnly = !m.text?.trim() && !m.imageUrl && !m.voiceUrl && !!m.videoUrl;
+
+                if (isVideoOnly) {
+                  return (
+                    <div
+                      key={m.id || i}
+                      data-msg-id={m.id}
+                      className={`private-msg private-msg--video ${isOwn ? 'private-msg--own' : 'private-msg--other'}`}
+                      onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                      onTouchMove={handleMsgTouchMove}
+                      onTouchEnd={handleMsgTouchEnd}
+                    >
+                      {forwardLabel}
+                      <VideoMessage url={m.videoUrl} isOwn={isOwn} />
                     </div>
                   );
                 }

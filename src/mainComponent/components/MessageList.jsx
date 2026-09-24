@@ -4,6 +4,7 @@ import ConfirmModal from './ConfirmModal';
 import MessageActionsMenu from './MessageActionsMenu';
 import ReactionWheel from './ReactionWheel';
 import VoiceMessage from './VoiceMessage';
+import VideoMessage from './VideoMessage';
 
 const DOUBLE_TAP_MS = 250;
 const LONG_PRESS_MENU_MS = 500;
@@ -76,6 +77,7 @@ const MessageList = ({
 
   const startEdit = (message) => {
     if (message?.stickerUrl) return;
+    if (message?.videoUrl) return;
     setEditingMessageId(message.id);
     setEditText(message.text || '');
     setIsEditing(true);
@@ -227,6 +229,9 @@ const MessageList = ({
       voiceUrl: m.voiceUrl || null,
       voiceDuration: m.voiceDuration || null,
       voiceWaveform: m.voiceWaveform || null,
+      videoUrl: m.videoUrl || null,
+      videoDuration: m.videoDuration || null,
+      videoMime: m.videoMime || null,
       forwardedFrom,
     };
   };
@@ -360,6 +365,7 @@ const MessageList = ({
     if (actionsMenu) { setActionsMenu(null); return; }
     if (swipeActiveRef.current) return;
     if (Date.now() - longPressRef.current.completedAt < LONG_PRESS_IGNORE_MS) return;
+    if (e.target.closest('.video-msg')) return;
     handleMessageTap(m.id, e);
   };
 
@@ -402,6 +408,7 @@ const MessageList = ({
     if (aImageOnly || bImageOnly) return false;
     if (a.stickerUrl || b.stickerUrl) return false;
     if (a.voiceUrl || b.voiceUrl) return false;
+    if (a.videoUrl || b.videoUrl) return false;
     return true;
   };
 
@@ -432,6 +439,7 @@ const MessageList = ({
           const isSticker = !!m.stickerUrl;
           const isImageOnly = !isSticker && !m.text?.trim() && !!m.imageUrl && !isEditingThis;
           const isVoiceOnly = !isSticker && !m.text?.trim() && !m.imageUrl && !!m.voiceUrl;
+          const isVideoOnly = !isSticker && !m.text?.trim() && !m.imageUrl && !m.voiceUrl && !!m.videoUrl;
           const prevMessage = messages[i - 1];
           const nextMessage = messages[i + 1];
           const showDateDivider = isNewDay(prevMessage?.time, m.time);
@@ -460,6 +468,7 @@ const MessageList = ({
                     onTouchMove={(e) => handleMsgTouchMove(e, m)}
                     onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                   >
+                    {editRingId === m.id && <div className="hold-ring" />}
                     {forwardLabel}
                     <div className="msg-sticker-nick">{m.nickname}</div>
                     <img src={m.stickerUrl} alt="" className="msg-sticker-img" draggable={false} loading="lazy" />
@@ -507,6 +516,7 @@ const MessageList = ({
                     onTouchMove={(e) => handleMsgTouchMove(e, m)}
                     onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
                   >
+                    {editRingId === m.id && <div className="msg-edit-ring" />}
                     <div className="msg-header">
                       <span className="msg-nick">{m.nickname}</span>
                       <span className="msg-time">{formatMessageDate(m.time)}</span>
@@ -519,6 +529,28 @@ const MessageList = ({
                       waveform={m.voiceWaveform || []}
                       isOwn={isOwn}
                     />
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          }
+
+          if (isVideoOnly) {
+            return (
+              <React.Fragment key={m.id}>
+                {dateDivider}
+                <div className={`msg msg--video-only ${isOwn ? 'msg--own' : 'msg--other'}`} data-msg-id={m.id}>
+                  <div className="msg-swipe-glow msg-swipe-glow--reply" />
+                  <div className="msg-swipe-glow msg-swipe-glow--delete" />
+                  <div
+                    className="msg-video-wrap"
+                    onTouchStart={(e) => handleMsgTouchStart(e, m)}
+                    onTouchMove={(e) => handleMsgTouchMove(e, m)}
+                    onTouchEnd={(e) => handleMsgTouchEnd(e, m)}
+                  >
+                    {editRingId === m.id && <div className="hold-ring" />}
+                    {forwardLabel}
+                    <VideoMessage url={m.videoUrl} isOwn={isOwn} />
                   </div>
                 </div>
               </React.Fragment>
@@ -702,7 +734,7 @@ const MessageList = ({
         container={actionsMenu?.container}
         isOwn={actionsMenu?.msg?.userId === myId}
         isAdmin={isAdmin}
-        isSticker={!!actionsMenu?.msg?.stickerUrl}
+        isSticker={!!actionsMenu?.msg?.stickerUrl || !!actionsMenu?.msg?.videoUrl}
         onForward={() => { if (actionsMenu?.msg && onForward) onForward(buildForwardData(actionsMenu.msg)); }}
         onEdit={() => { if (actionsMenu?.msg) startEdit(actionsMenu.msg); }}
         onDelete={() => { if (actionsMenu?.msg) setConfirmData({ messageId: actionsMenu.msg.id }); }}

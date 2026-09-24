@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 /*
-  [2.37.1] Убран мёртвый case 'unread_private_list'. Бэк его не шлёт —
-           непрочитанные восстанавливаются из dialogs_list.
-  [2.35.60] private_message_deleted — удаление + пересчёт preview в dialogs
-  [2.35.49] lastFromMe/lastIsRead в dialogs + dialog_read_update
-  [2.35.41] historyLoaded в privateChat
-  [2.28.7] восстанавливаем unreadByUser из dialogs_list
+  [2.42.0] previewFromMessage учитывает videoUrl.
+  [2.37.1] Убран мёртвый case 'unread_private_list'.
+  [2.35.60] private_message_deleted — удаление + пересчёт preview.
+  [2.35.49] lastFromMe/lastIsRead + dialog_read_update.
+  [2.35.41] historyLoaded в privateChat.
+  [2.28.7] восстанавливаем unreadByUser из dialogs_list.
 */
 
 const previewFromMessage = (m) => {
@@ -15,6 +15,7 @@ const previewFromMessage = (m) => {
   if (m.stickerUrl) return '🎨 стикер';
   if (m.imageUrl) return '📷 фото';
   if (m.voiceUrl) return '🎤 голосовое';
+  if (m.videoUrl) return '📹 видео';
   return '· · ·';
 };
 
@@ -180,7 +181,6 @@ export const usePrivateChat = ({ sendMessage, myId, players }) => {
         });
         return true;
 
-      // [2.35.60] Удаление в личке — убираем и пересчитываем preview
       case 'private_message_deleted': {
         const { messageId, senderId, recipientId } = msg.data;
 

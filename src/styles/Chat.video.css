@@ -483,3 +483,55 @@ body.dark .video-msg-square {
   from { --hold-p: 0deg; }
   to   { --hold-p: 360deg; }
 }
+
+/* ============================================================= */
+/* [2.42.0] Video-only сообщение в общем чате                     */
+/* ============================================================= */
+
+.msg--video-only {
+  display: flex;
+  margin: 6px 0;
+  padding: 0;
+  background: none;
+  border: none;
+  max-width: 100%;
+  position: relative;
+}
+
+.msg--video-only.msg--own {
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+
+.msg--video-only.msg--other {
+  justify-content: flex-start;
+  padding-left: 6px;
+}
+
+.msg-video-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.msg--video-only.msg--own .msg-video-wrap {
+  align-items: flex-end;
+}
+
+/* Личка: video-only сообщение */
+.private-msg--video {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+  max-width: none;
+}
+
+.private-msg--video .video-msg-square {
+  width: 180px;
+  height: 180px;
+}
