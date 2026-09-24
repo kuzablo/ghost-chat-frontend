@@ -85,7 +85,6 @@ export const useMascotFlight = ({
       reverse = false,
       fromLanded = false,
       fromRef: fromRefOverride,
-      fromRect: fromRectOverride,
       toRef: toRefOverride,
       toSize = null,
     } = options;
@@ -95,24 +94,21 @@ export const useMascotFlight = ({
     let from = null;
     let to = null;
 
+    const targetEl = toRefOverride?.current || toRef?.current;
+
     if (reverse) {
-      from = fromRectOverride || lastLandedRectRef.current;
+      from = fromRefOverride?.current
+        ? getRect(fromRefOverride.current)
+        : lastLandedRectRef.current;
       to = getRect(fromRef?.current);
-    } else if (fromRectOverride) {
-      from = fromRectOverride;
-      const targetEl = toRefOverride?.current || toRef?.current;
-      to = getTargetRect(targetEl, toSize);
     } else if (fromRefOverride) {
       from = getRect(fromRefOverride.current);
-      const targetEl = toRefOverride?.current || toRef?.current;
       to = getTargetRect(targetEl, toSize);
     } else if (fromLanded) {
       from = lastLandedRectRef.current;
-      const targetEl = toRefOverride?.current || toRef?.current;
       to = getTargetRect(targetEl, toSize);
     } else {
       from = getRect(fromRef?.current);
-      const targetEl = toRefOverride?.current || toRef?.current;
       to = getTargetRect(targetEl, toSize);
     }
 

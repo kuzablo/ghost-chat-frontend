@@ -6,4 +6,5 @@
 // [2.48.8] Маскот: cancelFlight при modalOpen — без провисания.
 // [2.48.9] Маскот: panelMascotRef, замер rect до смены стейта.
 // [2.48.10] Маскот: поиск источника/цели через querySelector.
-export const VERSION = '2.48.10';
+// [2.48.11] Маскот: возврат к простым refs, ref на обёртку панели.
+export const VERSION = '2.48.11';

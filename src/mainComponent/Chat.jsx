@@ -533,70 +533,45 @@ const Chat = () => {
       centerDismissedForCountRef.current === unreadUserObjects.length;
     const wantCenter = !showPlayers && hasUnread && !centerAlreadyShown;
 
-    // [2.48.10] Узлы ищем в DOM. querySelector надёжнее ref: класс
-    // .pm-orbit--header отличает панельную орбиту от центральной.
-    const findHeaderMascot = () => document.querySelector('.chat-header-logo');
-    const findCenterMascot = () => document.querySelector('.pm-orbit:not(.pm-orbit--header) .pm-orbit-mascot-wrap');
-    const findPanelMascot = () => document.querySelector('.pm-orbit--header .pm-orbit-mascot-wrap');
-
-    const measure = (el) => {
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) return null;
-      return { left: r.left, top: r.top, width: r.width, height: r.height };
-    };
-
-    const fromElFor = (place) => {
-      if (place === 'header') return findHeaderMascot();
-      if (place === 'center') return findCenterMascot();
-      if (place === 'panel') return findPanelMascot();
-      return null;
-    };
-
     if (wantPanel && mascotPlace !== 'panel') {
-      const fromRect = measure(fromElFor(mascotPlace));
+      setMascotPlace('panel');
       const size = hasUnread ? MASCOT_SIZE_PANEL_ORBIT : MASCOT_SIZE_PANEL_SOLO;
 
-      setMascotPlace('panel');
-      requestAnimationFrame(() => {
-        const toEl = findPanelMascot();
-        if (!toEl) return;
+      if (mascotPlace === 'header') {
+        startMascotFlight({ toRef: panelOrbitRef, toSize: size });
+      } else if (mascotPlace === 'center') {
         startMascotFlight({
-          fromRect,
-          toRef: { current: toEl },
+          fromRef: centerMascotRef,
+          toRef: panelOrbitRef,
           toSize: size,
         });
-      });
+      } else {
+        startMascotFlight({ fromLanded: true, toRef: panelOrbitRef, toSize: size });
+      }
       return;
     }
 
     if (wantCenter && mascotPlace !== 'center') {
-      const fromRect = measure(fromElFor(mascotPlace));
-
       setMascotPlace('center');
-      requestAnimationFrame(() => {
-        const toEl = findCenterMascot();
-        if (!toEl) return;
+
+      if (mascotPlace === 'header') {
+        startMascotFlight({ toRef: centerMascotRef, toSize: MASCOT_SIZE_CENTER });
+      } else if (mascotPlace === 'panel') {
         startMascotFlight({
-          fromRect,
-          toRef: { current: toEl },
+          fromRef: panelOrbitRef,
+          toRef: centerMascotRef,
           toSize: MASCOT_SIZE_CENTER,
         });
-      });
+      } else {
+        startMascotFlight({ fromLanded: true, toRef: centerMascotRef, toSize: MASCOT_SIZE_CENTER });
+      }
       return;
     }
 
     if (mascotPlace !== 'header' && !wantPanel && !wantCenter) {
-      const fromRect = measure(fromElFor(mascotPlace));
-      const toEl = findHeaderMascot();
-
       setMascotPlace('header');
-      requestAnimationFrame(() => {
-        startMascotFlight({
-          fromRect,
-          toRef: { current: toEl },
-        });
-      });
+      const fromRef = mascotPlace === 'panel' ? panelOrbitRef : centerMascotRef;
+      startMascotFlight({ fromRef, toRef: headerMascotRef });
     }
   }, [
     showPlayers,
@@ -1495,7 +1470,7 @@ const Chat = () => {
         <PlayersPanel
           ref={playersOverlayRef}
           visible={showPlayers}
-          orbitMascotRef={panelOrbitRef}
+          orbitSlotRef={panelOrbitRef}
           orbitHidden={mascotFlying || mascotPlace !== 'panel'}
           players={players}
           dialogsBg={effectiveDialogsBg}
