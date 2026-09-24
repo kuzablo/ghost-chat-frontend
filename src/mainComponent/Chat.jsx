@@ -62,7 +62,7 @@ import '../styles/Chat.video.css';
 
 // fix(input): mic/cam без long-press, разрешения сразу, вращающийся ОТПРАВИТЬ (v2.42.3)
 // feat(video): кружки (v2.42.0)
-const VERSION = '2.42.4';
+const VERSION = '2.42.9';
 const WS_URL = 'wss://api.banjoboy420.ru';
 const API_URL = 'https://api.banjoboy420.ru';
 const BASE_TITLE = "banjoboy's crew";
@@ -1116,10 +1116,7 @@ const Chat = () => {
     const ok = await ensureMediaPermissions();
     if (!ok) return;
     const started = await voiceRec.start();
-    if (started) {
-      setVoiceRecActive(true);
-      setVoiceRecFrozen(false);
-    }
+    if (started) { setVoiceRecActive(true); setVoiceRecFrozen(false); }
   }, [isUploading, voiceRecActive, videoRecActive, ensureMediaPermissions, voiceRec]);
 
   // ===== VIDEO =====
@@ -1745,7 +1742,7 @@ const Chat = () => {
       </div>
 
       <VoiceRecordingOverlay
-        open={voiceRecActive}
+        open={voiceRecActive && !videoRecActive}
         duration={voiceRec.duration}
         level={voiceRec.level}
         paused={voiceRec.paused}
@@ -1758,7 +1755,7 @@ const Chat = () => {
       />
 
       <VideoRecordingOverlay
-        open={videoRecActive}
+        open={videoRecActive && !voiceRecActive}
         stream={videoRec.stream}
         duration={videoRec.duration}
         facing={videoRec.facing}

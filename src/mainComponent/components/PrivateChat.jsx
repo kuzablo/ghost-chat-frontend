@@ -822,7 +822,7 @@ const PrivateChat = ({
       </div>
 
       <VoiceRecordingOverlay
-        open={voiceRecActive}
+        open={voiceRecActive && !videoRecActive}
         duration={voiceRec.duration}
         level={voiceRec.level}
         paused={voiceRec.paused}
@@ -835,7 +835,7 @@ const PrivateChat = ({
       />
 
       <VideoRecordingOverlay
-        open={videoRecActive}
+        open={videoRecActive && !voiceRecActive}
         stream={videoRec.stream}
         duration={videoRec.duration}
         facing={videoRec.facing}
