@@ -12,4 +12,5 @@
 //          RoomPulse реже, масштабирование вместо left/top/width/height.
 // [2.48.15] Avatar через React.memo.
 // [2.48.16] Refresh — только на главном экране.
-export const VERSION = '2.48.16';
+// [2.48.17] StickerMenu — открытие по pointerdown, не click.
+export const VERSION = '2.48.17';

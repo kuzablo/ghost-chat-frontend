@@ -33,7 +33,9 @@ const StickerMenu = ({ open, title, subtitle, items, onClose }) => {
                 '--sticker-delay': `${i * 0.05}s`,
                 '--sticker-rotate': `${i % 2 === 0 ? -3 : 3}deg`,
               }}
-              onClick={() => {
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
                 onClose();
                 if (item.onClick) item.onClick();
               }}
