@@ -91,62 +91,168 @@
   transform: translate(-50%, -50%) scale(0.9) !important;
 }
 
-/* ==== Вращающийся «ОТПРАВИТЬ» ==== */
+/* ============================================================= */
+/* [2.42.4] InputActionButtons — rotation как в старом Chat.css   */
+/* ============================================================= */
+
+.iab {
+  position: relative;
+  flex-shrink: 0;
+  width: 108px;
+  height: 72px;
+  pointer-events: none;
+}
+
+.iab-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 3px solid var(--btn-border);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  will-change: transform, opacity;
+  transition:
+    transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity   0.24s ease,
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.iab-btn:disabled { cursor: not-allowed; }
+
+.iab-btn--mic,
+.iab-btn--cam {
+  width: 52px;
+  height: 52px;
+  background: var(--input-bg);
+  color: var(--text);
+  border-color: var(--card-border);
+}
+.iab-btn--mic svg,
+.iab-btn--cam svg { width: 24px; height: 24px; display: block; }
+
+.iab-btn--mic { transform: translate(calc(-50% - 28px), -50%) scale(1); opacity: 1; }
+.iab-btn--cam { transform: translate(calc(-50% + 28px), -50%) scale(1); opacity: 1; }
+
+.iab-btn--mic:active:not(:disabled) {
+  transform: translate(calc(-50% - 28px), -50%) scale(0.88) !important;
+}
+.iab-btn--cam:active:not(:disabled) {
+  transform: translate(calc(-50% + 28px), -50%) scale(0.88) !important;
+}
+
+.iab--active .iab-btn--mic { transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; }
+.iab--active .iab-btn--cam { transform: translate(-50%, -50%) scale(0.4); opacity: 0; pointer-events: none; }
+
+.iab-btn--send {
+  width: 72px;
+  height: 72px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.iab-btn--send svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.iab--active .iab-btn--send {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.iab-btn--send:active:not(:disabled) {
+  transform: translate(-50%, -50%) scale(0.9) !important;
+}
+
+/* ==== Вращающийся «ОТПРАВИТЬ» — точно как в старом Chat.css ==== */
+
 .iab-rotating-text {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  transform-origin: 50% 50%;
-  animation: iabRot 18s linear infinite;
-  will-change: transform;
+  animation: iabRot 25s linear infinite;
 }
 
-@keyframes iabRot {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-.iab-rotating-text > span {
+.iab-rotating-text span {
   position: absolute;
   top: 50%;
   left: 50%;
   transform-origin: 0 0;
-  display: block;
-  font-size: 9px;
-  font-weight: 900;
-  color: #FFFFFF;
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--btn-text);
   text-transform: uppercase;
-  letter-spacing: 0.2px;
   line-height: 1;
+  letter-spacing: 0.2px;
   white-space: nowrap;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
-  pointer-events: none;
 }
 
-.iab-btn--sending .iab-rotating-text { display: none; }
+@keyframes iabRot { to { transform: rotate(360deg); } }
 
 .iab-spinner {
   display: none;
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
+  margin: auto;
   width: 26px;
   height: 26px;
-  margin: -13px 0 0 -13px;
   border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #FFFFFF;
+  border-top-color: var(--btn-text);
   border-radius: 50%;
   animation: iabSpin 0.7s linear infinite;
   z-index: 2;
 }
-@keyframes iabSpin { to { transform: rotate(360deg); } }
-
 .iab-btn--sending svg { display: none; }
 .iab-btn--sending .iab-spinner { display: block; }
+.iab-btn--sending .iab-rotating-text { display: none; }
+
+@keyframes iabSpin { to { transform: rotate(360deg); } }
+
+body.dark .iab-btn--mic,
+body.dark .iab-btn--cam {
+  background: var(--input-bg);
+  border-color: #2C3E5A;
+  color: #EAF2FA;
+}
+
+@media (max-width: 600px) {
+  .iab { width: 96px; height: 60px; }
+  .iab-btn--mic,
+  .iab-btn--cam { width: 46px; height: 46px; }
+  .iab-btn--mic svg,
+  .iab-btn--cam svg { width: 22px; height: 22px; }
+  .iab-btn--mic { transform: translate(calc(-50% - 25px), -50%) scale(1); }
+  .iab-btn--cam { transform: translate(calc(-50% + 25px), -50%) scale(1); }
+  .iab-btn--mic:active:not(:disabled) {
+    transform: translate(calc(-50% - 25px), -50%) scale(0.88) !important;
+  }
+  .iab-btn--cam:active:not(:disabled) {
+    transform: translate(calc(-50% + 25px), -50%) scale(0.88) !important;
+  }
+  .iab-btn--send { width: 60px; height: 60px; }
+  .iab-btn--send svg { width: 24px; height: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iab-rotating-text { animation: none; }
+}
 
 /* ==== Тёмная тема ==== */
 body.dark .iab-btn--mic,
