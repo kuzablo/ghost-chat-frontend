@@ -172,10 +172,11 @@ body.dark .pm-orbit-mascot {
   left: 0;
   width: 42px;
   height: 42px;
+  margin: -21px 0 0 -21px;
   display: block;
   will-change: transform, opacity;
   pointer-events: none;
-  transform: translate(-50%, -50%) translate3d(0, 0, 0) scale(0.6);
+  transform: translate3d(0, 0, 0) scale(0.6);
   opacity: 0;
   animation: pmSlotFadeIn 0.5s ease-out both;
 }
@@ -281,7 +282,7 @@ body.dark .pm-orbit-more {
   .pm-orbit-halo--outer { width: 188px; height: 188px; }
   .pm-orbit-halo--inner { width: 112px; height: 112px; }
   .pm-orbit-mascot-wrap { width: 72px; height: 72px; }
-  .pm-orbit-slot { width: 38px; height: 38px; }
+  .pm-orbit-slot { width: 38px; height: 38px; margin: -19px 0 0 -19px; }
   .pm-orbit-avatar { width: 38px; height: 38px; font-size: 13px; }
   .pm-orbit-more { min-width: 24px; height: 24px; font-size: 11px; bottom: 2px; }
 

@@ -8,4 +8,6 @@
 // [2.48.10] Маскот: поиск источника/цели через querySelector.
 // [2.48.11] Маскот: возврат к простым refs, ref на обёртку панели.
 // [2.48.12] Маскот: fromSize для панели — конец овалу.
-export const VERSION = '2.48.12';
+// [2.48.13] Производительность: OrbitNotification кэширует nodes,
+//          RoomPulse реже, масштабирование вместо left/top/width/height.
+export const VERSION = '2.48.13';

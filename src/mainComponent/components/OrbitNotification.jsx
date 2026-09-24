@@ -3,12 +3,10 @@ import { getAvatarColor, getInitial } from '../utils';
 import Avatar from './Avatar';
 
 /*
-  [2.39.4] mascotRef — ref на обёртку маскота. Через него маскот из шапки
-           летит точно на место, а не в приблизительный центр контейнера.
-           mascotOnly — рендерить только маскота, без орбиты и аватарок.
-           Нужно, чтобы маскот был в DOM даже когда непрочитанных нет —
-           ref валиден для будущих полётов.
-  [2.35.40] Клик по pointerdown.
+  [2.48.13] Кэш nodes + кэш ORBITS на длину. Раньше querySelectorAll
+            и .length вызывались на каждом кадре — парсинг селектора,
+            скан DOM. Теперь — один раз при изменении users.length.
+  [2.39.4] mascotRef, mascotOnly.
   [2.35.34] Кнопка вместо div.
 */
 const MAX_AVATARS = 5;
@@ -36,39 +34,59 @@ const OrbitNotification = ({
   const rafRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0, fired: false });
 
+  const usersCount = users.length;
+
   useEffect(() => {
     if (mascotOnly || paused) return;
     const stage = orbitRef.current;
     if (!stage) return;
 
+    // Кэш слотов — один раз. querySelectorAll на каждом кадре — главный
+    // источник тормозов: парсит селектор, сканирует DOM, инвалидирует layout.
+    const nodes = stage.querySelectorAll('.pm-orbit-slot');
+    const n = nodes.length;
+    if (n === 0) return;
+
+    // Кэш параметров для каждого слота — не пересчитываем массив каждый кадр.
+    const params = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const o = ORBITS[i % ORBITS.length];
+      const rad = (o.tilt * Math.PI) / 180;
+      params[i] = {
+        rx: o.rx,
+        ry: o.ry,
+        speed: o.speed,
+        phase: o.phase,
+        cosT: Math.cos(rad),
+        sinT: Math.sin(rad),
+      };
+    }
+
     const start = performance.now();
 
     const tick = (time) => {
       const t = (time - start) / 1000;
-      const nodes = stage.querySelectorAll('.pm-orbit-slot');
-      const n = nodes.length;
 
       for (let i = 0; i < n; i++) {
-        const o = ORBITS[i % ORBITS.length];
-        const a = o.phase + o.speed * t;
+        const p = params[i];
+        const a = p.phase + p.speed * t;
+        const cosA = Math.cos(a);
+        const sinA = Math.sin(a);
 
-        const rawX = Math.cos(a) * o.rx;
-        const rawY = Math.sin(a) * o.ry;
+        const rawX = cosA * p.rx;
+        const rawY = sinA * p.ry;
 
-        const rad = (o.tilt * Math.PI) / 180;
-        const x = rawX * Math.cos(rad) - rawY * Math.sin(rad);
-        const y = rawX * Math.sin(rad) + rawY * Math.cos(rad);
+        const x = rawX * p.cosT - rawY * p.sinT;
+        const y = rawX * p.sinT + rawY * p.cosT;
 
-        const depth = (Math.sin(a) + 1) / 2;
+        const depth = (sinA + 1) / 2;
         const scale = 0.6 + depth * 0.5;
         const opacity = 0.42 + depth * 0.58;
-        const z = Math.round(depth * 100);
 
         const el = nodes[i];
         el.style.transform =
-          `translate(-50%, -50%) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
-        el.style.opacity = opacity.toFixed(3);
-        el.style.zIndex = String(z);
+          `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${scale.toFixed(2)})`;
+        el.style.opacity = opacity.toFixed(2);
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -78,7 +96,7 @@ const OrbitNotification = ({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [mascotOnly, paused]);
+  }, [mascotOnly, paused, usersCount]);
 
   const shown = mascotOnly ? [] : users.slice(0, MAX_AVATARS);
   const more = mascotOnly ? 0 : Math.max(0, users.length - MAX_AVATARS);
