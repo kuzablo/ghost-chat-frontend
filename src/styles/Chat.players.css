@@ -1,4 +1,6 @@
 /* ===== Панель игроков =====
+   [2.48.5] Скролл — у секций «Онлайн», «Друзья», «Запросы».
+            Шапка/поиск/я/«О приложении» — зафиксированы.
    [2.35.34] Кастомный фон, плейсхолдер, орбита в шапке
    [2.35.25] Скрытое состояние — панель в DOM
    [2.32.39] unreadPulse: box-shadow → transform
@@ -15,7 +17,9 @@
   padding: 12px;
   width: 260px;
   max-height: 70vh;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   touch-action: pan-y;
   overscroll-behavior: contain;
   user-select: none;
@@ -115,6 +119,7 @@ body.dark .players-bg-loading-mascot {
   justify-content: center;
   overflow: hidden;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 /* ===== Общие элементы ===== */
@@ -126,17 +131,75 @@ body.dark .players-bg-loading-mascot {
   font-weight: 800;
   text-align: center;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .players-overlay .search-input {
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
+
+/* ===== [2.48.5] Список: колонка, фиксированное + секции со скроллом ===== */
 
 .players-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-height: 0;
 }
+
+.players-list > .player-item--self,
+.players-list > .players-info-link {
+  flex-shrink: 0;
+}
+
+.players-section {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.players-section--requests {
+  flex: 0 1 auto;
+  max-height: 22vh;
+}
+
+.players-section > .friends-header {
+  flex-shrink: 0;
+  position: static;
+}
+
+.players-section-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: var(--btn-bg) transparent;
+}
+
+.players-section-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.players-section-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.players-section-scroll::-webkit-scrollbar-thumb {
+  background: var(--btn-bg);
+  border-radius: 6px;
+}
+
+.players-section-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--nick-color);
+}
+
+/* ===== Общие поля ===== */
 
 .search-input {
   width: 100%;
@@ -154,10 +217,6 @@ body.dark .players-bg-loading-mascot {
 .search-input::placeholder { color: var(--text-muted); }
 
 .friends-header {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: var(--card-bg);
   margin-top: 12px;
   margin-bottom: 6px;
   padding: 10px 6px 6px;
@@ -166,6 +225,7 @@ body.dark .players-bg-loading-mascot {
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--text-muted);
+  background: var(--card-bg);
 }
 
 .friends-header:first-child {
@@ -444,4 +504,50 @@ body.dark .player-hint {
   color: #3BB5E8;
   border-color: #3BB5E8;
   background: rgba(59, 181, 232, 0.1);
+}
+
+/* ===== [2.31.3] Кольцо long-press (0.5с) ===== */
+
+@property --ring-progress {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.player-item--pressing {
+  position: relative;
+}
+
+.player-item--pressing::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: calc(var(--radius-sm) + 3px);
+  pointer-events: none;
+  z-index: 5;
+  padding: var(--ring-thickness);
+  background: conic-gradient(
+    from -90deg,
+    var(--ring-color) 0deg,
+    var(--ring-color) var(--ring-progress),
+    var(--ring-color-faded) var(--ring-progress),
+    var(--ring-color-faded) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: playerRingFill var(--ring-duration-player) linear forwards;
+}
+
+@keyframes playerRingFill {
+  from { --ring-progress: 0deg; }
+  to   { --ring-progress: 360deg; }
 }

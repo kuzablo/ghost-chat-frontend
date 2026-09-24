@@ -5,16 +5,13 @@ import OrbitNotification from './OrbitNotification';
 import Avatar from './Avatar';
 
 /*
-  [2.39.0] Узел орбиты (players-header--orbit) рендерится всегда.
-           Внутри — OrbitNotification, если unread > 0, иначе маскот-одиночка.
-           Через orbitSlotRef маскот из шапки чата летит именно сюда.
-           orbitHidden=true пока летит — чтобы не было двух маскотов.
+  [2.48.5] Скролл — у секций «Онлайн», «Друзья», «Запросы».
+           Шапка/поиск/я/«О приложении» — зафиксированы.
+  [2.39.0] Узел орбиты в шапке рендерится всегда.
   [2.35.34] Плейсхолдер-маскот и орбита в шапке разделены.
-  [2.35.33] Кастомный фон + орбита
-  [2.35.25] visible — панель всегда в DOM
-  [2.35.4] дуэль: onRequestDuel(userId)
-  [2.33.7] React.memo
+  [2.35.25] visible — панель всегда в DOM.
 */
+
 const LONG_PRESS_MS = 500;
 const MOVE_CANCEL_PX = 8;
 
@@ -216,14 +213,15 @@ const PlayersPanel = forwardRef(({
 
   const isPressing = (id) => pressingId === id;
 
-const renderAvatar = (nickname, avatarUrl) => (
-  <Avatar
-    src={avatarUrl}
-    nickname={nickname}
-    className="player-avatar"
-    alt=""
-  />
-);
+  const renderAvatar = (nickname, avatarUrl) => (
+    <Avatar
+      src={avatarUrl}
+      nickname={nickname}
+      className="player-avatar"
+      alt=""
+      mascot={false}
+    />
+  );
 
   const bgCss = getBgCss(dialogsBg);
   const hasBg = !!bgCss;
@@ -256,9 +254,7 @@ const renderAvatar = (nickname, avatarUrl) => (
           </div>
         )}
 
-        {/* [2.39.0] Узел орбиты рендерится всегда. Ref валиден в любой момент,
-            маскот из шапки чата знает координаты для полёта.
-            Содержимое узла — OrbitNotification (unread > 0) или маскот-одиночка. */}
+        {/* [2.39.0] Узел орбиты рендерится всегда. Ref валиден в любой момент */}
         <div
           ref={orbitSlotRef}
           className="players-header players-header--orbit"
@@ -288,6 +284,7 @@ const renderAvatar = (nickname, avatarUrl) => (
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+
         <div className="players-list">
 
           {myself && (
@@ -326,133 +323,146 @@ const renderAvatar = (nickname, avatarUrl) => (
             </div>
           )}
 
+          {/* ===== Онлайн ===== */}
           {nonFriends.length > 0 && (
-            <div className="friends-header">Онлайн ({nonFriends.length})</div>
+            <div className="players-section">
+              <div className="friends-header">Онлайн ({nonFriends.length})</div>
+              <div className="players-section-scroll">
+                {nonFriends.map(p => {
+                  const isSelf = p.userId === myId;
+                  const pid = `p-${p.id}`;
+                  return (
+                    <div
+                      className={`player-item ${isPressing(pid) ? 'player-item--pressing' : ''}`}
+                      key={p.id}
+                      onTouchStart={(e) => !isSelf && startPress(pid, e, () => openMenuForPlayer(p))}
+                      onTouchMove={movePress}
+                      onTouchEnd={endPress}
+                      onTouchCancel={endPress}
+                      onMouseDown={(e) => !isSelf && startPress(pid, e, () => openMenuForPlayer(p))}
+                      onMouseMove={movePress}
+                      onMouseUp={endPress}
+                      onMouseLeave={endPress}
+                    >
+                      {renderAvatar(p.nickname, p.avatarUrl)}
+                      <span className="player-name">
+                        {p.nickname}
+                        <small className="player-stats">W:{p.wins} L:{p.losses}</small>
+                      </span>
+                      {!isSelf && (
+                        <div className="player-actions">
+                          {isAdmin && (
+                            <>
+                              <button
+                                className="player-action-btn"
+                                onClick={(e) => { e.stopPropagation(); onWatchChat(p.userId); }}
+                                title="Просмотр чата"
+                              >
+                                ℹ️
+                              </button>
+                              <button
+                                className="player-action-btn player-action-btn--danger"
+                                onClick={(e) => { e.stopPropagation(); onBanConfirm(p.userId, p.nickname); }}
+                                title="Забанить навсегда"
+                              >
+                                ⛔
+                              </button>
+                            </>
+                          )}
+                          <button
+                            className="player-action-btn"
+                            onClick={(e) => { e.stopPropagation(); onRequestDuel(p.userId); }}
+                            title="Вызвать на дуэль"
+                          >
+                            ⚔️
+                          </button>
+                          <button
+                            className={`player-action-btn ${unreadByUser[p.userId] ? 'player-action-btn--unread' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); onOpenPrivateChat(p.userId, p.nickname); }}
+                            title="Написать"
+                          >
+                            ✉️
+                          </button>
+                          <button
+                            className="player-action-btn"
+                            onClick={(e) => { e.stopPropagation(); onFriendRequest(p.userId); }}
+                            title="Добавить в друзья"
+                          >
+                            🤝
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
-          {nonFriends.map(p => {
-            const isSelf = p.userId === myId;
-            const pid = `p-${p.id}`;
-            return (
-              <div
-                className={`player-item ${isPressing(pid) ? 'player-item--pressing' : ''}`}
-                key={p.id}
-                onTouchStart={(e) => !isSelf && startPress(pid, e, () => openMenuForPlayer(p))}
-                onTouchMove={movePress}
-                onTouchEnd={endPress}
-                onTouchCancel={endPress}
-                onMouseDown={(e) => !isSelf && startPress(pid, e, () => openMenuForPlayer(p))}
-                onMouseMove={movePress}
-                onMouseUp={endPress}
-                onMouseLeave={endPress}
-              >
-                {renderAvatar(p.nickname, p.avatarUrl)}
-                <span className="player-name">
-                  {p.nickname}
-                  <small className="player-stats">W:{p.wins} L:{p.losses}</small>
-                </span>
-                {!isSelf && (
-                  <div className="player-actions">
-                    {isAdmin && (
-                      <>
+
+          {/* ===== Друзья ===== */}
+          {filteredFriends.length > 0 && (
+            <div className="players-section">
+              <div className="friends-header">Друзья ({filteredFriends.length})</div>
+              <div className="players-section-scroll">
+                {filteredFriends.map(f => {
+                  const pid = `f-${f.userId}`;
+                  return (
+                    <div
+                      className={`player-item ${isPressing(pid) ? 'player-item--pressing' : ''}`}
+                      key={f.userId}
+                      onTouchStart={(e) => startPress(pid, e, () => openMenuForFriend(f))}
+                      onTouchMove={movePress}
+                      onTouchEnd={endPress}
+                      onTouchCancel={endPress}
+                      onMouseDown={(e) => startPress(pid, e, () => openMenuForFriend(f))}
+                      onMouseMove={movePress}
+                      onMouseUp={endPress}
+                      onMouseLeave={endPress}
+                    >
+                      {renderAvatar(f.nickname, f.avatarUrl)}
+                      <span className="player-name">
+                        {f.nickname}
+                        {isFriendOnline(f.userId) && <span className="online-status" title="В сети" />}
+                      </span>
+                      <div className="player-actions">
+                        <button
+                          className={`player-action-btn ${unreadByUser[f.userId] ? 'player-action-btn--unread' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); onOpenPrivateChat(f.userId, f.nickname); }}
+                          title="Написать"
+                        >
+                          ✉️
+                        </button>
                         <button
                           className="player-action-btn"
-                          onClick={(e) => { e.stopPropagation(); onWatchChat(p.userId); }}
-                          title="Просмотр чата"
+                          onClick={(e) => { e.stopPropagation(); onRequestDuel(f.userId); }}
+                          title="Вызвать на дуэль"
                         >
-                          ℹ️
+                          ⚔️
                         </button>
-                        <button
-                          className="player-action-btn player-action-btn--danger"
-                          onClick={(e) => { e.stopPropagation(); onBanConfirm(p.userId, p.nickname); }}
-                          title="Забанить навсегда"
-                        >
-                          ⛔
-                        </button>
-                      </>
-                    )}
-                    <button
-                      className="player-action-btn"
-                      onClick={(e) => { e.stopPropagation(); onRequestDuel(p.userId); }}
-                      title="Вызвать на дуэль"
-                    >
-                      ⚔️
-                    </button>
-                    <button
-                      className={`player-action-btn ${unreadByUser[p.userId] ? 'player-action-btn--unread' : ''}`}
-                      onClick={(e) => { e.stopPropagation(); onOpenPrivateChat(p.userId, p.nickname); }}
-                      title="Написать"
-                    >
-                      ✉️
-                    </button>
-                    <button
-                      className="player-action-btn"
-                      onClick={(e) => { e.stopPropagation(); onFriendRequest(p.userId); }}
-                      title="Добавить в друзья"
-                    >
-                      🤝
-                    </button>
-                  </div>
-                )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-
-          {filteredFriends.length > 0 && (
-            <div className="friends-header">Друзья ({filteredFriends.length})</div>
+            </div>
           )}
-          {filteredFriends.map(f => {
-            const pid = `f-${f.userId}`;
-            return (
-              <div
-                className={`player-item ${isPressing(pid) ? 'player-item--pressing' : ''}`}
-                key={f.userId}
-                onTouchStart={(e) => startPress(pid, e, () => openMenuForFriend(f))}
-                onTouchMove={movePress}
-                onTouchEnd={endPress}
-                onTouchCancel={endPress}
-                onMouseDown={(e) => startPress(pid, e, () => openMenuForFriend(f))}
-                onMouseMove={movePress}
-                onMouseUp={endPress}
-                onMouseLeave={endPress}
-              >
-                {renderAvatar(f.nickname, f.avatarUrl)}
-                <span className="player-name">
-                  {f.nickname}
-                  {isFriendOnline(f.userId) && <span className="online-status" title="В сети" />}
-                </span>
-                <div className="player-actions">
-                  <button
-                    className={`player-action-btn ${unreadByUser[f.userId] ? 'player-action-btn--unread' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); onOpenPrivateChat(f.userId, f.nickname); }}
-                    title="Написать"
-                  >
-                    ✉️
-                  </button>
-                  <button
-                    className="player-action-btn"
-                    onClick={(e) => { e.stopPropagation(); onRequestDuel(f.userId); }}
-                    title="Вызвать на дуэль"
-                  >
-                    ⚔️
-                  </button>
-                </div>
-              </div>
-            );
-          })}
 
+          {/* ===== Запросы ===== */}
           {friendRequests.length > 0 && (
-            <>
+            <div className="players-section players-section--requests">
               <div className="friends-header">Входящие запросы ({friendRequests.length})</div>
-              {friendRequests.map(req => (
-                <div className="friend-request-item" key={req.requestId}>
-                  <span>{req.senderNickname} хочет добавить вас в друзья</span>
-                  <div className="friend-request-actions">
-                    <button className="btn" onClick={() => onAcceptRequest(req.requestId)}>Принять</button>
-                    <button className="btn" onClick={() => onDeclineRequest(req.requestId)}>Отклонить</button>
+              <div className="players-section-scroll">
+                {friendRequests.map(req => (
+                  <div className="friend-request-item" key={req.requestId}>
+                    <span>{req.senderNickname} хочет добавить вас в друзья</span>
+                    <div className="friend-request-actions">
+                      <button className="btn" onClick={() => onAcceptRequest(req.requestId)}>Принять</button>
+                      <button className="btn" onClick={() => onDeclineRequest(req.requestId)}>Отклонить</button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </>
+                ))}
+              </div>
+            </div>
           )}
 
           {onOpenInfo && (

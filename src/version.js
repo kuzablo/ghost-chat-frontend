@@ -2,4 +2,4 @@
 // 2.48.3 — кнопка перезагрузки страницы (left top).
 // 2.48.2 — оптимистичный реордер в useStorage.
 // [2.48.4] Refresh на мобиле — в шапке слева.
-export const VERSION = '2.48.4';
+export const VERSION = '2.48.5';
