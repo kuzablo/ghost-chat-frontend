@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import StorageGrid from './StorageGrid';
+import StorageTile from './StorageTile';
 import ConfirmModal from './ConfirmModal';
 import '../../styles/Chat.storage.css';
 
